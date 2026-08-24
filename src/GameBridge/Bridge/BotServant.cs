@@ -38,6 +38,7 @@ namespace HordeForge.GameBridge.Bridge
         // guest's 2048-byte sense cap (24 + 60 * 32 = 1944 bytes).
         private const int MaxSenseRecords = 60;
 
+        private readonly Func<long> _tickProvider;
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
         // Sense runs once per tick per calling brain; the snapshot and its
@@ -47,6 +48,16 @@ namespace HordeForge.GameBridge.Bridge
         private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
         private int _countFloor = DefaultBotCount;
         private bool _spawned;
+
+        /// <summary>
+        /// Creates the servant. <paramref name="tickProvider"/> supplies the
+        /// bridge's monotonic tick counter for sense snapshots; injecting it
+        /// keeps the servant free of a reference back into BridgeHost.
+        /// </summary>
+        public BotServant(Func<long> tickProvider)
+        {
+            _tickProvider = tickProvider ?? throw new ArgumentNullException(nameof(tickProvider));
+        }
 
         private static SenseSnapshotWriter.EntityRecord[] CreateSenseRecords()
         {
@@ -138,7 +149,7 @@ namespace HordeForge.GameBridge.Bridge
                     return 0;
                 }
                 snapshot.Clear();
-                snapshot.Tick = BridgeHost.CurrentTick;
+                snapshot.Tick = _tickProvider();
                 snapshot.SelfNetId = 0;
                 snapshot.WorldTime = (long)game.World.GetWorldTime();
                 snapshot.BloodMoon = false;

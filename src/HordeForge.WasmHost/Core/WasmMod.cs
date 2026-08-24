@@ -45,30 +45,6 @@ namespace HordeForge.WasmHost.Core
             _tick = tick;
         }
 
-        /// <summary>
-        /// Resolves a no-argument hook that may return either an i32 status
-        /// (our ABI) or void (the zdtd plugin contract). A void hook is
-        /// wrapped and reported as StatusOk.
-        /// </summary>
-        private static Func<int>? ResolveNoArg(Instance instance, string name)
-        {
-            var withResult = instance.GetFunction<int>(name);
-            if (withResult != null)
-            {
-                return () => withResult();
-            }
-            var withoutResult = instance.GetAction(name);
-            if (withoutResult != null)
-            {
-                return () =>
-                {
-                    withoutResult();
-                    return AbiConstants.StatusOk;
-                };
-            }
-            return null;
-        }
-
         /// <summary>Unique mod id used as the registry key.</summary>
         public string Id { get; }
 
@@ -141,6 +117,30 @@ namespace HordeForge.WasmHost.Core
                 return null;
             }
             return Run("on_player_join", () => _onPlayerJoin(entityId));
+        }
+
+        /// <summary>
+        /// Resolves a no-argument hook that may return either an i32 status
+        /// (our ABI) or void (the zdtd plugin contract). A void hook is
+        /// wrapped and reported as StatusOk.
+        /// </summary>
+        private static Func<int>? ResolveNoArg(Instance instance, string name)
+        {
+            var withResult = instance.GetFunction<int>(name);
+            if (withResult != null)
+            {
+                return () => withResult();
+            }
+            var withoutResult = instance.GetAction(name);
+            if (withoutResult != null)
+            {
+                return () =>
+                {
+                    withoutResult();
+                    return AbiConstants.StatusOk;
+                };
+            }
+            return null;
         }
 
         private ModRunResult Run(string callName, Func<int> invoke)

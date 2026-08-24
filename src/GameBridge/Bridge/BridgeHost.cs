@@ -69,7 +69,7 @@ namespace HordeForge.GameBridge.Bridge
 
                 var config = new WasmHostConfig();
                 ApplySharedLimits(config, sharedTomlPath);
-                _servant = new BotServant();
+                _servant = new BotServant(() => _tick);
                 _gameApi = new GameHostApi(_settings, _servant);
                 _host = new WasmModHost(_gameApi, config);
 
@@ -112,9 +112,6 @@ namespace HordeForge.GameBridge.Bridge
                 }
             }
         }
-
-        /// <summary>Current value of the bridge's monotonic tick counter.</summary>
-        internal static long CurrentTick => _tick;
 
         /// <summary>
         /// Player-spawn handler invoked by the Harmony postfix on
