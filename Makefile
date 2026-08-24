@@ -3,11 +3,38 @@
 # Toolchains. The workspace uses net8.0 for tooling and net48 for in-game
 # mod DLLs; guests are built with an in-project rustup toolchain so nothing
 # is installed system-wide. The C guest is built with the zig compiler.
-DOTNET ?= $(shell command -v dotnet 2>/dev/null || echo /home/maci/.cache/dotnet-sdk/dotnet)
+# DOTNET falls back to the workspace-local SDK under $(HOME)/.cache (the
+# system dotnet may be SDK-less); it must never name a specific user.
+DOTNET ?= $(shell command -v dotnet 2>/dev/null || echo $(HOME)/.cache/dotnet-sdk/dotnet)
 CARGO  ?= $(PWD)/.cargo/bin/cargo
 ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
+
+# Wasmtime runtime id of THIS machine, used by "make dist" to stage the
+# matching native engine (same mapping as NativeAssets.RuntimeIdentifier).
+UNAME_S := $(shell uname -s 2>/dev/null || echo Windows_NT)
+UNAME_M := $(shell uname -m 2>/dev/null)
+ifeq ($(OS),Windows_NT)
+  WASMTIME_OS := win
+else ifeq ($(UNAME_S),Darwin)
+  WASMTIME_OS := osx
+else
+  WASMTIME_OS := linux
+endif
+ifneq (,$(filter aarch64 arm64,$(UNAME_M)))
+  WASMTIME_ARCH := arm64
+else
+  WASMTIME_ARCH := x64
+endif
+WASMTIME_RID := $(WASMTIME_OS)-$(WASMTIME_ARCH)
+ifeq ($(WASMTIME_OS),win)
+  WASMTIME_NATIVE := wasmtime.dll
+else ifeq ($(WASMTIME_OS),osx)
+  WASMTIME_NATIVE := libwasmtime.dylib
+else
+  WASMTIME_NATIVE := libwasmtime.so
+endif
 
 # Dedicated server install used for the net48 bridge build and target check.
 GAME_DIR ?= $(HOME)/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server
@@ -89,8 +116,8 @@ dist: build fixtures bridge
 	cp src/GameBridge/bin/Release/*.dll dist/Mods/1_HordeForge_WasmHost/
 	rm -f dist/Mods/1_HordeForge_WasmHost/System.Runtime.CompilerServices.Unsafe.dll
 	cp src/GameBridge/ModInfo.xml dist/Mods/1_HordeForge_WasmHost/
-	# Native engine for this platform.
-	cp "$(HOME)/.nuget/packages/wasmtime/44.0.0/runtimes/linux-x64/native/libwasmtime.so" dist/Mods/1_HordeForge_WasmHost/Native/
+	# Native engine for this platform ($(WASMTIME_RID), see header).
+	cp "$(HOME)/.nuget/packages/wasmtime/44.0.0/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
 	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
 	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig dist/Mods/Wasm/fps-bot
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm

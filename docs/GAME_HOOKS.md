@@ -5,9 +5,13 @@
 - Loads once per server start via `ModApi.InitMod`.
 - Only acts on dedicated servers (`GameManager.IsDedicatedServer`); on
   clients it logs a note and exits.
-- Bootstraps the native Wasmtime library from `<modlet>/Native/`
-  (LD_LIBRARY_PATH on Linux, PATH on Windows) before any Wasmtime type is
-  touched.
+- Bootstraps the native Wasmtime library from `<modlet>/Native/` before
+  any Wasmtime type is touched. On Windows it prepends `Native/` to
+  `PATH` (consulted on every library load). On Linux the loader captures
+  `LD_LIBRARY_PATH` at process start, so the server must be started with
+  `<modlet>/Native/` already on it; the bridge probes resolution at init
+  and logs exact instructions when the engine is not resolvable (see
+  docs/ACCEPTANCE.md for the working acceptance setup).
 - Starts the host, scans `<install>/Mods/Wasm/<id>/module.wasm` for guest
   modules, initializes them, and patches `GameManager.Update`.
 
