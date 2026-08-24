@@ -111,7 +111,7 @@ namespace HordeForge.GameBridge.Bridge
             // the acceptance run: the Harmony postfix must not declare
             // parameters by names the target does not have).
             int entityId = clientInfo != null ? clientInfo.entityId : 0;
-            Log.Out("[WasmHost] player spawned: " + name + " (entity " + entityId + ")");
+            Log.Out("[WasmHost] player spawned: " + TextSanitizer.Clean(name) + " (entity " + entityId + ")");
             foreach (var result in _host.DispatchPlayerJoin(entityId, name))
             {
                 if (!result.Ok)
@@ -146,6 +146,11 @@ namespace HordeForge.GameBridge.Bridge
             if (droppedChat.Length > 0)
             {
                 lines.Add("  " + droppedChat);
+            }
+            string droppedCommands = _gameApi != null ? _gameApi.CommandLimiter.DescribeDropped("sim commands") : string.Empty;
+            if (droppedCommands.Length > 0)
+            {
+                lines.Add("  " + droppedCommands);
             }
             string droppedTick = DispatchFailureLimiter.DescribeDropped("tick failure logs");
             if (droppedTick.Length > 0)
@@ -211,9 +216,23 @@ namespace HordeForge.GameBridge.Bridge
             return loaded;
         }
 
+        /// <summary>
+        /// True when the id is a plain folder name under WasmRoot: non-empty
+        /// and free of path separators. Ids arrive from console input
+        /// ("wasm reload &lt;id&gt;"), so this keeps the module path inside
+        /// Mods/Wasm.
+        /// </summary>
+        public static bool IsValidModId(string id)
+        {
+            return !string.IsNullOrEmpty(id) &&
+                   id.IndexOf('/') < 0 &&
+                   id.IndexOf('\\') < 0 &&
+                   id != "." && id != "..";
+        }
+
         public static bool Reload(string id)
         {
-            if (_host == null)
+            if (_host == null || !IsValidModId(id))
             {
                 return false;
             }
@@ -284,7 +303,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return;
                 }
-                ModManifest shared = ModManifest.ParseToml(File.ReadAllText(sharedPath), "shared");
+                ModManifest shared = ModManifest.ParseToml(ReadBounded(sharedPath), "shared");
                 if (shared.FuelPerCall.HasValue)
                 {
                     config.FuelPerCall = shared.FuelPerCall.Value;
@@ -321,13 +340,13 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (File.Exists(tomlPath))
                 {
-                    manifest = ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
+                    manifest = ModManifest.ParseToml(ReadBounded(tomlPath), id);
                     return true;
                 }
                 if (File.Exists(jsonPath))
                 {
                     // Deprecated format, kept for older modules.
-                    manifest = ModManifest.Parse(File.ReadAllText(jsonPath), id);
+                    manifest = ModManifest.Parse(ReadBounded(jsonPath), id);
                     return true;
                 }
                 manifest = null;
@@ -341,12 +360,27 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                // An unreadable manifest file is treated like a malformed
-                // one: skip the module instead of running it with defaults.
+                // An unreadable or oversized manifest file is treated like a
+                // malformed one: skip the module instead of running it with
+                // defaults.
                 Log.Warning("[WasmHost] cannot read manifest for " + id + ": " + ex.Message + "; module skipped");
                 manifest = null;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Reads a manifest file behind the shared size bound; throws so the
+        /// caller's existing error paths (skip the module, keep defaults)
+        /// handle it uniformly.
+        /// </summary>
+        private static string ReadBounded(string path)
+        {
+            if (!ManifestFiles.TryRead(path, out string content))
+            {
+                throw new InvalidOperationException(path + " is unreadable or larger than " + ManifestFiles.MaxBytes + " bytes");
+            }
+            return content;
         }
 
         public static void Shutdown()

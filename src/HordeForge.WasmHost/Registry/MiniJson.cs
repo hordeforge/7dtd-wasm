@@ -15,6 +15,15 @@ namespace HordeForge.WasmHost.Registry
     /// </summary>
     internal static class MiniJson
     {
+        /// <summary>
+        /// Maximum container nesting accepted by the parser. Manifests are flat
+        /// config files; anything deeper is rejected with a FormatException so a
+        /// hostile document cannot overflow the stack (StackOverflowException
+        /// would take the whole server process down, defeating the per-mod
+        /// fail-soft guarantee).
+        /// </summary>
+        private const int MaxDepth = 128;
+
         public static JsonValue Parse(string text)
         {
             if (text == null)
@@ -35,6 +44,7 @@ namespace HordeForge.WasmHost.Registry
         {
             private readonly string _text;
             private int _pos;
+            private int _depth;
 
             public Parser(string text)
             {
@@ -58,6 +68,22 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("unexpected end of input");
                 }
+                if (++_depth > MaxDepth)
+                {
+                    throw new FormatException("nesting deeper than " + MaxDepth);
+                }
+                try
+                {
+                    return ParseValueAtDepth();
+                }
+                finally
+                {
+                    _depth--;
+                }
+            }
+
+            private JsonValue ParseValueAtDepth()
+            {
                 char c = _text[_pos];
                 switch (c)
                 {

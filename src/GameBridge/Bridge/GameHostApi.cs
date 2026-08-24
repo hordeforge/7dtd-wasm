@@ -22,6 +22,7 @@ namespace HordeForge.GameBridge.Bridge
             _servant = servant;
             RateLimiter = new GuestRateLimiter();
             ChatLimiter = new GuestRateLimiter();
+            CommandLimiter = new GuestRateLimiter();
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
@@ -29,6 +30,12 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>Per-module chat rate limiter; exposed for "wasm status".</summary>
         public GuestRateLimiter ChatLimiter { get; }
+
+        /// <summary>Per-module SimCommand rate limiter; exposed for "wasm status".</summary>
+        public GuestRateLimiter CommandLimiter { get; }
+
+        /// <summary>Longest chat message accepted from a guest, in characters.</summary>
+        public const int MaxChatMessageLength = 256;
 
         public void Log(string source, int level, string message)
         {
@@ -43,7 +50,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 return;
             }
-            string line = "[" + source + "] " + message;
+            string line = "[" + source + "] " + TextSanitizer.Clean(message);
             switch (level)
             {
                 case AbiConstants.LogWarn:
@@ -80,8 +87,16 @@ namespace HordeForge.GameBridge.Bridge
             return _settings.TryGetSetting(modId, key, out value);
         }
 
-        public bool TryQueueCommand(string command)
+        public bool TryQueueCommand(string modId, string command)
         {
+            // SimCommands execute game-side work (entity spawn, damage) that
+            // the wasm fuel budget never sees, so each module is rate capped
+            // like its log output (ADR 0006 reasoning).
+            if (!CommandLimiter.TryWrite(modId, out _, GuestRateLimiter.MaxCommandsPerSecond))
+            {
+                return false;
+            }
+            command = TextSanitizer.Clean(command);
             // The bot servant dispatches the brain's SimCommands; non-bot
             // commands are logged and accepted.
             if (_servant.TryQueue(command, out bool handled))
@@ -119,6 +134,13 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return false;
                 }
+                // A guest must not push arbitrarily large strings into the
+                // chat broadcast; oversized messages are rejected outright
+                // (visible to the guest author) instead of silently cut.
+                if (message == null || message.Length > MaxChatMessageLength)
+                {
+                    return false;
+                }
                 // The game does not rate limit ChatMessageServer on its own,
                 // so the bridge does: a guest spamming chat must not flood
                 // the global channel (observed live in the acceptance run).
@@ -127,7 +149,7 @@ namespace HordeForge.GameBridge.Bridge
                     return false;
                 }
                 // Verified signature (V3): ChatMessageServer(ClientInfo, EChatType, int, string, List<int>, EMessageSender, BbCodeSupportMode)
-                game.ChatMessageServer(null, EChatType.Global, -1, message, null, EMessageSender.Server, GeneratedTextManager.BbCodeSupportMode.NotSupported);
+                game.ChatMessageServer(null, EChatType.Global, -1, TextSanitizer.Clean(message), null, EMessageSender.Server, GeneratedTextManager.BbCodeSupportMode.NotSupported);
                 return true;
             }
             catch (Exception ex)

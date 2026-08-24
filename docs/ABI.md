@@ -28,7 +28,7 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 | `tick` | `() -> i64` | Current game tick. The bridge maintains a monotonic counter incremented once per game tick (20 TPS on the dedicated server); `GameTimer.ticks` reads 0 on the dedicated server, so it is not used. Same name as zdtd's `tick()` |
 | `get_world_time` | `() -> i64` | World time in game minutes, 0 when no world is loaded |
 | `get_setting` | `(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Read a setting (per-mod settings win over shared; see docs/CONFIG.md). Returns written byte count, -1 not found, -2 buffer too small |
-| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected |
+| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 characters are rejected |
 | `get_join_player_name` | `(out_ptr: i32, out_cap: i32) -> i32` | During an `on_player_join` call: the joining player's name written into the guest buffer. Returns byte count, -1 no event, -2 buffer too small |
 
 Strings are passed as `(pointer, length)` pairs into the **guest's own
@@ -87,6 +87,14 @@ the live game: bots spawn as zombieSoldier bodies, `bot move` / `bot look` /
 in the ZBS3 layout. `query` (cover/path) and `on_admin_command` console
 wiring are stage 3.
 
+Host-side bounds on the servant, enforced per calling module (the wasm fuel
+budget does not cover game-side work):
+
+- SimCommands are rate capped (200/second/module); excess commands are
+  rejected (-1) and counted, visible in `wasm status`.
+- Live servant bots are capped at 16; spawn requests beyond the cap are
+  refused. `bot remove` only ever despawns the servant's own bots.
+
 Modules without a declared memory maximum are treated as declaring the
 wasm32 ceiling (4 GiB) and load only when the effective cap allows it; an
 operator raises the cap via `wasm.toml [limits] max_memory_bytes`. This is
@@ -99,9 +107,11 @@ amendment; see SECURITY.md for the weaker bound).
   Exceeding it stops the call with `FuelExhausted`; the module stays loaded.
 - Traps return a structured `ModRunResult`; the game loop and other modules
   are unaffected.
-- WASI preview 1 is linked with stdout and stderr inherited (they surface in
-  the server console), no preopened directories, empty environment, no
-  stdin. Guests must not rely on WASI beyond that.
+- WASI preview 1 is linked with stdout and stderr discarded by default (the
+  raw WASI path cannot be rate capped, so guests must report through the
+  `log` import; hosts may enable stream inheritance for trusted debugging),
+  no preopened directories, empty environment, no stdin. Guests must not
+  rely on WASI beyond that.
 - `get_world_time` and `get_setting` are safe to call before a world loads;
   they degrade to 0 and not-found.
 

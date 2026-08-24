@@ -21,6 +21,12 @@ namespace HordeForge.GameBridge.Bridge
         private const string BotEntityClass = "zombieSoldier";
         private const int DefaultBotCount = 4;
 
+        // Hard ceiling on live servant bots, matching the zdtd-server host
+        // cap (max_bots 16) and the "bot count" clamp. Spawn requests beyond
+        // the cap are refused: entity creation is game-side work a hostile
+        // guest must not be able to multiply without bound.
+        private const int MaxBotCount = 16;
+
         // The brain speaks radians; the game speaks degrees.
         private const float RadiansToDegrees = 57.2957795f;
 
@@ -203,6 +209,13 @@ namespace HordeForge.GameBridge.Bridge
 
         private bool SpawnOne()
         {
+            // Free cap slots held by bots that died in the world so the
+            // ceiling bounds live bodies, not history.
+            PruneDeadBots();
+            if (_bots.Count >= MaxBotCount)
+            {
+                return false;
+            }
             try
             {
                 var game = GameManager.Instance;
@@ -232,6 +245,28 @@ namespace HordeForge.GameBridge.Bridge
             {
                 global::Log.Warning("[WasmHost] bot spawn failed (world not ready?): " + ex.Message);
                 return false;
+            }
+        }
+
+        private void PruneDeadBots()
+        {
+            if (_bots.Count == 0)
+            {
+                return;
+            }
+            var game = GameManager.Instance;
+            if (game == null || game.World == null)
+            {
+                return;
+            }
+            foreach (int id in new List<int>(_bots))
+            {
+                Entity e = game.World.GetEntity(id);
+                if (e == null || !(e is EntityAlive alive) || alive.IsDead())
+                {
+                    _bots.Remove(id);
+                    _botYaw.Remove(id);
+                }
             }
         }
 
@@ -266,6 +301,13 @@ namespace HordeForge.GameBridge.Bridge
 
         private void Despawn(int entityId)
         {
+            // Only our own bots may be despawned. The id comes from a guest
+            // command; without this gate "bot remove <player entity id>"
+            // would kill any world entity, players included.
+            if (!_bots.Remove(entityId))
+            {
+                return;
+            }
             var game = GameManager.Instance;
             if (game != null && game.World != null)
             {
@@ -275,7 +317,6 @@ namespace HordeForge.GameBridge.Bridge
                     alive.SetDead();
                 }
             }
-            _bots.Remove(entityId);
             _botYaw.Remove(entityId);
         }
 

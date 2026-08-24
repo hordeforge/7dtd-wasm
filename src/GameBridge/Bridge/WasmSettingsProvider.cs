@@ -29,6 +29,12 @@ namespace HordeForge.GameBridge.Bridge
         private DateTime _loggedFailureMtime = DateTime.MinValue;
         private bool _loggedFailureValid;
 
+        // Minimum interval between shared-file probes. A guest can loop on
+        // get_setting misses within its fuel budget; without the throttle
+        // every miss costs a stat syscall pair in the game main loop.
+        private const int ProbeIntervalMs = 500;
+        private int _lastProbeMs = int.MinValue;
+
         public WasmSettingsProvider(string sharedPath)
         {
             _sharedPath = sharedPath;
@@ -61,6 +67,14 @@ namespace HordeForge.GameBridge.Bridge
 
         private void ReloadSharedIfChanged()
         {
+            // Throttle disk probes (see ProbeIntervalMs); unchecked int
+            // subtraction stays correct across TickCount wraparound.
+            int nowMs = Environment.TickCount;
+            if (_lastProbeMs != int.MinValue && nowMs - _lastProbeMs < ProbeIntervalMs)
+            {
+                return;
+            }
+            _lastProbeMs = nowMs;
             DateTime attemptedMtime = DateTime.MinValue;
             bool attempted = false;
             try
@@ -78,7 +92,12 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return;
                 }
-                ModManifest shared = ModManifest.ParseToml(File.ReadAllText(_sharedPath), "shared");
+                if (!ManifestFiles.TryRead(_sharedPath, out string text))
+                {
+                    throw new InvalidOperationException(
+                        _sharedPath + " is unreadable or larger than " + ManifestFiles.MaxBytes + " bytes");
+                }
+                ModManifest shared = ModManifest.ParseToml(text, "shared");
                 _shared.Clear();
                 foreach (var pair in shared.Settings)
                 {

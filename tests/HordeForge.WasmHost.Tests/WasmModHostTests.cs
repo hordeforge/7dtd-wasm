@@ -321,6 +321,25 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void DeeplyNestedJsonManifestIsRejectedCleanly()
+        {
+            // A hostile manifest with extreme container nesting must come
+            // back as a normal load error, not overflow the stack (which
+            // would kill the whole server process).
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.Parse(new string('[', 100_000), "bad"));
+            Assert.Contains("nesting", ex.Message);
+        }
+
+        [Fact]
+        public void DeeplyNestedTomlManifestIsRejectedCleanly()
+        {
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("future = " + new string('[', 100_000) + new string(']', 100_000) + "\n", "bad"));
+            Assert.Contains("nesting", ex.Message);
+        }
+
+        [Fact]
         public void TomlManifestBindsLimitsAndSettings()
         {
             const string toml = @"

@@ -59,7 +59,7 @@ namespace HordeForge.WasmHost.Tests
             return true;
         }
 
-        public bool TryQueueCommand(string command)
+        public bool TryQueueCommand(string modId, string command)
         {
             QueuedCommands.Add(command);
             return true;

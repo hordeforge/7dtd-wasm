@@ -18,6 +18,13 @@ namespace HordeForge.WasmHost.Registry
     /// </summary>
     internal static class MiniToml
     {
+        /// <summary>
+        /// Maximum array nesting accepted by the parser (see MiniJson.MaxDepth):
+        /// a hostile manifest must fail with a FormatException, never with a
+        /// stack overflow that kills the server process.
+        /// </summary>
+        private const int MaxDepth = 128;
+
         public static TomlValue Parse(string text)
         {
             if (text == null)
@@ -146,9 +153,18 @@ namespace HordeForge.WasmHost.Registry
 
         private static TomlValue ParseValue(string text, int lineNumber)
         {
+            return ParseValue(text, lineNumber, 0);
+        }
+
+        private static TomlValue ParseValue(string text, int lineNumber, int depth)
+        {
             if (text.Length == 0)
             {
                 throw new FormatException("line " + lineNumber + ": empty value");
+            }
+            if (depth > MaxDepth)
+            {
+                throw new FormatException("line " + lineNumber + ": array nesting deeper than " + MaxDepth);
             }
             char first = text[0];
             if (first == '"' || first == '\'')
@@ -157,7 +173,7 @@ namespace HordeForge.WasmHost.Registry
             }
             if (first == '[')
             {
-                return ParseArray(text, lineNumber);
+                return ParseArray(text, lineNumber, depth);
             }
             if (text == "true")
             {
@@ -218,7 +234,7 @@ namespace HordeForge.WasmHost.Registry
             return sb.ToString();
         }
 
-        private static TomlArray ParseArray(string text, int lineNumber)
+        private static TomlArray ParseArray(string text, int lineNumber, int depth)
         {
             if (text[text.Length - 1] != ']')
             {
@@ -232,7 +248,7 @@ namespace HordeForge.WasmHost.Registry
             }
             foreach (string item in SplitArrayItems(inner))
             {
-                array.Add(ParseValue(item.Trim(), lineNumber));
+                array.Add(ParseValue(item.Trim(), lineNumber, depth + 1));
             }
             return array;
         }

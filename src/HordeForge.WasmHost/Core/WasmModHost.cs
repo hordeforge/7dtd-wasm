@@ -407,7 +407,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQueue, (caller, ptr, len) =>
             {
                 string command = ReadGuestString(caller, ptr, len);
-                return _api.TryQueueCommand(command) ? 0 : -1;
+                return _api.TryQueueCommand(_currentModId, command) ? 0 : -1;
             });
 
             _linker.DefineFunction<int, int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportSense, (caller, outPtr, outCap, token) =>

@@ -32,10 +32,15 @@ namespace HordeForge.WasmHost.Config
 
         /// <summary>
         /// When true, guest writes to WASI stdout and stderr are inherited
-        /// from the host process (the dedicated server console). Default true.
-        /// When false they are discarded.
+        /// from the host process (the dedicated server console). Default
+        /// false: the raw WASI path bypasses the bridge's per-module log rate
+        /// cap entirely, so a hostile guest could flood the server console
+        /// and logfile without bound. Guests should report through the
+        /// <c>log</c> import, which is capped; operators who accept the risk
+        /// (for example while debugging a trusted guest) can enable this.
+        /// When false, guest standard streams are discarded.
         /// </summary>
-        public bool InheritGuestStandardStreams { get; set; } = true;
+        public bool InheritGuestStandardStreams { get; set; } = false;
 
         /// <summary>
         /// Optional upper bound on the wasm caller stack, in bytes. Kept as a

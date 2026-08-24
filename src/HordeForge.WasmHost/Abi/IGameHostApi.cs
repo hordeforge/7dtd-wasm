@@ -36,9 +36,11 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>
         /// Queues a text SimCommand from a guest (the bot servant command
         /// surface: "bot spawn", "bot move", "bot look", "bot shoot", ...).
-        /// Returns true when the command was accepted.
+        /// The mod id is the registry id of the calling module, so the
+        /// implementation can attribute and rate limit per module. Returns
+        /// true when the command was accepted.
         /// </summary>
-        bool TryQueueCommand(string command);
+        bool TryQueueCommand(string modId, string command);
 
         /// <summary>
         /// Builds the binary world snapshot ('ZBS3', see docs/ABI.md) into

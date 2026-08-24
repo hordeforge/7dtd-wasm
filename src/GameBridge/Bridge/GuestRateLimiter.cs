@@ -18,6 +18,14 @@ namespace HordeForge.GameBridge.Bridge
     {
         public const int MaxLinesPerSecond = 10;
 
+        /// <summary>
+        /// Cap for guest SimCommands (bot spawn/move/look/shoot) per module.
+        /// Generous headroom above a busy brain (a few commands per tick at
+        /// 20 TPS), while bounding the game-side work a hostile guest can
+        /// trigger: host imports run outside the wasm fuel budget.
+        /// </summary>
+        public const int MaxCommandsPerSecond = 200;
+
         private const int WindowMs = 1000;
 
         private sealed class Window
@@ -33,9 +41,10 @@ namespace HordeForge.GameBridge.Bridge
         /// Returns true when the line may be written, false when the source
         /// exceeded its cap for this second. Call once per candidate line.
         /// The source's total dropped-line count is reported in
-        /// <paramref name="droppedTotal"/>.
+        /// <paramref name="droppedTotal"/>. <paramref name="maxPerSecond"/>
+        /// overrides the default cap for this limiter instance.
         /// </summary>
-        public bool TryWrite(string source, out long droppedTotal)
+        public bool TryWrite(string source, out long droppedTotal, int maxPerSecond = MaxLinesPerSecond)
         {
             int nowMs = Environment.TickCount;
             if (!_windows.TryGetValue(source, out var window))
@@ -54,7 +63,7 @@ namespace HordeForge.GameBridge.Bridge
                 window.StartTickMs = nowMs;
                 window.Count = 0;
             }
-            if (window.Count >= MaxLinesPerSecond)
+            if (window.Count >= maxPerSecond)
             {
                 window.Dropped++;
                 droppedTotal = window.Dropped;

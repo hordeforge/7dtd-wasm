@@ -112,6 +112,9 @@ with no rebuild.
    guest chat globally at 10 messages/second with a visible drop counter.
 3. An empty `TelnetPassword` makes the telnet server reset every session;
    the acceptance config uses a local throwaway password (`wasmtest`).
+   `run_acceptance.sh` therefore binds every container port to 127.0.0.1
+   only: the console must not be reachable off-host under a password that
+   is public in this repo.
 
 ## Reproducing
 

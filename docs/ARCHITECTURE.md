@@ -28,8 +28,9 @@ Single-threaded by design: call it only from the game main loop.
 
 - `WasmModHost` builds the engine with `WithFuelConsumption(true)`, a static
   memory ceiling, and a bounded wasm stack; wires WASI preview 1 (stdout and
-  stderr inherited, no preopens, empty env); defines the `hordeforge` host
-  API plus the `zdtd` compatibility module; and registers modules by id.
+  stderr discarded by default, no preopens, empty env); defines the
+  `hordeforge` host API plus the `zdtd` compatibility module; and registers
+  modules by id.
 - `LoadModule` validates the module size, the declared memory maximum, and
   the export signatures before instantiation. Any failure throws
   `WasmModLoadException` with a specific reason and leaves the host intact.
