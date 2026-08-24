@@ -1,0 +1,11 @@
+[package]
+name = "guest-noexports"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "guest_noexports"
+crate-type = ["cdylib"]
+
+[dependencies]
+guest-common = { path = "../../guest-common" }

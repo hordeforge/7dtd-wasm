@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "guest-common",
+    "guest-hello",
+    "guest-fixtures/trap",
+    "guest-fixtures/fuel",
+    "guest-fixtures/strings",
+    "guest-fixtures/bigmem",
+    "guest-fixtures/noexports",
+]
+
+[profile.release]
+panic = "abort"

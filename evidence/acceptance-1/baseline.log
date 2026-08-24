@@ -1,0 +1,85 @@
+Mono path[0] = '/home/maci/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server/7DaysToDieServer_Data/Managed'
+Mono config path = '/home/maci/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server/7DaysToDieServer_Data/MonoBleedingEdge/etc'
+Preloaded 'libEOSSDK-Linux-Shipping.so'
+Preloaded 'libMagick.so'
+Preloaded 'lib_burst_generated.so'
+Preloaded 'libdiscord_partner_sdk.so'
+Preloaded 'libgetrss.so'
+Preloaded 'libsteam_api.so'
+Preloaded 'steamclient.so'
+Unable to preload the following plugins:
+	libEOSSDK-LinuxArm64-Shipping.so
+	libMouseLib.so
+Input System module state changed to: Initialized.
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+Loading player data from /home/maci/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server/7DaysToDieServer_Data/data.unity3d
+Initialize engine version: 2022.3.62f2 (7670c08855a9)
+[Subsystems] Discovering subsystems at path /home/maci/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server/7DaysToDieServer_Data/UnitySubsystems
+Forcing GfxDevice: Null
+GfxDevice: creating device client; threaded=0; jobified=0
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.039 seconds
+- Finished resetting the current domain, in  0.001 seconds
+ERROR: Shader Hidden/LandClaimBoundary shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ERROR: Shader Sprites/Default shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ERROR: Shader Sprites/Mask shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ERROR: Shader Legacy Shaders/VertexLit shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ERROR: Shader GUI/Text Shader shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+WARNING: Shader Unsupported: 'Legacy Shaders/Diffuse' - All subshaders removed
+WARNING: Shader Did you use #pragma only_renderers and omit this platform?
+WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
+ERROR: Shader Legacy Shaders/Diffuse shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+WARNING: Shader Unsupported: 'Legacy Shaders/Diffuse' - All subshaders removed
+WARNING: Shader Did you use #pragma only_renderers and omit this platform?
+WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
+WARNING: Shader Unsupported: 'Game/Cube_UI_Glow' - All subshaders removed
+WARNING: Shader Did you use #pragma only_renderers and omit this platform?
+WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
+ERROR: Shader Game/Cube_UI_Glow shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+WARNING: Shader Unsupported: 'Game/Cube_UI_Glow' - All subshaders removed
+WARNING: Shader Did you use #pragma only_renderers and omit this platform?
+WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
+ERROR: Shader Unlit/Transparent Colored shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+The referenced script on this Behaviour (Game Object 'BlockProcessor') is missing!
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+UnloadTime: 0.316173 ms
+Caught fatal signal - signo:11 code:1 errno:0 addr:0x8
+Obtained 37 stack frames.
+#0  0x007fa2f0e44cb0 in __sigaction
+#1  0x007fa25086b617 in mono_set_break_policy
+#2  0x007fa25083c8bd in _init
+#3  0x007fa25083eaf3 in _init
+#4  0x007fa250842788 in mono_jit_set_domain
+#5  0x007fa2508c0763 in mono_install_ftnptr_eh_callback
+#6  0x007fa2508c01cc in mono_install_ftnptr_eh_callback
+#7  0x000000409be396 in (Unknown)
+#8  0x000000412b78f3 in GameEntrypoint/<EntrypointCoroutine>d__8:MoveNext ()
+#9  0x000000412b6c26 in ThreadManager:RunCoroutineSync (System.Collections.IEnumerator)
+#10 0x000000412b6b13 in GameEntrypoint:Awake ()
+#11 0x00000041262e75 in (wrapper runtime-invoke) object:runtime_invoke_void__this__ (object,intptr,intptr,intptr)
+#12 0x007fa250846428 in mono_get_runtime_build_info
+#13 0x007fa2509e578f in mono_runtime_invoke
+#14 0x007fa2509e56d9 in mono_runtime_invoke
+#15 0x007fa2f1f41b82 in (Unknown)
+#16 0x007fa2f1f2eee2 in (Unknown)
+#17 0x007fa2f1f2ede1 in (Unknown)
+#18 0x007fa2f1f88137 in (Unknown)
+#19 0x007fa2f1f22a08 in (Unknown)
+#20 0x007fa2f1f22e86 in (Unknown)
+#21 0x007fa2f1f22961 in (Unknown)
+#22 0x007fa2f1fa2e47 in (Unknown)
+#23 0x007fa2f1d5f95f in (Unknown)
+#24 0x007fa2f1d5f6ad in (Unknown)
+#25 0x007fa2f1d5f606 in (Unknown)
+#26 0x007fa2f1d60427 in (Unknown)
+#27 0x007fa2f1d60cca in (Unknown)
+#28 0x007fa2f1d6bacf in (Unknown)
+#29 0x007fa2f1d52146 in (Unknown)
+#30 0x007fa2f1fb01ac in PlayerMain(int, char**)
+#31 0x007fa2f0e27c8e in __libc_init_first
+#32 0x007fa2f0e27dcb in __libc_start_main
+#33 0x00564f941a9029 in (Unknown)

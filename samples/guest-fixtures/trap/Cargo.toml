@@ -1,0 +1,11 @@
+[package]
+name = "guest-trap"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "guest_trap"
+crate-type = ["cdylib"]
+
+[dependencies]
+guest-common = { path = "../../guest-common" }

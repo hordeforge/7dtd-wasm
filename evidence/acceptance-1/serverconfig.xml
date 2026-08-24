@@ -1,0 +1,17 @@
+<ServerSettings>
+  <property name="UserDataFolder" value="/home/maci/Desktop/hordeforge/7dtd-wasm/evidence/acceptance-1/userdata"/>
+  <property name="GameWorld" value="Navezgane"/>
+  <property name="GameName" value="WasmAcceptance1"/>
+  <property name="GameMode" value="GameModeSurvival"/>
+  <property name="TelnetEnabled" value="true"/>
+  <property name="TelnetPort" value="8081"/>
+  <property name="TelnetPassword" value=""/>
+  <property name="ServerIsPublic" value="false"/>
+  <property name="ServerPort" value="26900"/>
+  <property name="ServerMaxPlayerCount" value="4"/>
+  <property name="MaxSpawnedZombies" value="16"/>
+  <property name="EACEnabled" value="false"/>
+  <property name="ZombieMove" value="0"/>
+  <property name="DayNightLength" value="60"/>
+  <property name="DayLightLength" value="40"/>
+</ServerSettings>

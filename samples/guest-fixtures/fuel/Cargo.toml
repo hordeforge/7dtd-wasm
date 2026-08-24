@@ -1,0 +1,11 @@
+[package]
+name = "guest-fuel"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "guest_fuel"
+crate-type = ["cdylib"]
+
+[dependencies]
+guest-common = { path = "../../guest-common" }
