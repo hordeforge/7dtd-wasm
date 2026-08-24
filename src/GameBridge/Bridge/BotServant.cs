@@ -34,6 +34,10 @@ namespace HordeForge.GameBridge.Bridge
         // pistol 0, shotgun 1, ak 2, sniper 3, auto 4, smg 5).
         private static readonly int[] WeaponDamage = { 12, 18, 14, 45, 12, 10 };
 
+        // Entity records per sense snapshot; 60 records fit under the
+        // guest's 2048-byte sense cap (24 + 60 * 32 = 1944 bytes).
+        private const int MaxSenseRecords = 60;
+
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
         private int _countFloor = DefaultBotCount;
@@ -66,7 +70,7 @@ namespace HordeForge.GameBridge.Bridge
                         RemoveBots(parts);
                         return true;
                     case "count":
-                        if (parts.Length > 2 && int.TryParse(parts[2], out int n) && n >= 0 && n <= 16)
+                        if (parts.Length > 2 && int.TryParse(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
                         {
                             _countFloor = n;
                             EnsureSpawned();
@@ -127,9 +131,9 @@ namespace HordeForge.GameBridge.Bridge
                     {
                         continue;
                     }
-                    if (snapshot.Records.Count >= 60)
+                    if (snapshot.Records.Count >= MaxSenseRecords)
                     {
-                        break; // 60 records fit under the guest's 2048-byte sense cap
+                        break;
                     }
                     snapshot.Records.Add(new SenseSnapshotWriter.EntityRecord
                     {

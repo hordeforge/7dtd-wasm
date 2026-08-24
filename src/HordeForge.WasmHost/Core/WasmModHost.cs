@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Config;
@@ -158,10 +157,6 @@ namespace HordeForge.WasmHost.Core
             catch (Exception ex)
             {
                 throw new WasmModLoadException(id, "instantiation failed: " + ex.Message, ex);
-            }
-            if (instance == null)
-            {
-                throw new WasmModLoadException(id, "instantiation returned no instance");
             }
 
             var mod = new WasmMod(id, _store, fuelPerCall, instance, Tick);

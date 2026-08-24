@@ -64,8 +64,10 @@ namespace HordeForge.GameBridge.Bridge
         {
             get
             {
+                // PlatformID.Unix / MacOSX plus 128, the pre-.NET value Mono
+                // reported for Unix on old runtimes still in game servers.
                 int p = (int)Environment.OSVersion.Platform;
-                return p != 4 && p != 6 && p != 128;
+                return p != (int)PlatformID.Unix && p != (int)PlatformID.MacOSX && p != 128;
             }
         }
 

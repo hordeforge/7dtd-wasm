@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace HordeForge.WasmHost.Registry
 {
@@ -62,11 +61,11 @@ namespace HordeForge.WasmHost.Registry
                 TomlTable root = MiniToml.Parse(toml).AsTable("wasm-mod.toml root");
                 if (root.TryGet("limits", out TomlValue limitsValue))
                 {
-                    BindLimits(manifest, limitsValue.AsTable("limits"), modId);
+                    BindLimits(manifest, limitsValue.AsTable("limits"));
                 }
                 if (root.TryGet("settings", out TomlValue settingsValue))
                 {
-                    BindSettings(manifest, settingsValue.AsTable("settings"), modId);
+                    BindSettings(manifest, settingsValue.AsTable("settings"));
                 }
                 return manifest;
             }
@@ -97,11 +96,11 @@ namespace HordeForge.WasmHost.Registry
                     JsonObject limits = limitsValue.AsObject();
                     if (limits.TryGet("fuelPerCall", out JsonValue fuel))
                     {
-                        manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuelPerCall"), modId);
+                        manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuelPerCall"));
                     }
                     if (limits.TryGet("maxMemoryBytes", out JsonValue memory))
                     {
-                        manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.maxMemoryBytes"), modId);
+                        manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.maxMemoryBytes"));
                     }
                 }
                 return manifest;
@@ -112,19 +111,19 @@ namespace HordeForge.WasmHost.Registry
             }
         }
 
-        private static void BindLimits(ModManifest manifest, TomlTable limits, string modId)
+        private static void BindLimits(ModManifest manifest, TomlTable limits)
         {
             if (limits.TryGet("fuel_per_call", out TomlValue fuel))
             {
-                manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuel_per_call"), modId);
+                manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuel_per_call"));
             }
             if (limits.TryGet("max_memory_bytes", out TomlValue memory))
             {
-                manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.max_memory_bytes"), modId);
+                manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.max_memory_bytes"));
             }
         }
 
-        private static void BindSettings(ModManifest manifest, TomlTable settings, string modId)
+        private static void BindSettings(ModManifest manifest, TomlTable settings)
         {
             var bound = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (string key in settings.Keys)
@@ -143,7 +142,7 @@ namespace HordeForge.WasmHost.Registry
             manifest.Settings = bound;
         }
 
-        private static long CheckFuel(long value, string modId)
+        private static long CheckFuel(long value)
         {
             if (value < 1)
             {
@@ -156,7 +155,7 @@ namespace HordeForge.WasmHost.Registry
             return value;
         }
 
-        private static long CheckMemory(long value, string modId)
+        private static long CheckMemory(long value)
         {
             if (value < 1)
             {

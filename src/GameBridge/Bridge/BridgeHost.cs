@@ -44,10 +44,11 @@ namespace HordeForge.GameBridge.Bridge
             NativeBootstrap.Prepare(modletDir);
 
             WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
-            _settings = new WasmSettingsProvider(Path.Combine(WasmRoot, "wasm.toml"));
+            string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
+            _settings = new WasmSettingsProvider(sharedTomlPath);
 
             var config = new WasmHostConfig();
-            ApplySharedLimits(config);
+            ApplySharedLimits(config, sharedTomlPath);
             _servant = new BotServant();
             _gameApi = new GameHostApi(_settings, _servant);
             _host = new WasmModHost(_gameApi, config);
@@ -145,32 +146,25 @@ namespace HordeForge.GameBridge.Bridge
                     lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
                 }
             }
-            string dropped = _gameApi != null ? _gameApi.RateLimiter.DescribeDropped("guest log lines") : string.Empty;
+            if (_gameApi != null)
+            {
+                AddDropped(lines, _gameApi.RateLimiter, "guest log lines");
+                AddDropped(lines, _gameApi.ChatLimiter, "chat messages");
+                AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
+                AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
+            }
+            AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
+            return lines;
+        }
+
+        /// <summary>Appends the limiter's dropped summary when it has one.</summary>
+        private static void AddDropped(List<string> lines, GuestRateLimiter limiter, string noun)
+        {
+            string dropped = limiter.DescribeDropped(noun);
             if (dropped.Length > 0)
             {
                 lines.Add("  " + dropped);
             }
-            string droppedChat = _gameApi != null ? _gameApi.ChatLimiter.DescribeDropped("chat messages") : string.Empty;
-            if (droppedChat.Length > 0)
-            {
-                lines.Add("  " + droppedChat);
-            }
-            string droppedCommands = _gameApi != null ? _gameApi.CommandLimiter.DescribeDropped("sim commands") : string.Empty;
-            if (droppedCommands.Length > 0)
-            {
-                lines.Add("  " + droppedCommands);
-            }
-            string droppedWorldTime = _gameApi != null ? _gameApi.WorldTimeErrorLimiter.DescribeDropped("world time failures") : string.Empty;
-            if (droppedWorldTime.Length > 0)
-            {
-                lines.Add("  " + droppedWorldTime);
-            }
-            string droppedTick = DispatchFailureLimiter.DescribeDropped("tick failure logs");
-            if (droppedTick.Length > 0)
-            {
-                lines.Add("  " + droppedTick);
-            }
-            return lines;
         }
 
         /// <summary>
@@ -194,50 +188,67 @@ namespace HordeForge.GameBridge.Bridge
             foreach (string dir in Directory.GetDirectories(WasmRoot))
             {
                 string id = Path.GetFileName(dir);
-                string modulePath = Path.Combine(dir, "module.wasm");
-                if (!File.Exists(modulePath))
-                {
-                    continue;
-                }
                 if (_host.TryGetMod(id, out _))
                 {
                     continue;
                 }
-                if (!TryReadManifest(id, out ModManifest? manifest))
+                if (!TryLoadFromDisk(_host, id))
                 {
-                    // Invalid manifest: skip the module rather than run it
-                    // with weaker-than-intended limits.
                     continue;
                 }
-                byte[] wasmBytes;
-                try
-                {
-                    wasmBytes = File.ReadAllBytes(modulePath);
-                }
-                catch (Exception ex)
-                {
-                    // An unreadable module file must not abort the scan or
-                    // the bridge start; skip it like any other bad module.
-                    Log.Warning("[WasmHost] cannot read " + modulePath + ": " + ex.Message + "; module skipped");
-                    continue;
-                }
-                try
-                {
-                    _host.LoadModule(id, wasmBytes, manifest);
-                    _settings?.UpdateMod(id, manifest);
-                    loadedIds.Add(id);
-                    loaded++;
-                }
-                catch (WasmModLoadException ex)
-                {
-                    Log.Warning("[WasmHost] failed to load module " + id + ": " + ex.Message);
-                }
+                loadedIds.Add(id);
+                loaded++;
             }
             foreach (string id in loadedIds)
             {
                 InitOne(id);
             }
             return loaded;
+        }
+
+        /// <summary>
+        /// Loads one module from its Mods/Wasm/&lt;id&gt;/module.wasm file and
+        /// registers its manifest settings. Shared by start scanning and
+        /// "wasm reload". Returns false (logged) when the manifest is
+        /// invalid or the module is unreadable or rejected; on_enable is
+        /// NOT run here, callers init explicitly.
+        /// </summary>
+        private static bool TryLoadFromDisk(WasmModHost host, string id)
+        {
+            string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
+            if (!File.Exists(modulePath))
+            {
+                return false;
+            }
+            if (!TryReadManifest(id, out ModManifest? manifest))
+            {
+                // Invalid manifest: refuse to run the module with
+                // weaker-than-intended limits.
+                return false;
+            }
+            byte[] wasmBytes;
+            try
+            {
+                wasmBytes = File.ReadAllBytes(modulePath);
+            }
+            catch (Exception ex)
+            {
+                // An unreadable module file must not abort the scan or the
+                // bridge start; skip it like any other bad module.
+                Log.Warning("[WasmHost] cannot read " + modulePath + ": " + ex.Message + "; module skipped");
+                return false;
+            }
+            try
+            {
+                host.LoadModule(id, wasmBytes, manifest);
+            }
+            catch (WasmModLoadException ex)
+            {
+                Log.Warning("[WasmHost] failed to load module " + id + ": " + ex.Message);
+                return false;
+            }
+            _settings?.UpdateMod(id, manifest);
+            return true;
         }
 
         /// <summary>
@@ -288,41 +299,14 @@ namespace HordeForge.GameBridge.Bridge
                             oldShutdown.Message + (oldShutdown.Details.Length > 0 ? " (" + oldShutdown.Details + ")" : ""));
             }
             _settings?.RemoveMod(id);
-            string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
-            if (!File.Exists(modulePath))
+            if (!TryLoadFromDisk(_host, id))
             {
                 return false;
             }
-            if (!TryReadManifest(id, out ModManifest? manifest))
-            {
-                // Invalid manifest: refuse to reload with weaker-than-
-                // intended limits; the mod stays unloaded until fixed.
-                return false;
-            }
-            byte[] wasmBytes;
-            try
-            {
-                wasmBytes = File.ReadAllBytes(modulePath);
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("[WasmHost] reload of " + id + " failed: cannot read " + modulePath + ": " + ex.Message);
-                return false;
-            }
-            try
-            {
-                _host.LoadModule(id, wasmBytes, manifest);
-                _settings?.UpdateMod(id, manifest);
-                // Init only the module that was reloaded; dispatching init
-                // to the host would re-run on_enable for every other guest.
-                InitOne(id);
-                return true;
-            }
-            catch (WasmModLoadException ex)
-            {
-                Log.Warning("[WasmHost] reload of " + id + " failed: " + ex.Message);
-                return false;
-            }
+            // Init only the module that was reloaded; dispatching init to
+            // the host would re-run on_enable for every other guest.
+            InitOne(id);
+            return true;
         }
 
         public static bool Unload(string id)
@@ -354,11 +338,10 @@ namespace HordeForge.GameBridge.Bridge
         /// manifests can still tighten further at load). Load order follows
         /// the zdtd convention: code defaults -> wasm.toml -> wasm-mod.toml.
         /// </summary>
-        private static void ApplySharedLimits(WasmHostConfig config)
+        private static void ApplySharedLimits(WasmHostConfig config, string sharedPath)
         {
             try
             {
-                string sharedPath = Path.Combine(WasmRoot, "wasm.toml");
                 if (!File.Exists(sharedPath))
                 {
                     return;

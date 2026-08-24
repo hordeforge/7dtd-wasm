@@ -192,17 +192,17 @@ namespace HordeForge.WasmHost.Core
         private ModRunResult ClassifyFailure(string callName, Exception ex, ulong consumed)
         {
             string message = ex.Message ?? ex.GetType().Name;
-            if (MentionsFuel(message))
-            {
-                FuelExhaustedCalls++;
-                return new ModRunResult(
-                    ModRunStatus.FuelExhausted,
-                    "fuel exhausted during " + callName,
-                    message,
-                    consumed);
-            }
             if (ex is TrapException trap)
             {
+                if (trap.Type == TrapCode.OutOfFuel)
+                {
+                    FuelExhaustedCalls++;
+                    return new ModRunResult(
+                        ModRunStatus.FuelExhausted,
+                        "fuel exhausted during " + callName,
+                        message,
+                        consumed);
+                }
                 TrapCalls++;
                 return new ModRunResult(
                     ModRunStatus.Trap,
@@ -212,11 +212,6 @@ namespace HordeForge.WasmHost.Core
             }
             ErrorCalls++;
             return new ModRunResult(ModRunStatus.Error, "error during " + callName, message, consumed);
-        }
-
-        private static bool MentionsFuel(string message)
-        {
-            return message.IndexOf("fuel", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

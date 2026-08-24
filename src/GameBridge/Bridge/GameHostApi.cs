@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text;
 using HordeForge.WasmHost.Abi;
 
 namespace HordeForge.GameBridge.Bridge

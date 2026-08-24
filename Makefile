@@ -89,7 +89,7 @@ boss:
 # -fno-entry module (without it everything is dead-code eliminated).
 boss-zig:
 	mkdir -p samples/target
-	cd samples/guest-boss-zig && zig build-exe src/main.zig \
+	cd samples/guest-boss-zig && $(ZIG) build-exe src/main.zig \
 	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \
 	  --max-memory=33554432 -femit-bin=guest-boss-zig.wasm
 	cp samples/guest-boss-zig/guest-boss-zig.wasm samples/target/
