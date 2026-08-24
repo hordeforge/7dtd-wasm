@@ -53,21 +53,22 @@ namespace TargetCheck
                 CheckMethod(md, t, "RequestToSpawnPlayer", "void(ClientInfo, int, PlayerProfile, int)", isStatic: false);
             });
 
-            CheckAnyType(md, "ClientInfo", t =>
+            CheckType(md, "ClientInfo", t =>
             {
                 CheckFieldOrProperty(md, t, "playerName", isStatic: false);
                 CheckFieldOrProperty(md, t, "entityId", isStatic: false);
             });
 
             // Bot servant entity APIs (BotServant.cs).
-            CheckAnyType(md, "World", t =>
+            CheckType(md, "World", t =>
             {
                 CheckFieldOrProperty(md, t, "Entities", isStatic: false);
                 CheckMethod(md, t, "GetEntity", "Entity(int)", isStatic: false);
                 CheckMethod(md, t, "SpawnEntityInWorld", "void(Entity)", isStatic: false);
+                CheckMethod(md, t, "GetWorldTime", "ulong()", isStatic: false);
             });
 
-            CheckAnyType(md, "Entity", t =>
+            CheckType(md, "Entity", t =>
             {
                 CheckFieldOrProperty(md, t, "entityId", isStatic: false);
                 CheckFieldOrProperty(md, t, "position", isStatic: false);
@@ -75,7 +76,7 @@ namespace TargetCheck
                 CheckMethod(md, t, "SetRotation", "void(Vector3)", isStatic: false);
             });
 
-            CheckAnyType(md, "EntityAlive", t =>
+            CheckType(md, "EntityAlive", t =>
             {
                 CheckProperty(md, t, "Health", isStatic: false);
                 CheckMethod(md, t, "SetDead", "void()", isStatic: false);
@@ -83,13 +84,13 @@ namespace TargetCheck
                 CheckMethod(md, t, "DamageEntity", "int(DamageSource, int, bool, float)", isStatic: false);
             });
 
-            CheckAnyType(md, "EntityFactory", t =>
+            CheckType(md, "EntityFactory", t =>
             {
                 CheckMethod(md, t, "SetupEntityCreationData", "EntityCreationData(int, Vector3)", isStatic: true);
                 CheckMethod(md, t, "CreateEntity", "Entity(EntityCreationData)", isStatic: true);
             });
 
-            CheckAnyType(md, "EntityClass", t =>
+            CheckType(md, "EntityClass", t =>
             {
                 CheckMethod(md, t, "FromString", "int(string)", isStatic: true);
             });
@@ -119,14 +120,9 @@ namespace TargetCheck
                 CheckFieldOrProperty(md, t, "Instance", isStatic: true);
             });
 
-            CheckAnyType(md, "IModApi", t =>
+            CheckType(md, "IModApi", t =>
             {
                 Console.WriteLine("  IModApi found at " + FullName(md, t) + " (" + TypeKind(md, t) + ")");
-            });
-
-            CheckAnyType(md, "World", t =>
-            {
-                CheckMethod(md, t, "GetWorldTime", "ulong()", isStatic: false);
             });
 
             CheckEnumMember(md, "EChatType", "Global");
@@ -139,7 +135,7 @@ namespace TargetCheck
             {
                 using var peLog = new PEReader(File.OpenRead(logLibrary));
                 var mdLog = peLog.GetMetadataReader();
-                CheckAnyType(mdLog, "Log", t =>
+                CheckType(mdLog, "Log", t =>
                 {
                     CheckMethod(mdLog, t, "Out", "void(string)", isStatic: true);
                     CheckMethod(mdLog, t, "Warning", "void(string)", isStatic: true);
@@ -216,22 +212,6 @@ namespace TargetCheck
         }
 
         private static void CheckType(MetadataReader md, string name, Action<TypeDefinition> body)
-        {
-            foreach (var handle in md.TypeDefinitions)
-            {
-                var t = md.GetTypeDefinition(handle);
-                if (md.GetString(t.Name) == name)
-                {
-                    Console.WriteLine("== " + FullName(md, t) + " ==");
-                    body(t);
-                    Console.WriteLine();
-                    return;
-                }
-            }
-            Fail("type " + name + " not found");
-        }
-
-        private static void CheckAnyType(MetadataReader md, string name, Action<TypeDefinition> body)
         {
             foreach (var handle in md.TypeDefinitions)
             {
@@ -329,37 +309,6 @@ namespace TargetCheck
         private static string TypeKind(MetadataReader md, TypeDefinition t)
         {
             return (t.Attributes & TypeAttributes.Interface) != 0 ? "interface" : "class";
-        }
-
-        private static void DiscoverMembers(MetadataReader md, TypeDefinition type, string nameFilter)
-        {
-            foreach (var handle in type.GetFields())
-            {
-                var f = md.GetFieldDefinition(handle);
-                string n = md.GetString(f.Name);
-                if (n.IndexOf(nameFilter, StringComparison.Ordinal) >= 0)
-                {
-                    Console.WriteLine("  field " + n + " (static=" + ((f.Attributes & FieldAttributes.Static) != 0) + ")");
-                }
-            }
-            foreach (var handle in type.GetProperties())
-            {
-                var p = md.GetPropertyDefinition(handle);
-                string n = md.GetString(p.Name);
-                if (n.IndexOf(nameFilter, StringComparison.Ordinal) >= 0)
-                {
-                    Console.WriteLine("  property " + n);
-                }
-            }
-            foreach (var handle in type.GetMethods())
-            {
-                var m = md.GetMethodDefinition(handle);
-                string n = md.GetString(m.Name);
-                if (n.IndexOf(nameFilter, StringComparison.Ordinal) >= 0)
-                {
-                    Console.WriteLine("  method " + n + " (static=" + ((m.Attributes & MethodAttributes.Static) != 0) + ")");
-                }
-            }
         }
 
         private static void Fail(string what)

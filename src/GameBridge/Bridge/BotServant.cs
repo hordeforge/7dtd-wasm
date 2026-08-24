@@ -21,6 +21,9 @@ namespace HordeForge.GameBridge.Bridge
         private const string BotEntityClass = "zombieSoldier";
         private const int DefaultBotCount = 4;
 
+        // The brain speaks radians; the game speaks degrees.
+        private const float RadiansToDegrees = 57.2957795f;
+
         // Weapon pool damage (index matches the brain's weapon ids:
         // pistol 0, shotgun 1, ak 2, sniper 3, auto 4, smg 5).
         private static readonly int[] WeaponDamage = { 12, 18, 14, 45, 12, 10 };
@@ -130,7 +133,7 @@ namespace HordeForge.GameBridge.Bridge
                         Y = e.position.y,
                         Z = e.position.z,
                         Hp = alive.Health,
-                        Yaw = DegreesToRadians(YawFor(e.entityId)),
+                        Yaw = YawFor(e.entityId),
                         TargetId = 0,
                     });
                 }
@@ -160,11 +163,6 @@ namespace HordeForge.GameBridge.Bridge
                 return SenseSnapshotWriter.KindPlayer;
             }
             return SenseSnapshotWriter.KindBot;
-        }
-
-        private static float DegreesToRadians(float degrees)
-        {
-            return degrees * 0.0174532925f;
         }
 
         private void EnsureSpawned()
@@ -307,7 +305,7 @@ namespace HordeForge.GameBridge.Bridge
             if (e != null)
             {
                 // The brain emits radians; the game uses degrees.
-                e.SetRotation(new UnityEngine.Vector3(0, yaw * 57.2957795f, 0));
+                e.SetRotation(new UnityEngine.Vector3(0, yaw * RadiansToDegrees, 0));
                 _botYaw[e.entityId] = yaw;
             }
         }

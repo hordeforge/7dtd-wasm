@@ -7,7 +7,6 @@ namespace HordeForge.WasmHost.Limits
     /// </summary>
     public sealed class ModRunResult
     {
-        /// <summary>Creates a call result with status, message, details, and fuel consumed.</summary>
         /// <summary>Creates a structured call result.</summary>
         public ModRunResult(ModRunStatus status, string message, string details, ulong fuelConsumed)
         {
@@ -31,8 +30,5 @@ namespace HordeForge.WasmHost.Limits
 
         /// <summary>True when the call completed successfully with StatusOk.</summary>
         public bool Ok => Status == ModRunStatus.Ok;
-
-        /// <summary>True when the call completed and the guest returned StatusOk.</summary>
-        public bool Succeeded => Ok;
     }
 }

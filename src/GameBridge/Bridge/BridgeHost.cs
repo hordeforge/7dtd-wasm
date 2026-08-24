@@ -156,33 +156,11 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     continue;
                 }
-                ModManifest manifest = null;
-                string tomlPath = Path.Combine(dir, "wasm-mod.toml");
-                string jsonPath = Path.Combine(dir, "wasm-mod.json");
-                if (File.Exists(tomlPath))
+                if (!TryReadManifest(id, out ModManifest manifest))
                 {
-                    try
-                    {
-                        manifest = ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
-                    }
-                    catch (WasmModLoadException ex)
-                    {
-                        Log.Warning("[WasmHost] invalid wasm-mod.toml for " + id + ": " + ex.Message + "; module skipped");
-                        continue;
-                    }
-                }
-                else if (File.Exists(jsonPath))
-                {
-                    // Deprecated format, kept for older modules.
-                    try
-                    {
-                        manifest = ModManifest.Parse(File.ReadAllText(jsonPath), id);
-                    }
-                    catch (WasmModLoadException ex)
-                    {
-                        Log.Warning("[WasmHost] invalid wasm-mod.json for " + id + ": " + ex.Message + "; module skipped");
-                        continue;
-                    }
+                    // Invalid manifest: skip the module rather than run it
+                    // with weaker-than-intended limits.
+                    continue;
                 }
                 try
                 {
@@ -211,7 +189,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return false;
             }
-            ModManifest manifest = TryReadManifest(id);
+            if (!TryReadManifest(id, out ModManifest manifest))
+            {
+                // Invalid manifest: refuse to reload with weaker-than-
+                // intended limits; the mod stays unloaded until fixed.
+                return false;
+            }
             try
             {
                 _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
@@ -272,8 +255,13 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        /// <summary>Reads wasm-mod.toml (preferred) or wasm-mod.json for a module id; null when absent or invalid.</summary>
-        private static ModManifest TryReadManifest(string id)
+        /// <summary>
+        /// Reads wasm-mod.toml (preferred) or the deprecated wasm-mod.json
+        /// for a module id. Returns false when a manifest is present but
+        /// invalid (logged); true with a null manifest when the module ships
+        /// none, so host defaults apply.
+        /// </summary>
+        private static bool TryReadManifest(string id, out ModManifest manifest)
         {
             string dir = Path.Combine(WasmRoot, id);
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");
@@ -282,18 +270,24 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (File.Exists(tomlPath))
                 {
-                    return ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
+                    manifest = ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
+                    return true;
                 }
                 if (File.Exists(jsonPath))
                 {
-                    return ModManifest.Parse(File.ReadAllText(jsonPath), id);
+                    // Deprecated format, kept for older modules.
+                    manifest = ModManifest.Parse(File.ReadAllText(jsonPath), id);
+                    return true;
                 }
+                manifest = null;
+                return true;
             }
             catch (WasmModLoadException ex)
             {
-                Log.Warning("[WasmHost] invalid manifest for " + id + ": " + ex.Message);
+                Log.Warning("[WasmHost] invalid manifest for " + id + ": " + ex.Message + "; module skipped");
+                manifest = null;
+                return false;
             }
-            return null;
         }
 
         public static void Shutdown()

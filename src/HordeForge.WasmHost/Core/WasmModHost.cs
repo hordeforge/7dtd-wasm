@@ -341,7 +341,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int>(AbiConstants.HostModule, "log", (Caller caller, int level, int ptr, int len) =>
             {
                 string message = ReadGuestString(caller, ptr, len);
-                _api.Log(_config.LogSourcePrefix, level, message);
+                _api.Log(LogSource(), level, message);
             });
 
             _linker.DefineFunction<long>(AbiConstants.HostModule, AbiConstants.ImportTick, caller =>
@@ -361,18 +361,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     return AbiConstants.SettingNotFound;
                 }
-                byte[] bytes = Encoding.UTF8.GetBytes(value);
-                if (bytes.Length > outCap)
-                {
-                    return AbiConstants.SettingBufferTooSmall;
-                }
-                Memory? memory = caller.GetMemory("memory");
-                if (memory == null)
-                {
-                    return AbiConstants.SettingBufferTooSmall;
-                }
-                memory.WriteString(outPtr, value, Encoding.UTF8);
-                return bytes.Length;
+                return WriteGuestString(caller, outPtr, outCap, value, AbiConstants.SettingBufferTooSmall);
             });
 
             _linker.DefineFunction<int, int, int>(AbiConstants.HostModule, "send_chat", (caller, ptr, len) =>
@@ -389,18 +378,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     return AbiConstants.SettingNotFound;
                 }
-                byte[] bytes = Encoding.UTF8.GetBytes(_currentJoinName);
-                if (bytes.Length > outCap)
-                {
-                    return AbiConstants.SettingBufferTooSmall;
-                }
-                Memory? memory = caller.GetMemory("memory");
-                if (memory == null)
-                {
-                    return AbiConstants.SettingBufferTooSmall;
-                }
-                memory.WriteString(outPtr, _currentJoinName, Encoding.UTF8);
-                return bytes.Length;
+                return WriteGuestString(caller, outPtr, outCap, _currentJoinName, AbiConstants.SettingBufferTooSmall);
             });
 
             DefineZdtdCompatibilityApi();
@@ -419,7 +397,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, "log", (caller, level, ptr, len) =>
             {
                 string message = ReadGuestString(caller, ptr, len);
-                _api.Log(_config.LogSourcePrefix, level, message);
+                _api.Log(LogSource(), level, message);
             });
 
             _linker.DefineFunction<long>(AbiConstants.ZdtdHostModule, AbiConstants.ImportTick, caller =>
@@ -462,19 +440,41 @@ namespace HordeForge.WasmHost.Core
                 {
                     return -1;
                 }
-                byte[] bytes = Encoding.UTF8.GetBytes(answer);
-                if (bytes.Length > outCap)
-                {
-                    return -2;
-                }
-                Memory? memory = caller.GetMemory("memory");
-                if (memory == null)
-                {
-                    return -2;
-                }
-                memory.WriteString(outPtr, answer, Encoding.UTF8);
-                return bytes.Length;
+                return WriteGuestString(caller, outPtr, outCap, answer, -2);
             });
+        }
+
+        /// <summary>
+        /// Source tag for guest log lines: the configured prefix plus the
+        /// calling mod's id, so log attribution and the bridge's per-module
+        /// rate cap (ADR 0006) key on the module, not on the shared prefix.
+        /// </summary>
+        private string LogSource()
+        {
+            return _currentModId.Length == 0
+                ? _config.LogSourcePrefix
+                : _config.LogSourcePrefix + "/" + _currentModId;
+        }
+
+        /// <summary>
+        /// Writes a UTF-8 string into guest linear memory. Returns the byte
+        /// count written, or <paramref name="tooSmallStatus"/> when the
+        /// guest buffer cannot hold it or the guest exports no 'memory'.
+        /// </summary>
+        private static int WriteGuestString(Caller caller, int outPtr, int outCap, string value, int tooSmallStatus)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(value);
+            if (bytes.Length > outCap)
+            {
+                return tooSmallStatus;
+            }
+            Memory? memory = caller.GetMemory("memory");
+            if (memory == null)
+            {
+                return tooSmallStatus;
+            }
+            memory.WriteString(outPtr, value, Encoding.UTF8);
+            return bytes.Length;
         }
 
         private static string ReadGuestString(Caller caller, int ptr, int len)
