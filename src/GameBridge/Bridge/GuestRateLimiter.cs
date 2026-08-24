@@ -39,7 +39,10 @@ namespace HordeForge.GameBridge.Bridge
                 window = new Window { StartSecond = now };
                 _windows[source] = window;
             }
-            if (window.StartSecond != now)
+            // Reset only when time moved forward. On a backward wall-clock
+            // step (NTP correction) "!= now" would reset the window on every
+            // call until the clock caught up, opening an unlimited burst.
+            if (now > window.StartSecond)
             {
                 window.StartSecond = now;
                 window.Count = 0;

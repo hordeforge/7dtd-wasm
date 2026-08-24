@@ -277,10 +277,13 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            int id = int.Parse(parts[2]);
-            float x = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-            float y = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
-            float z = float.Parse(parts[5], System.Globalization.CultureInfo.InvariantCulture);
+            if (!TryParseId(parts[2], out int id) ||
+                !TryParseFloat(parts[3], out float x) ||
+                !TryParseFloat(parts[4], out float y) ||
+                !TryParseFloat(parts[5], out float z))
+            {
+                return;
+            }
             Entity? e = FindBot(id);
             if (e != null)
             {
@@ -299,8 +302,10 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            int id = int.Parse(parts[2]);
-            float yaw = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+            if (!TryParseId(parts[2], out int id) || !TryParseFloat(parts[3], out float yaw))
+            {
+                return;
+            }
             Entity? e = FindBot(id);
             if (e != null)
             {
@@ -316,8 +321,10 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            int botId = int.Parse(parts[2]);
-            int targetId = int.Parse(parts[3]);
+            if (!TryParseId(parts[2], out int botId) || !TryParseId(parts[3], out int targetId))
+            {
+                return;
+            }
             bool head = parts.Length > 4 && parts[4] == "head";
             var game = GameManager.Instance;
             if (game == null || game.World == null)
@@ -356,6 +363,24 @@ namespace HordeForge.GameBridge.Bridge
             }
             var game = GameManager.Instance;
             return game != null && game.World != null ? game.World.GetEntity(entityId) : null;
+        }
+
+        // SimCommands arrive from untrusted guests through the queue import.
+        // Every number is parsed invariantly; floats must additionally be
+        // finite ("nan" and "Infinity" parse cleanly otherwise) so a hostile
+        // command cannot corrupt entity position/rotation or persist a NaN
+        // yaw into every later sense snapshot.
+        private static bool TryParseId(string text, out int value)
+        {
+            return int.TryParse(text, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out value);
+        }
+
+        private static bool TryParseFloat(string text, out float value)
+        {
+            return float.TryParse(text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out value)
+                && !float.IsNaN(value) && !float.IsInfinity(value);
         }
     }
 }
