@@ -30,6 +30,10 @@ name = "boss-zig"            # informational; the folder name is the mod id
 description = "Boss watcher"
 version = "0.1.0"
 
+# The mod id (the folder name under Mods/Wasm) must be a plain folder name:
+# no path separators, no dot-only segments, no control characters. Invalid
+# folders are skipped with a warning at load.
+
 # Host-enforced caps. A manifest can only tighten the host defaults:
 # fuel_per_call above the host ceiling (50,000,000) is rejected at load.
 [limits]

@@ -89,7 +89,10 @@ namespace HordeForge.GameBridge.Bridge
                     case "cfg":
                         // The guest keeps its own per-slot skill and personality
                         // state; the servant acknowledges and logs the policy.
-                        global::Log.Out("[WasmHost] bot " + verb + ": " + command.Substring(3 + verb.Length));
+                        string policy = parts.Length > 2
+                            ? string.Join(" ", parts, 2, parts.Length - 2)
+                            : string.Empty;
+                        global::Log.Out("[WasmHost] bot " + verb + ": " + policy);
                         return true;
                     default:
                         global::Log.Out("[WasmHost] bot cmd (unknown verb '" + verb + "'): " + command);

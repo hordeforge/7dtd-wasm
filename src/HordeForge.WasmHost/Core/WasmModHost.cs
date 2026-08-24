@@ -90,13 +90,13 @@ namespace HordeForge.WasmHost.Core
         public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
         {
             ThrowIfDisposed();
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new ArgumentException("mod id must not be empty", nameof(id));
-            }
             if (wasmBytes == null)
             {
                 throw new ArgumentNullException(nameof(wasmBytes));
+            }
+            if (!ModId.IsValid(id))
+            {
+                throw new WasmModLoadException(id ?? string.Empty, "mod id must be a plain folder name without path separators or control characters");
             }
             if (wasmBytes.Length > _config.MaxModuleSizeBytes)
             {
