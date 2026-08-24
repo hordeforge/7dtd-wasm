@@ -92,10 +92,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return;
                 }
-                if (!ManifestFiles.TryRead(_sharedPath, out string text, out string? failureReason))
-                {
-                    throw new InvalidOperationException(_sharedPath + " is unreadable: " + failureReason);
-                }
+                string text = ManifestFiles.ReadRequired(_sharedPath);
                 ModManifest shared = ModManifest.ParseToml(text, "shared");
                 _shared.Clear();
                 foreach (var pair in shared.Settings)
@@ -113,8 +110,8 @@ namespace HordeForge.GameBridge.Bridge
                 // mtime stays unapplied, so a later fixed save re-reads.
                 if (!attempted || !_loggedFailureValid || attemptedMtime != _loggedFailureMtime)
                 {
-                    global::Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + ex.Message +
-                                        "; serving previous shared settings");
+                    Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + ex.Message +
+                                "; serving previous shared settings");
                     _loggedFailureMtime = attemptedMtime;
                     _loggedFailureValid = true;
                 }

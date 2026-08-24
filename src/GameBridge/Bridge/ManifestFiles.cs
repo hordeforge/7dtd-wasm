@@ -48,5 +48,19 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
         }
+
+        /// <summary>
+        /// Reads a manifest file behind the shared size bound; throws so the
+        /// caller's existing error paths (skip the module, keep defaults)
+        /// handle it uniformly.
+        /// </summary>
+        public static string ReadRequired(string path)
+        {
+            if (!TryRead(path, out string content, out string? failureReason))
+            {
+                throw new InvalidOperationException(path + " is unreadable: " + failureReason);
+            }
+            return content;
+        }
     }
 }

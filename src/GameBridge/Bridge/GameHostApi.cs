@@ -18,15 +18,17 @@ namespace HordeForge.GameBridge.Bridge
         {
             _settings = settings;
             _servant = servant;
-            RateLimiter = new GuestRateLimiter();
+            // Each limiter carries its own cap from construction; the
+            // per-purpose constants cannot drift from their call sites.
+            LogLimiter = new GuestRateLimiter();
             ChatLimiter = new GuestRateLimiter();
-            CommandLimiter = new GuestRateLimiter();
-            SenseLimiter = new GuestRateLimiter();
+            CommandLimiter = new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond);
+            SenseLimiter = new GuestRateLimiter(GuestRateLimiter.MaxSensePerSecond);
             WorldTimeErrorLimiter = new GuestRateLimiter();
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
-        public GuestRateLimiter RateLimiter { get; }
+        public GuestRateLimiter LogLimiter { get; }
 
         /// <summary>Global guest chat rate limiter (one shared "chat" source); exposed for "wasm status".</summary>
         public GuestRateLimiter ChatLimiter { get; }
@@ -50,7 +52,9 @@ namespace HordeForge.GameBridge.Bridge
 
         public void Log(string source, int level, string message)
         {
-            if (!RateLimiter.TryWrite(source, out long dropped))
+            // The game logger must be named global::Log here: the simple
+            // name binds to this class's own Log method (CS0119).
+            if (!LogLimiter.TryWrite(source, out long dropped))
             {
                 // Every 100th dropped line is logged so throttling is
                 // visible without the log itself being flooded.
@@ -115,7 +119,7 @@ namespace HordeForge.GameBridge.Bridge
             // SimCommands execute game-side work (entity spawn, damage) that
             // the wasm fuel budget never sees, so each module is rate capped
             // like its log output (ADR 0006 reasoning).
-            if (!CommandLimiter.TryWrite(modId, out _, GuestRateLimiter.MaxCommandsPerSecond))
+            if (!CommandLimiter.TryWrite(modId, out _))
             {
                 return false;
             }
@@ -143,7 +147,7 @@ namespace HordeForge.GameBridge.Bridge
             // is rate capped like its SimCommands (ADR 0006 reasoning). A
             // capped request reports "no world data" (0), the same verdict a
             // blind brain already handles, and the drop is counted.
-            if (!SenseLimiter.TryWrite(modId, out _, GuestRateLimiter.MaxSensePerSecond))
+            if (!SenseLimiter.TryWrite(modId, out _))
             {
                 return 0;
             }

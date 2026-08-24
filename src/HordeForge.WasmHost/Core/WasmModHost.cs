@@ -264,7 +264,7 @@ namespace HordeForge.WasmHost.Core
             _currentJoinName = playerName ?? string.Empty;
             try
             {
-                var results = new List<ModRunResult>();
+                var results = new List<ModRunResult>(_mods.Count);
                 foreach (var mod in ModsInLoadOrder())
                 {
                     _currentModId = mod.Id;
@@ -442,7 +442,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQueue, (caller, ptr, len) =>
             {
                 string command = ReadGuestString(caller, ptr, len);
-                return _api.TryQueueCommand(_currentModId, command) ? 0 : -1;
+                return _api.TryQueueCommand(_currentModId, command) ? AbiConstants.QueueAccepted : AbiConstants.QueueRejected;
             });
 
             _linker.DefineFunction<int, int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportSense, (caller, outPtr, outCap, token) =>
@@ -476,9 +476,9 @@ namespace HordeForge.WasmHost.Core
                 string? answer = _api.TryQuery(request);
                 if (answer == null)
                 {
-                    return -1;
+                    return AbiConstants.QueryNoAnswer;
                 }
-                return WriteGuestString(caller, outPtr, outCap, answer, -2);
+                return WriteGuestString(caller, outPtr, outCap, answer, AbiConstants.QueryBufferTooSmall);
             });
         }
 

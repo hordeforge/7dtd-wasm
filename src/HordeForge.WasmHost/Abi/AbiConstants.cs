@@ -51,6 +51,18 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>zdtd import: text request/response query (cover, path).</summary>
         public const string ImportQuery = "query";
 
+        /// <summary>The zdtd queue import accepted the SimCommand.</summary>
+        public const int QueueAccepted = 0;
+
+        /// <summary>The queue target refused the command.</summary>
+        public const int QueueRejected = -1;
+
+        /// <summary>The query has no answer (cover/path not wired).</summary>
+        public const int QueryNoAnswer = -1;
+
+        /// <summary>The guest output buffer is smaller than the response.</summary>
+        public const int QueryBufferTooSmall = -2;
+
         /// <summary>Optional guest export: console/admin command handler (zdtd plugin surface).</summary>
         public const string ExportAdminCommand = "on_admin_command";
 

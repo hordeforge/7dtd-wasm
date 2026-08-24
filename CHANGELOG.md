@@ -8,6 +8,17 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Changed
 
+- Guest rate limiters bind their cap at construction
+  (`new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond)`) and
+  `TryWrite` lost its per-call override parameter, so a limiter's cap can
+  no longer drift from its call sites. The generic `GameHostApi.RateLimiter`
+  property is renamed `LogLimiter`, matching its siblings.
+- `NativeAssets.StageNativeLibrary` stages from the newest installed
+  Wasmtime NuGet package instead of a hard-coded version string, matching
+  what `make dist` already does from the lock file.
+- Named the zdtd queue/query result codes in `AbiConstants`
+  (`QueueAccepted`, `QueueRejected`, `QueryNoAnswer`,
+  `QueryBufferTooSmall`); no wire change (docs/ABI.md unchanged).
 - Sense requests (`zdtd.sense`) are now rate capped per module
   (200/second, same reasoning as the SimCommand cap): building a snapshot
   scans the live world entity list on the host side, work the wasm fuel

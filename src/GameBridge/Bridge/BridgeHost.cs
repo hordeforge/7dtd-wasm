@@ -176,7 +176,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 if (_gameApi != null)
                 {
-                    AddDropped(lines, _gameApi.RateLimiter, "guest log lines");
+                    AddDropped(lines, _gameApi.LogLimiter, "guest log lines");
                     AddDropped(lines, _gameApi.ChatLimiter, "chat messages");
                     AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
                     AddDropped(lines, _gameApi.SenseLimiter, "sense snapshots");
@@ -394,7 +394,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return;
                 }
-                ModManifest shared = ModManifest.ParseToml(ReadBounded(sharedPath), "shared");
+                ModManifest shared = ModManifest.ParseToml(ManifestFiles.ReadRequired(sharedPath), "shared");
                 if (shared.FuelPerCall.HasValue)
                 {
                     config.FuelPerCall = shared.FuelPerCall.Value;
@@ -431,13 +431,13 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (File.Exists(tomlPath))
                 {
-                    manifest = ModManifest.ParseToml(ReadBounded(tomlPath), id);
+                    manifest = ModManifest.ParseToml(ManifestFiles.ReadRequired(tomlPath), id);
                     return true;
                 }
                 if (File.Exists(jsonPath))
                 {
                     // Deprecated format, kept for older modules.
-                    manifest = ModManifest.Parse(ReadBounded(jsonPath), id);
+                    manifest = ModManifest.Parse(ManifestFiles.ReadRequired(jsonPath), id);
                     return true;
                 }
                 manifest = null;
@@ -458,20 +458,6 @@ namespace HordeForge.GameBridge.Bridge
                 manifest = null;
                 return false;
             }
-        }
-
-        /// <summary>
-        /// Reads a manifest file behind the shared size bound; throws so the
-        /// caller's existing error paths (skip the module, keep defaults)
-        /// handle it uniformly.
-        /// </summary>
-        private static string ReadBounded(string path)
-        {
-            if (!ManifestFiles.TryRead(path, out string content, out string? failureReason))
-            {
-                throw new InvalidOperationException(path + " is unreadable: " + failureReason);
-            }
-            return content;
         }
 
         public static void Shutdown()

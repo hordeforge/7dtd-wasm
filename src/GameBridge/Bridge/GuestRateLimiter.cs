@@ -7,9 +7,9 @@ namespace HordeForge.GameBridge.Bridge
     /// Caps guest output per source key so a talkative mod cannot flood the
     /// server log or the global chat. A source is a mod id (per-module caps
     /// for log lines and SimCommands) or a shared tag such as "chat" (the
-    /// global chat cap). Each source may emit at most
-    /// <see cref="MaxLinesPerSecond"/> items per second (or the override),
-    /// measured with the monotonic process clock so an operator clock step
+    /// global chat cap). Each source may emit at most the cap the limiter
+    /// was constructed with per second, measured with the monotonic process
+    /// clock so an operator clock step
     /// or NTP correction can neither freeze output nor open a burst; excess
     /// items are dropped and counted.
     /// The counters surface in "wasm status" and every 100th dropped item is
@@ -41,6 +41,8 @@ namespace HordeForge.GameBridge.Bridge
 
         private const int WindowMs = 1000;
 
+        private readonly int _maxPerSecond;
+
         private sealed class Window
         {
             public int StartTickMs;
@@ -51,13 +53,26 @@ namespace HordeForge.GameBridge.Bridge
         private readonly Dictionary<string, Window> _windows = new Dictionary<string, Window>(StringComparer.Ordinal);
 
         /// <summary>
-        /// Returns true when the line may be written, false when the source
-        /// exceeded its cap for this second. Call once per candidate line.
-        /// The source's total dropped-line count is reported in
-        /// <paramref name="droppedTotal"/>. <paramref name="maxPerSecond"/>
-        /// overrides the default cap for this limiter instance.
+        /// Creates a limiter whose cap is fixed at construction, so the
+        /// pairing of limiter instance and cap lives in one place instead of
+        /// being re-declared at every call site.
         /// </summary>
-        public bool TryWrite(string source, out long droppedTotal, int maxPerSecond = MaxLinesPerSecond)
+        public GuestRateLimiter(int maxPerSecond = MaxLinesPerSecond)
+        {
+            if (maxPerSecond < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxPerSecond));
+            }
+            _maxPerSecond = maxPerSecond;
+        }
+
+        /// <summary>
+        /// Returns true when the line may be written, false when the source
+        /// exceeded this limiter's cap for this second. Call once per
+        /// candidate line. The source's total dropped-line count is reported
+        /// in <paramref name="droppedTotal"/>.
+        /// </summary>
+        public bool TryWrite(string source, out long droppedTotal)
         {
             int nowMs = Environment.TickCount;
             if (!_windows.TryGetValue(source, out var window))
@@ -76,7 +91,7 @@ namespace HordeForge.GameBridge.Bridge
                 window.StartTickMs = nowMs;
                 window.Count = 0;
             }
-            if (window.Count >= maxPerSecond)
+            if (window.Count >= _maxPerSecond)
             {
                 window.Dropped++;
                 droppedTotal = window.Dropped;

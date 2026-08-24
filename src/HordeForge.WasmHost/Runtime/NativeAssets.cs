@@ -57,22 +57,7 @@ namespace HordeForge.WasmHost.Runtime
             Directory.CreateDirectory(destinationDirectory);
 
             string rid = RuntimeIdentifier();
-            string packageNative = Path.Combine(
-                GetUserProfileDirectory(),
-                ".nuget",
-                "packages",
-                "wasmtime",
-                "44.0.0",
-                "runtimes",
-                rid,
-                "native");
-
-            if (!Directory.Exists(packageNative))
-            {
-                throw new DirectoryNotFoundException(
-                    "Wasmtime native assets not found at " + packageNative +
-                    ". Restore the Wasmtime NuGet package first, or stage the native library manually.");
-            }
+            string packageNative = FindNewestPackageNativeDirectory(rid);
 
             string? source = null;
             foreach (string file in Directory.GetFiles(packageNative))
@@ -95,6 +80,52 @@ namespace HordeForge.WasmHost.Runtime
                 File.Copy(source, destination, overwrite: false);
             }
             return destination;
+        }
+
+        /// <summary>
+        /// Locates runtimes/&lt;rid&gt;/native under the highest installed
+        /// Wasmtime NuGet version, so staging cannot drift from the resolved
+        /// package version the way a hard-coded version string would.
+        /// </summary>
+        private static string FindNewestPackageNativeDirectory(string rid)
+        {
+            string packageRoot = Path.Combine(
+                GetUserProfileDirectory(),
+                ".nuget",
+                "packages",
+                "wasmtime");
+            string? newest = null;
+            Version? newestVersion = null;
+            if (Directory.Exists(packageRoot))
+            {
+                foreach (string versionDir in Directory.GetDirectories(packageRoot))
+                {
+                    // Only semantic version directories; anything else in
+                    // the cache layout is skipped.
+                    if (!Version.TryParse(Path.GetFileName(versionDir), out Version? version))
+                    {
+                        continue;
+                    }
+                    string candidate = Path.Combine(versionDir, "runtimes", rid, "native");
+                    if (!Directory.Exists(candidate))
+                    {
+                        continue;
+                    }
+                    if (newestVersion == null || version > newestVersion)
+                    {
+                        newestVersion = version;
+                        newest = candidate;
+                    }
+                }
+            }
+            if (newest == null)
+            {
+                throw new DirectoryNotFoundException(
+                    "Wasmtime native assets not found under " + packageRoot +
+                    " for runtime id " + rid +
+                    ". Restore the Wasmtime NuGet package first, or stage the native library manually.");
+            }
+            return newest;
         }
 
         private static string GetUserProfileDirectory()

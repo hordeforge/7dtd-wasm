@@ -96,7 +96,7 @@ namespace HordeForge.GameBridge.Bridge
                         RemoveBots(parts);
                         return true;
                     case "count":
-                        if (parts.Length > 2 && int.TryParse(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
+                        if (parts.Length > 2 && TryParseId(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
                         {
                             _countFloor = n;
                             EnsureSpawned();
@@ -118,16 +118,16 @@ namespace HordeForge.GameBridge.Bridge
                         string policy = parts.Length > 2
                             ? string.Join(" ", parts, 2, parts.Length - 2)
                             : string.Empty;
-                        global::Log.Out("[WasmHost] bot " + verb + ": " + policy);
+                        Log.Out("[WasmHost] bot " + verb + ": " + policy);
                         return true;
                     default:
-                        global::Log.Out("[WasmHost] bot cmd (unknown verb '" + verb + "'): " + command);
+                        Log.Out("[WasmHost] bot cmd (unknown verb '" + verb + "'): " + command);
                         return true;
                 }
             }
             catch (Exception ex)
             {
-                global::Log.Warning("[WasmHost] bot " + verb + " failed: " + ex);
+                Log.Warning("[WasmHost] bot " + verb + " failed: " + ex);
                 return false;
             }
         }
@@ -180,7 +180,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                global::Log.Warning("[WasmHost] sense failed: " + ex.Message);
+                Log.Warning("[WasmHost] sense failed: " + ex.Message);
                 return 0;
             }
             return SenseSnapshotWriter.Write(snapshot, buffer);
@@ -253,23 +253,23 @@ namespace HordeForge.GameBridge.Bridge
                 int classId = EntityClass.FromString(BotEntityClass);
                 if (classId < 0)
                 {
-                    global::Log.Warning("[WasmHost] entity class '" + BotEntityClass + "' not found");
+                    Log.Warning("[WasmHost] entity class '" + BotEntityClass + "' not found");
                     return false;
                 }
                 Entity e = EntityFactory.CreateEntity(classId, pos, UnityEngine.Vector3.zero);
                 if (e == null)
                 {
-                    global::Log.Warning("[WasmHost] bot entity creation failed");
+                    Log.Warning("[WasmHost] bot entity creation failed");
                     return false;
                 }
                 game.World.SpawnEntityInWorld(e);
                 _bots.Add(e.entityId);
-                global::Log.Out("[WasmHost] bot spawned entity " + e.entityId + " at " + pos.x + "," + pos.y + "," + pos.z);
+                Log.Out("[WasmHost] bot spawned entity " + e.entityId + " at " + pos.x + "," + pos.y + "," + pos.z);
                 return true;
             }
             catch (Exception ex)
             {
-                global::Log.Warning("[WasmHost] bot spawn failed (world not ready?): " + ex.Message);
+                Log.Warning("[WasmHost] bot spawn failed (world not ready?): " + ex.Message);
                 return false;
             }
         }
@@ -319,7 +319,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 return;
             }
-            if (parts.Length > 2 && int.TryParse(parts[2], out int removeId))
+            if (parts.Length > 2 && TryParseId(parts[2], out int removeId))
             {
                 Despawn(removeId);
             }
@@ -424,7 +424,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             var source = new DamageSourceEntity(EnumDamageSource.External, EnumDamageTypes.Piercing, botId);
             targetAlive.DamageEntity(source, dmg, head, 1f);
-            global::Log.Out("[WasmHost] bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
+            Log.Out("[WasmHost] bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
         }
 
         private Entity? FindBot(int entityId)
