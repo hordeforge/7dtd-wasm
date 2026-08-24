@@ -207,16 +207,16 @@ namespace HordeForge.GameBridge.Bridge
             }
             // Spawn defensively and retry: the world is not ready to host
             // entities during world creation (the game's own EAIManager can
-            // NRE), so _spawned latches only when every spawn succeeded.
-            int ok = 0;
-            for (int i = 0; i < _countFloor; i++)
+            // NRE). Top up to the configured floor instead of re-running the
+            // full batch, so a partially failed round cannot stack another
+            // batch on top of the bots that already spawned; _spawned latches
+            // only once the floor is met.
+            int target = Math.Min(_countFloor, MaxBotCount);
+            PruneDeadBots();
+            while (_bots.Count < target && SpawnOne())
             {
-                if (SpawnOne())
-                {
-                    ok++;
-                }
             }
-            if (ok == _countFloor || _countFloor == 0)
+            if (_bots.Count >= target)
             {
                 _spawned = true;
             }
