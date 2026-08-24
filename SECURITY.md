@@ -15,7 +15,7 @@ are not.
 | Attack | Defense | Enforced at |
 |---|---|---|
 | Infinite loop / CPU burn | Per-call fuel budget (`FuelPerCall`, default 1,000,000 instructions) | Every call (init, tick, shutdown) |
-| Memory exhaustion | Declared memory maximum checked against `StaticMemoryMaximumBytes` (default 32 MiB); modules without a declared maximum are rejected | Module load |
+| Memory exhaustion | Declared memory maximum checked against `StaticMemoryMaximumBytes` (default 32 MiB). A module with NO declared maximum is treated as declaring the wasm32 ceiling (4 GiB) and loads only when the operator raised the cap via `wasm.toml [limits] max_memory_bytes`; the bound for such modules is the weaker 4 GiB ceiling, so prefer plugins built with an explicit `--max-memory` | Module load |
 | Giant module file | `MaxModuleSizeBytes` (default 1 MiB) | Module load |
 | Reading host memory | Guests see only their own linear memory; no pointers into host space are ever exposed | Runtime (engine) |
 | Reaching game objects | No game types, Reflection, or file APIs reachable from wasm; only the ABI imports | Design |

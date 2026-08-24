@@ -62,6 +62,31 @@ recognizes the other. Two deliberate differences, both documented:
   that burns fuel every tick keeps running at bounded cost instead of being
   disabled.
 
+## zdtd-server compatibility (module `zdtd`)
+
+Sibling zdtd-server plugins (the fps_bot and its kin) import module `zdtd`
+with bare field names and export bare hooks. Quarantine defines the same
+surface so those plugins run unmodified:
+
+| Import | Signature | Meaning |
+|---|---|---|
+| `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Same as the hordeforge log |
+| `tick` | `() -> i64` | Same as the hordeforge tick |
+| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand for the bot servant (`bot spawn`, `bot move`, `bot look`, `bot shoot`, ...). 0 accepted, -1 rejected |
+| `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS3', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
+| `query` | `(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Text request/response (`cover bx bz tx tz`, `path bx bz tx tz`). Returns response bytes, -1 no answer, -2 buffer too small |
+
+Guest hooks are accepted with either an `i32` result (our ABI) or `void`
+(zdtd contract) for `on_enable`, `on_tick`, and `on_shutdown`. The optional
+`on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap) -> i32` export is
+resolved when present.
+
+Modules without a declared memory maximum are treated as declaring the
+wasm32 ceiling (4 GiB) and load only when the effective cap allows it; an
+operator raises the cap via `wasm.toml [limits] max_memory_bytes`. This is
+how plugins built without `--max-memory` run unmodified (ADR 0004
+amendment; see SECURITY.md for the weaker bound).
+
 ## Host behavior guarantees
 
 - Every call runs under a fresh fuel budget (default 1,000,000 instructions).

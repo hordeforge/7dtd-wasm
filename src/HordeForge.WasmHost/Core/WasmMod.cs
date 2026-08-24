@@ -20,6 +20,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Func<int> _tick;
         private readonly Func<int>? _shutdown;
         private readonly Func<int, int>? _onPlayerJoin;
+        private readonly Func<int, int, int, int, int>? _onAdminCommand;
 
         internal WasmMod(string id, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
@@ -28,10 +29,11 @@ namespace HordeForge.WasmHost.Core
             _fuelPerCall = fuelPerCall;
             InitTick = initTick;
 
-            _shutdown = instance.GetFunction<int>(AbiConstants.ExportShutdown);
+            _shutdown = ResolveNoArg(instance, AbiConstants.ExportShutdown);
             _onPlayerJoin = instance.GetFunction<int, int>(AbiConstants.ExportPlayerJoin);
-            var init = instance.GetFunction<int>(AbiConstants.ExportInit);
-            var tick = instance.GetFunction<int>(AbiConstants.ExportTick);
+            _onAdminCommand = instance.GetFunction<int, int, int, int, int>(AbiConstants.ExportAdminCommand);
+            var init = ResolveNoArg(instance, AbiConstants.ExportInit);
+            var tick = ResolveNoArg(instance, AbiConstants.ExportTick);
             if (init == null)
             {
                 throw new WasmModLoadException(id, "missing required export " + AbiConstants.ExportInit);
@@ -42,6 +44,30 @@ namespace HordeForge.WasmHost.Core
             }
             _init = init;
             _tick = tick;
+        }
+
+        /// <summary>
+        /// Resolves a no-argument hook that may return either an i32 status
+        /// (our ABI) or void (the zdtd plugin contract). A void hook is
+        /// wrapped and reported as StatusOk.
+        /// </summary>
+        private static Func<int>? ResolveNoArg(Instance instance, string name)
+        {
+            var withResult = instance.GetFunction<int>(name);
+            if (withResult != null)
+            {
+                return () => withResult();
+            }
+            var withoutResult = instance.GetAction(name);
+            if (withoutResult != null)
+            {
+                return () =>
+                {
+                    withoutResult();
+                    return AbiConstants.StatusOk;
+                };
+            }
+            return null;
         }
 
         /// <summary>Unique mod id used as the registry key.</summary>
@@ -94,6 +120,12 @@ namespace HordeForge.WasmHost.Core
         public bool HasPlayerJoinHandler
         {
             get { return _onPlayerJoin != null; }
+        }
+
+        /// <summary>True when the guest exports the optional on_admin_command handler.</summary>
+        public bool HasAdminCommandHandler
+        {
+            get { return _onAdminCommand != null; }
         }
 
         /// <summary>

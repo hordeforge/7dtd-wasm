@@ -15,6 +15,15 @@ namespace HordeForge.WasmHost.Tests
 
         public List<string> Chats { get; } = new List<string>();
 
+        /// <summary>SimCommands queued by guests through the zdtd queue import.</summary>
+        public List<string> QueuedCommands { get; } = new List<string>();
+
+        /// <summary>Sense snapshot served through the zdtd sense import; null = no world data.</summary>
+        public SenseSnapshotWriter.Snapshot? Sense { get; set; }
+
+        /// <summary>Query answers served through the zdtd query import.</summary>
+        public Func<string, string?>? QueryAnswers { get; set; }
+
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
@@ -48,6 +57,26 @@ namespace HordeForge.WasmHost.Tests
         {
             Chats.Add(message);
             return true;
+        }
+
+        public bool TryQueueCommand(string command)
+        {
+            QueuedCommands.Add(command);
+            return true;
+        }
+
+        public int WriteSenseSnapshot(Span<byte> buffer)
+        {
+            if (Sense == null)
+            {
+                return 0;
+            }
+            return SenseSnapshotWriter.Write(Sense, buffer);
+        }
+
+        public string? TryQuery(string request)
+        {
+            return QueryAnswers != null ? QueryAnswers(request) : null;
         }
     }
 }

@@ -70,6 +70,9 @@ fixtures: samples boss boss-zig
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm    tests/fixtures/hello.wasm
 	cp samples/target/guest-boss.wasm                           tests/fixtures/boss.wasm
 	cp samples/target/guest-boss-zig.wasm                       tests/fixtures/boss-zig.wasm
+	# The unmodified zdtd fps_bot plugin (workspace sibling), committed as a
+	# fixture so the compatibility surface is tested against the real module.
+	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
 
 bridge:
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)"

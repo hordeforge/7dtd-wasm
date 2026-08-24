@@ -28,6 +28,9 @@ namespace HordeForge.WasmHost.Core
     {
         private const long WasmPageBytes = 65536;
 
+        /// <summary>wasm32 memory ceiling: 65536 pages of 64 KiB.</summary>
+        private const ulong Wasm32MemoryCeiling = 65536UL * 65536;
+
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
         private readonly Engine _engine;
@@ -121,23 +124,31 @@ namespace HordeForge.WasmHost.Core
                 throw new WasmModLoadException(id, "failed to parse or compile module: " + ex.Message, ex);
             }
 
-            ulong? maxBytes = DeclaredMemoryMaximumBytes(module);
-            if (maxBytes == null)
-            {
-                throw new WasmModLoadException(id, "guest memory has no declared maximum; compile with a --max-memory link flag (see docs/ABI.md)");
-            }
+            ulong? declaredMax = DeclaredMemoryMaximumBytes(module);
+            // A module with no declared maximum is treated as declaring the
+            // wasm32 ceiling (4 GiB). Such modules load only when the
+            // operator raised the effective cap accordingly (wasm.toml
+            // limits.max_memory_bytes); the weaker bound is documented
+            // (ADR 0004 amendment). This is how third-party plugins built
+            // without --max-memory (for example the sibling zdtd fps_bot)
+            // run unmodified.
+            ulong effectiveMax = declaredMax ?? Wasm32MemoryCeiling;
             ulong memoryCeiling = _config.StaticMemoryMaximumBytes;
             if (manifest != null && manifest.MaxMemoryBytes.HasValue && manifest.MaxMemoryBytes.Value < memoryCeiling)
             {
                 memoryCeiling = manifest.MaxMemoryBytes.Value;
             }
-            if (maxBytes.Value > memoryCeiling)
+            if (effectiveMax > memoryCeiling)
             {
-                throw new WasmModLoadException(id, "guest memory maximum " + maxBytes.Value + " bytes exceeds the effective cap " + memoryCeiling);
+                string detail = declaredMax.HasValue
+                    ? "guest memory maximum " + effectiveMax + " bytes exceeds the effective cap " + memoryCeiling
+                    : "guest memory has no declared maximum (treated as " + effectiveMax + " bytes); the effective cap is " + memoryCeiling +
+                      "; raise wasm.toml limits.max_memory_bytes to run it";
+                throw new WasmModLoadException(id, detail);
             }
 
-            RequireExportSignature(module, id, AbiConstants.ExportInit, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 });
-            RequireExportSignature(module, id, AbiConstants.ExportTick, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 });
+            RequireExportSignature(module, id, AbiConstants.ExportInit, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 }, allowVoidResult: true);
+            RequireExportSignature(module, id, AbiConstants.ExportTick, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 }, allowVoidResult: true);
             if (HasExport(module, AbiConstants.ExportPlayerJoin))
             {
                 RequireExportSignature(module, id, AbiConstants.ExportPlayerJoin, new[] { ValueKind.Int32 }, new[] { ValueKind.Int32 });
@@ -271,13 +282,15 @@ namespace HordeForge.WasmHost.Core
             return unchecked((ulong)pages.Value) * (ulong)WasmPageBytes;
         }
 
-        private static void RequireExportSignature(Module module, string id, string name, ValueKind[] parameters, ValueKind[] results)
+        private static void RequireExportSignature(Module module, string id, string name, ValueKind[] parameters, ValueKind[] results, bool allowVoidResult = false)
         {
             foreach (var export in module.Exports)
             {
                 if (export is FunctionExport function && function.Name == name)
                 {
-                    if (!Matches(function.Parameters, parameters) || !Matches(function.Results, results))
+                    bool resultOk = Matches(function.Results, results) ||
+                                    (allowVoidResult && function.Results.Count == 0);
+                    if (!Matches(function.Parameters, parameters) || !resultOk)
                     {
                         throw new WasmModLoadException(id, "export " + name + " has an unexpected signature; see docs/ABI.md");
                     }
@@ -379,6 +392,79 @@ namespace HordeForge.WasmHost.Core
                     return AbiConstants.SettingBufferTooSmall;
                 }
                 memory.WriteString(outPtr, _currentJoinName, Encoding.UTF8);
+                return bytes.Length;
+            });
+
+            DefineZdtdCompatibilityApi();
+        }
+
+        /// <summary>
+        /// Defines the zdtd-server import module so sibling plugins (the
+        /// unmodified fps_bot and its kin) load as-is. The functions map onto
+        /// the game host API: log and tick behave like the hordeforge ones,
+        /// queue forwards SimCommands to the bot servant, sense fills the
+        /// binary world snapshot, and query answers text requests. See
+        /// docs/ABI.md.
+        /// </summary>
+        private void DefineZdtdCompatibilityApi()
+        {
+            _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, "log", (caller, level, ptr, len) =>
+            {
+                string message = ReadGuestString(caller, ptr, len);
+                _api.Log(_config.LogSourcePrefix, level, message);
+            });
+
+            _linker.DefineFunction<long>(AbiConstants.ZdtdHostModule, AbiConstants.ImportTick, caller =>
+            {
+                return Tick;
+            });
+
+            _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQueue, (caller, ptr, len) =>
+            {
+                string command = ReadGuestString(caller, ptr, len);
+                return _api.TryQueueCommand(command) ? 0 : -1;
+            });
+
+            _linker.DefineFunction<int, int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportSense, (caller, outPtr, outCap, token) =>
+            {
+                if (outCap <= 0)
+                {
+                    return 0;
+                }
+                Memory? memory = caller.GetMemory("memory");
+                if (memory == null)
+                {
+                    return 0;
+                }
+                try
+                {
+                    return _api.WriteSenseSnapshot(memory.GetSpan(outPtr, outCap));
+                }
+                catch (Exception)
+                {
+                    return 0;
+                }
+            });
+
+            _linker.DefineFunction<int, int, int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQuery, (caller, reqPtr, reqLen, outPtr, outCap) =>
+            {
+                string request = ReadGuestString(caller, reqPtr, reqLen);
+                string? answer = _api.TryQuery(request);
+                if (answer == null)
+                {
+                    return -1;
+                }
+                byte[] bytes = Encoding.UTF8.GetBytes(answer);
+                if (bytes.Length > outCap)
+                {
+                    return -2;
+                }
+                Memory? memory = caller.GetMemory("memory");
+                if (memory == null)
+                {
+                    return -2;
+                }
+                memory.WriteString(outPtr, answer, Encoding.UTF8);
                 return bytes.Length;
             });
         }

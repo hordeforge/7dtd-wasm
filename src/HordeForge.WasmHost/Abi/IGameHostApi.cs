@@ -1,3 +1,5 @@
+using System;
+
 namespace HordeForge.WasmHost.Abi
 {
     /// <summary>
@@ -25,6 +27,32 @@ namespace HordeForge.WasmHost.Abi
         /// unknown so the guest can fall back to a default.
         /// </summary>
         bool TryGetSetting(string modId, string key, out string value);
+
+        // zdtd-server compatibility surface: the sibling fps_bot plugin and
+        // its kin drive bots through these. Implemented by the bridge over
+        // game services; a host that lacks a servant can still load the
+        // plugins (the brain runs, commands are dropped or logged).
+
+        /// <summary>
+        /// Queues a text SimCommand from a guest (the bot servant command
+        /// surface: "bot spawn", "bot move", "bot look", "bot shoot", ...).
+        /// Returns true when the command was accepted.
+        /// </summary>
+        bool TryQueueCommand(string command);
+
+        /// <summary>
+        /// Builds the binary world snapshot ('ZBS3', see docs/ABI.md) into
+        /// the given buffer (the guest's own linear memory). Returns the
+        /// number of bytes written, or 0 when there is no world data to
+        /// report.
+        /// </summary>
+        int WriteSenseSnapshot(Span<byte> buffer);
+
+        /// <summary>
+        /// Answers a text query ("cover x z tx tz", "path x z tx tz") with a
+        /// text response, or null when the host has no answer.
+        /// </summary>
+        string? TryQuery(string request);
 
         /// <summary>
         /// Sends a message to the global chat channel. Returns true when the

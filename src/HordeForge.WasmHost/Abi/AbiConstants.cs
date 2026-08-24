@@ -41,6 +41,25 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Host import: writes the joining player's name into a guest buffer.</summary>
         public const string ImportGetJoinPlayerName = "get_join_player_name";
 
+        // zdtd-server compatibility surface (docs/PLUGIN_API.md): the sibling
+        // fps_bot plugin and its kin import module "zdtd" with bare field
+        // names. Quarantine defines the same module so those plugins load
+        // unmodified; the functions are mapped onto the game host API.
+        /// <summary>Import module name used by zdtd-server plugins.</summary>
+        public const string ZdtdHostModule = "zdtd";
+
+        /// <summary>zdtd import: queue a text SimCommand for the bot servant.</summary>
+        public const string ImportQueue = "queue";
+
+        /// <summary>zdtd import: fill a binary world snapshot ('ZBS3').</summary>
+        public const string ImportSense = "sense";
+
+        /// <summary>zdtd import: text request/response query (cover, path).</summary>
+        public const string ImportQuery = "query";
+
+        /// <summary>Optional guest export: console/admin command handler (zdtd plugin surface).</summary>
+        public const string ExportAdminCommand = "on_admin_command";
+
         /// <summary>Log levels understood by the host log import.</summary>
         public const int LogDebug = 0;
 

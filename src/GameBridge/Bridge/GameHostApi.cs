@@ -78,6 +78,29 @@ namespace HordeForge.GameBridge.Bridge
             return _settings.TryGetSetting(modId, key, out value);
         }
 
+        public bool TryQueueCommand(string command)
+        {
+            // Stage 1: the bot servant is not implemented yet, so commands
+            // are accepted (the guest keeps its cadence) and logged. The
+            // next slice maps them onto game actions (spawn, move, shoot).
+            global::Log.Out("[WasmHost] bot cmd: " + command);
+            return true;
+        }
+
+        public int WriteSenseSnapshot(Span<byte> buffer)
+        {
+            // Stage 1: no world snapshot yet. The next slice builds the ZBS3
+            // snapshot from the live entity list (players, zombies, bots).
+            return 0;
+        }
+
+        public string? TryQuery(string request)
+        {
+            // Stage 1: no cover/path queries; the brain falls back to plain
+            // movement when the host has no answer.
+            return null;
+        }
+
         public bool SendChat(string message)
         {
             try

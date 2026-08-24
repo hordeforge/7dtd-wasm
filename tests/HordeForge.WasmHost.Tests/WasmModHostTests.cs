@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Config;
 using HordeForge.WasmHost.Core;
 using HordeForge.WasmHost.Limits;
@@ -404,6 +405,97 @@ greeting = ""hello""
                 host.DispatchInit();
                 Assert.True(host.DispatchTick(1).Single().Ok);
                 Assert.Contains(api.Logs, l => l.Message.Contains("setting='shared value'"));
+            }
+        }
+
+        private static WasmModHost NewHostForFpsBot(TestGameHostApi api)
+        {
+            // The sibling fps_bot declares no memory maximum; it is treated
+            // as the wasm32 ceiling (4 GiB), so the cap must be raised to run
+            // it unmodified (ADR 0004 amendment).
+            var config = new WasmHostConfig { StaticMemoryMaximumBytes = 4294967296UL };
+            return new WasmModHost(api, config);
+        }
+
+
+        [Fact]
+        public void FpsBotLoadsUnmodified()
+        {
+            // The actual zdtd-server fps_bot plugin (mods/fps_bot/fps_bot.wasm)
+            // loads as-is: its zdtd imports are satisfied and its exports are
+            // recognized.
+            var api = new TestGameHostApi();
+            using (WasmModHost host = NewHostForFpsBot(api))
+            {
+                WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
+                Assert.True(bot.HasAdminCommandHandler);
+                Assert.False(bot.HasPlayerJoinHandler);
+                Assert.True(bot.Init(0).Ok);
+                Assert.True(bot.Tick(1).Ok);
+            }
+        }
+
+        [Fact]
+        public void FpsBotBrainTargetsHostileAndQueuesShoot()
+        {
+            // Feed the unmodified brain a sense snapshot with a zombie in
+            // front of the self bot; it must acquire it and queue bot look
+            // and bot shoot SimCommands.
+            var api = new TestGameHostApi();
+            api.Sense = new SenseSnapshotWriter.Snapshot
+            {
+                Tick = 100,
+                SelfNetId = 900,
+                WorldTime = 0,
+                Records =
+                {
+                    new SenseSnapshotWriter.EntityRecord { NetId = 900, Kind = SenseSnapshotWriter.KindBot, IsSelf = true, Alive = true, X = 0, Y = 0, Z = 0, Hp = 100, Yaw = 0 },
+                    new SenseSnapshotWriter.EntityRecord { NetId = 42, Kind = SenseSnapshotWriter.KindZombie, Alive = true, X = 0, Y = 0, Z = -10, Hp = 100, Yaw = 0 },
+                },
+            };
+            using (WasmModHost host = NewHostForFpsBot(api))
+            {
+                WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
+                Assert.True(bot.Init(0).Ok);
+                // Reaction gate is ~0.38 s (~8 ticks) for skill 2; give it
+                // enough ticks for the reaction to expire and the shot to fire.
+                for (int t = 1; t <= 12; t++)
+                {
+                    Assert.True(host.DispatchTick(t).Single().Ok, "tick " + t);
+                }
+                Assert.Contains(api.QueuedCommands, c => c.StartsWith("bot look 900"));
+                Assert.Contains(api.QueuedCommands, c => c.StartsWith("bot shoot 900 42"));
+            }
+        }
+
+        [Fact]
+        public void FpsBotBrainIdlesWithoutThreat()
+        {
+            // An empty snapshot (header only, no entities) drives no commands.
+            var api = new TestGameHostApi();
+            api.Sense = new SenseSnapshotWriter.Snapshot { Tick = 1, SelfNetId = 900, WorldTime = 0 };
+            using (WasmModHost host = NewHostForFpsBot(api))
+            {
+                WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
+                Assert.True(bot.Init(0).Ok);
+                for (int t = 1; t <= 5; t++)
+                {
+                    Assert.True(host.DispatchTick(t).Single().Ok);
+                }
+                Assert.DoesNotContain(api.QueuedCommands, c => c.StartsWith("bot shoot"));
+            }
+        }
+
+        [Fact]
+        public void FpsBotWithoutRaisedCapIsRejectedWithClearReason()
+        {
+            // The default 32 MiB cap rejects the undeclared-max module with a
+            // message pointing at wasm.toml.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("fps-bot", Fixture("fps-bot")));
+                Assert.Contains("raise wasm.toml limits.max_memory_bytes", ex.Message);
             }
         }
 

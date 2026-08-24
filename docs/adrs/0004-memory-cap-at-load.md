@@ -45,3 +45,15 @@ guest that declares a large but legal maximum is still trusted to stay
 within it by construction, not by the host watching it. Revisit if the
 binding exposes the pooling allocator with a max memory size, which would
 back the same policy at the engine level.
+
+## Amendment (2026-08-24)
+
+Third-party plugins built without an explicit memory maximum (for example
+the sibling zdtd fps_bot, compiled with plain clang and no `--max-memory`)
+declare no maximum. They now load when the operator raises the effective
+cap to the wasm32 ceiling: a missing declared maximum is treated as 4 GiB,
+and the module is accepted only if the effective cap (host default, raised
+via `wasm.toml [limits] max_memory_bytes`) is at least that. The memory
+guarantee for such modules is the weaker 4 GiB ceiling (WebAssembly
+semantics still bound growth to the ceiling); see SECURITY.md. The
+preferred path remains guests declaring a real maximum.

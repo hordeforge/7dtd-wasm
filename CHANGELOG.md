@@ -4,6 +4,30 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
+## [0.1.4] - 2026-08-24
+
+### Added
+
+- zdtd-server compatibility surface so sibling plugins run unmodified: the
+  host defines the `zdtd` import module (log, tick, queue, sense, query)
+  and accepts the bare zdtd hooks, including `void`-returning
+  on_enable/on_tick/on_shutdown and the optional `on_admin_command` export.
+- `SenseSnapshotWriter`: byte-identical 'ZBS3' world snapshot format shared
+  by the host, the bridge, and tests.
+- ADR 0004 amendment: modules without a declared memory maximum are treated
+  as declaring the wasm32 ceiling (4 GiB) and load only when the operator
+  raises the cap via `wasm.toml [limits] max_memory_bytes`.
+- Verified: the unmodified zdtd `fps_bot` wasm loads, and its brain, fed a
+  synthetic sense snapshot, queues `bot look` and `bot shoot` SimCommands
+  (four new host tests, 43 total).
+
+### Not yet implemented (stage 2)
+
+- The bot servant: `queue` commands are accepted and logged, `sense`
+  returns no world data yet, `query` has no answers. The bridge wires the
+  imports but the game-side spawn/move/shoot servant and the live entity
+  snapshot are the next slice.
+
 ## [0.1.3] - 2026-08-24
 
 ### Added
