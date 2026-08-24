@@ -42,6 +42,78 @@ exposes a `wasm` console command (`list`, `load`, `reload`, `unload`,
 | `tools/targetcheck` | Validates game API targets against a server install |
 | `tools/doccheck.py` | Docs quality gate (em dashes, links, attribution) |
 
+## How it fits together
+
+```mermaid
+flowchart TB
+    subgraph Game["7 Days to Die dedicated server (net48, Mono)"]
+        LOOP["Game loop<br/>20 TPS, 50 ms budget"]
+        BRIDGE["1_HordeForge_WasmHost<br/>(GameBridge, net48)"]
+        HOST["HordeForge.WasmHost<br/>(Wasmtime engine)"]
+        LOOP -->|"tick hook"| BRIDGE
+        BRIDGE -->|"dispatch + budgets"| HOST
+    end
+
+    subgraph Services["Game services"]
+        WORLD["world: entities, time"]
+        CHAT["global chat"]
+        SETTINGS["wasm.toml + wasm-mod.toml"]
+        SERVANT["bot servant (BotServant)"]
+    end
+
+    subgraph Guests["Guest mods (untrusted)"]
+        HELLO["hello (Rust)"]
+        BOSS["boss (C, zig cc)"]
+        BOSSZIG["boss-zig (Zig)"]
+        FPS["fps-bot (unmodified zdtd plugin)"]
+    end
+
+    HOST <-->|"hordeforge / zdtd ABI"| Guests
+    BRIDGE --- Services
+    SERVANT --- HOST
+```
+
+One game tick in detail: every guest call runs under a fresh fuel budget,
+and a trapped or fuel-burning guest is reported, never fatal.
+
+```mermaid
+flowchart LR
+    U["GameManager.Update"] --> H["GameTickHook postfix"]
+    H --> T["BridgeHost.Tick"]
+    T --> D["WasmModHost.DispatchTick"]
+    D --> F["fresh fuel per call"]
+    F --> G["guest on_tick"]
+    G -->|"zdtd.sense"| S["world snapshot (ZBS3)"]
+    G -->|"zdtd.queue"| Q["bot move / look / shoot"]
+    G -->|"hordeforge.log"| L["game log"]
+    G -->|"get_setting"| K["per-mod + shared settings"]
+    D -. "trap or fuel exhausted" .-> R["ModRunResult<br/>host and other modules survive"]
+```
+
+The ABI surface (details in [docs/ABI.md](docs/ABI.md)):
+
+```mermaid
+flowchart TB
+    subgraph G["Guest module"]
+        E["exports the host calls<br/>on_enable / on_tick / on_shutdown<br/>on_player_join / on_admin_command"]
+        I["imports the guest calls<br/>log / tick / get_world_time / get_setting / send_chat<br/>get_join_player_name / queue / sense / query"]
+    end
+    subgraph H["Host"]
+        HE["hooks dispatched per game event"]
+        HI["game services behind the ABI"]
+    end
+    HE -->|"invokes"| E
+    I -->|"reaches"| HI
+```
+
+Config load order (docs/CONFIG.md): each layer can only tighten the
+previous one.
+
+```mermaid
+flowchart LR
+    CODE["code defaults"] --> SHARED["wasm.toml"] --> MOD["wasm-mod.toml"] --> EFF["effective limits<br/>fuel, memory, module size"]
+```
+
 ## Why Wasmtime
 
 `Wasmtime` on NuGet (the official Bytecode Alliance .NET binding) is the most
@@ -77,9 +149,10 @@ ABI, and are always interrupted at their budget. Details and limits in
 ## Status
 
 - [x] Host library: load, dispatch, fuel, memory cap, traps (tested)
-- [x] Rust guest SDK + sample mods
+- [x] Rust, C, and Zig guest SDKs + sample mods
 - [x] net48 bridge compiles against V3.1.0 and all targets are verified
-- [ ] In-game acceptance on a live dedicated server (next step)
+- [x] In-game acceptance on a live dedicated server (docker container, fresh steamcmd install, V 3.1.0 b14)
+- [x] Unmodified zdtd fps_bot runs: sense, queue, and the bot servant drive live bots in combat
 - [ ] ABI stability review before anything is called stable
 
 ## License
