@@ -1,4 +1,6 @@
-# 7dtd-wasm: WebAssembly mod host for 7 Days to Die
+# 🧫 Quarantine (7DTD WasmHost)
+
+> **Part of [HordeForge](https://github.com/hordeforge)** - High-Performance Systems Engineering for 7 Days to Die.
 
 > **EXPERIMENT.** This project is an experiment: the ABI and host API are
 > expected to change, the in-game bridge has not been accepted inside a live
@@ -9,16 +11,20 @@
 ## What this is
 
 A mod host that runs guest mods as `wasm32-wasip1` WebAssembly modules inside
-an embedded [Wasmtime](https://wasmtime.dev) engine, with hard limits:
+an embedded [Wasmtime](https://wasmtime.dev) engine, with hard limits.
+Codename **Quarantine**: untrusted mod code is treated like the infected,
+contained by the host with hard limits so it can never reach the game
+process.
 
-- **Fuel**: every guest call (init, tick, shutdown) gets a fixed instruction
-  budget; a burning loop stops at the budget and reports `FuelExhausted`.
+- **Fuel**: every guest call (on_enable, on_tick, on_shutdown) gets a fixed
+  instruction budget; a burning loop stops at the budget and reports
+  `FuelExhausted`.
 - **Memory**: a guest's declared memory maximum is checked at load time
   against the host cap; oversized modules are rejected.
 - **Module size**: a .wasm file larger than the cap is refused.
 - **No game access beyond the ABI**: guests see no game objects, no
-  Reflection, no .NET types. They talk to the game only through five host
-  functions (see [docs/ABI.md](docs/ABI.md)).
+  Reflection, no .NET types. They talk to the game only through the
+  documented host imports (see [docs/ABI.md](docs/ABI.md)).
 
 A thin net48 mod (`1_HordeForge_WasmHost`) embeds the host in the dedicated
 server, drives guests from `GameManager.Update` at the game tick rate, and

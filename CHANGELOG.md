@@ -2,6 +2,7 @@
 
 All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
+Codename: Quarantine (7dtd-wasm).
 
 ## [0.1.3] - 2026-08-24
 

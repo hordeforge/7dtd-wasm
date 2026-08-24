@@ -1,5 +1,7 @@
 # Design contract index
 
+Quarantine (7dtd-wasm): WebAssembly mod host for 7 Days to Die.
+
 Reading order for a new contributor: start here, then
 [ARCHITECTURE.md](ARCHITECTURE.md) (how the pieces fit), [ABI.md](ABI.md)
 (the guest contract), then the document that owns the part you are changing.

@@ -1,4 +1,4 @@
-# AGENTS.md - 7dtd-wasm (WasmHost)
+# AGENTS.md - 7dtd-wasm (Quarantine)
 
 WebAssembly mod host experiment for 7 Days to Die dedicated servers.
 Runs untrusted guest mods as `wasm32-wasip1` modules inside an embedded
