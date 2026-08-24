@@ -26,7 +26,11 @@ namespace TargetCheck
             string? gameDir = args.Length > 0 ? args[0] : null;
             if (gameDir == null)
             {
-                string? home = Environment.GetEnvironmentVariable("HOME");
+                // Same lookup as NativeAssets.GetUserProfileDirectory: HOME
+                // everywhere Unix-like, USERPROFILE as the Windows fallback,
+                // so the not-found message names a real path on both.
+                string? home = Environment.GetEnvironmentVariable("HOME") ??
+                               Environment.GetEnvironmentVariable("USERPROFILE");
                 gameDir = Path.Combine(home ?? ".", ".local", "share", "Steam", "steamapps", "common", "7 Days to Die Dedicated Server");
             }
 

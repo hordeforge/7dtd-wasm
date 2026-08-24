@@ -13,9 +13,27 @@ namespace HordeForge.GameBridge.Bridge
     /// &lt;dedicated&gt;/Mods/Wasm directory for guest modules, and drives
     /// the per-tick dispatch. Also hosts the console-command surface. All
     /// entry points are fail soft and safe to call before the world loads.
+    ///
+    /// Thread model: tick dispatch and player joins arrive on the game main
+    /// loop, while "wasm" console commands execute on the telnet/console
+    /// thread of the dedicated server. Every entry point therefore takes
+    /// <see cref="Gate"/>; the host library itself stays single-threaded per
+    /// its contract (one store must never be touched from two threads, and
+    /// a mid-dispatch unload would throw out of the load-order walk). The
+    /// gate can stall a console command until the current dispatch ends;
+    /// both sides are bounded (fuel per guest call, module size cap on
+    /// compile), so this trades a bounded pause for the crash risk of
+    /// concurrent store access.
     /// </summary>
     public static class BridgeHost
     {
+        // Serializes main-loop entry points (Tick, PlayerSpawnedInWorld)
+        // against console-thread ones (LoadAllModules, Reload, Unload,
+        // StatusLines) and lifecycle (Start, Shutdown). Monitor reentrancy
+        // makes the internal call chains (Start -> LoadAllModules,
+        // Reload -> TryLoadFromDisk -> InitOne) safe without extra hops.
+        private static readonly object Gate = new object();
+
         // Nullable by design: null before Start() and after Shutdown();
         // every entry point re-checks per the fail-soft contract below.
         private static WasmModHost? _host;
@@ -37,53 +55,60 @@ namespace HordeForge.GameBridge.Bridge
 
         public static void Start()
         {
-            // ModApi.ModPath is the modlet folder itself (for example
-            // Mods/1_HordeForge_WasmHost); Native/ lives inside it and
-            // Mods/Wasm is its sibling.
-            string modletDir = ModApi.ModPath;
-            NativeBootstrap.Prepare(modletDir);
+            lock (Gate)
+            {
+                // ModApi.ModPath is the modlet folder itself (for example
+                // Mods/1_HordeForge_WasmHost); Native/ lives inside it and
+                // Mods/Wasm is its sibling.
+                string modletDir = ModApi.ModPath;
+                NativeBootstrap.Prepare(modletDir);
 
-            WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
-            string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
-            _settings = new WasmSettingsProvider(sharedTomlPath);
+                WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
+                string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
+                _settings = new WasmSettingsProvider(sharedTomlPath);
 
-            var config = new WasmHostConfig();
-            ApplySharedLimits(config, sharedTomlPath);
-            _servant = new BotServant();
-            _gameApi = new GameHostApi(_settings, _servant);
-            _host = new WasmModHost(_gameApi, config);
+                var config = new WasmHostConfig();
+                ApplySharedLimits(config, sharedTomlPath);
+                _servant = new BotServant();
+                _gameApi = new GameHostApi(_settings, _servant);
+                _host = new WasmModHost(_gameApi, config);
 
-            // LoadAllModules runs each newly loaded module's on_enable (see
-            // there), so start and "wasm load" initialize exactly once.
-            LoadAllModules();
-            Started = true;
-            Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
+                // LoadAllModules runs each newly loaded module's on_enable (see
+                // there), so start and "wasm load" initialize exactly once.
+                LoadAllModules();
+                Started = true;
+                Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
+            }
         }
 
         /// <summary>Dispatches one game tick into every loaded guest mod.</summary>
         public static void Tick()
         {
-            if (_host == null)
+            lock (Gate)
             {
-                return;
-            }
-            // GameTimer.Instance.ticks reads 0 on the dedicated server, so
-            // the bridge keeps its own monotonic counter: the hook runs once
-            // per game tick (20 TPS), which is the same rhythm.
-            _tick++;
-            var ids = _host.ModIds;
-            IReadOnlyList<ModRunResult> results = _host.DispatchTick(_tick);
-            for (int i = 0; i < results.Count; i++)
-            {
-                if (results[i].Ok)
+                WasmModHost? host = _host;
+                if (host == null)
                 {
-                    continue;
+                    return;
                 }
-                string source = "tick/" + (i < ids.Count ? ids[i] : "?");
-                if (DispatchFailureLimiter.TryWrite(source, out _))
+                // GameTimer.Instance.ticks reads 0 on the dedicated server, so
+                // the bridge keeps its own monotonic counter: the hook runs once
+                // per game tick (20 TPS), which is the same rhythm.
+                _tick++;
+                var ids = host.ModIds;
+                IReadOnlyList<ModRunResult> results = host.DispatchTick(_tick);
+                for (int i = 0; i < results.Count; i++)
                 {
-                    Log.Out("[WasmHost] tick: " + results[i].Message +
-                            (results[i].Details.Length > 0 ? " (" + results[i].Details + ")" : ""));
+                    if (results[i].Ok)
+                    {
+                        continue;
+                    }
+                    string source = "tick/" + (i < ids.Count ? ids[i] : "?");
+                    if (DispatchFailureLimiter.TryWrite(source, out _))
+                    {
+                        Log.Out("[WasmHost] tick: " + results[i].Message +
+                                (results[i].Details.Length > 0 ? " (" + results[i].Details + ")" : ""));
+                    }
                 }
             }
         }
@@ -101,60 +126,67 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public static void PlayerSpawnedInWorld(ClientInfo clientInfo)
         {
-            if (_host == null)
-            {
-                return;
-            }
             if (clientInfo == null)
             {
                 return;
             }
-            string name = clientInfo.playerName ?? string.Empty;
-            if (name.Length == 0)
+            lock (Gate)
             {
-                return;
-            }
-            // The entity id comes from ClientInfo.entityId:
-            // RequestToSpawnPlayer's int parameters are chunk view dim and
-            // near-entity id, not the spawning player's id (found live in
-            // the acceptance run: the Harmony postfix must not declare
-            // parameters by names the target does not have).
-            int entityId = clientInfo.entityId;
-            Log.Out("[WasmHost] player spawned: " + TextSanitizer.Clean(name) + " (entity " + entityId + ")");
-            foreach (var result in _host.DispatchPlayerJoin(entityId, name))
-            {
-                if (!result.Ok)
+                WasmModHost? host = _host;
+                if (host == null)
                 {
-                    Log.Out("[WasmHost] on_player_join: " + result.Message + (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                    return;
+                }
+                string name = clientInfo.playerName ?? string.Empty;
+                if (name.Length == 0)
+                {
+                    return;
+                }
+                // The entity id comes from ClientInfo.entityId:
+                // RequestToSpawnPlayer's int parameters are chunk view dim and
+                // near-entity id, not the spawning player's id (found live in
+                // the acceptance run: the Harmony postfix must not declare
+                // parameters by names the target does not have).
+                int entityId = clientInfo.entityId;
+                Log.Out("[WasmHost] player spawned: " + TextSanitizer.Clean(name) + " (entity " + entityId + ")");
+                foreach (var result in host.DispatchPlayerJoin(entityId, name))
+                {
+                    if (!result.Ok)
+                    {
+                        Log.Out("[WasmHost] on_player_join: " + result.Message + (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                    }
                 }
             }
         }
 
         public static List<string> StatusLines()
         {
-            var lines = new List<string>();
-            if (_host == null)
+            lock (Gate)
             {
-                lines.Add("host not started");
+                var lines = new List<string>();
+                if (_host == null)
+                {
+                    lines.Add("host not started");
+                    return lines;
+                }
+                lines.Add("host started, modules dir: " + WasmRoot);
+                foreach (string id in _host.ModIds)
+                {
+                    if (_host.TryGetMod(id, out var mod) && mod != null)
+                    {
+                        lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
+                    }
+                }
+                if (_gameApi != null)
+                {
+                    AddDropped(lines, _gameApi.RateLimiter, "guest log lines");
+                    AddDropped(lines, _gameApi.ChatLimiter, "chat messages");
+                    AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
+                    AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
+                }
+                AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
                 return lines;
             }
-            lines.Add("host started, modules dir: " + WasmRoot);
-            foreach (string id in _host.ModIds)
-            {
-                if (_host.TryGetMod(id, out var mod) && mod != null)
-                {
-                    lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
-                }
-            }
-            if (_gameApi != null)
-            {
-                AddDropped(lines, _gameApi.RateLimiter, "guest log lines");
-                AddDropped(lines, _gameApi.ChatLimiter, "chat messages");
-                AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
-                AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
-            }
-            AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
-            return lines;
         }
 
         /// <summary>Appends the limiter's dropped summary when it has one.</summary>
@@ -175,35 +207,39 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public static int LoadAllModules()
         {
-            if (_host == null)
+            lock (Gate)
             {
-                return 0;
-            }
-            int loaded = 0;
-            if (!Directory.Exists(WasmRoot))
-            {
-                return 0;
-            }
-            var loadedIds = new List<string>();
-            foreach (string dir in Directory.GetDirectories(WasmRoot))
-            {
-                string id = Path.GetFileName(dir);
-                if (_host.TryGetMod(id, out _))
+                WasmModHost? host = _host;
+                if (host == null)
                 {
-                    continue;
+                    return 0;
                 }
-                if (!TryLoadFromDisk(_host, id))
+                int loaded = 0;
+                if (!Directory.Exists(WasmRoot))
                 {
-                    continue;
+                    return 0;
                 }
-                loadedIds.Add(id);
-                loaded++;
+                var loadedIds = new List<string>();
+                foreach (string dir in Directory.GetDirectories(WasmRoot))
+                {
+                    string id = Path.GetFileName(dir);
+                    if (host.TryGetMod(id, out _))
+                    {
+                        continue;
+                    }
+                    if (!TryLoadFromDisk(host, id))
+                    {
+                        continue;
+                    }
+                    loadedIds.Add(id);
+                    loaded++;
+                }
+                foreach (string id in loadedIds)
+                {
+                    InitOne(id);
+                }
+                return loaded;
             }
-            foreach (string id in loadedIds)
-            {
-                InitOne(id);
-            }
-            return loaded;
         }
 
         /// <summary>
@@ -286,50 +322,58 @@ namespace HordeForge.GameBridge.Bridge
 
         public static bool Reload(string id)
         {
-            if (_host == null || !IsValidModId(id))
+            lock (Gate)
             {
-                return false;
+                WasmModHost? host = _host;
+                if (host == null || !IsValidModId(id))
+                {
+                    return false;
+                }
+                ModRunResult? oldShutdown = host.Unload(id);
+                if (oldShutdown != null && !oldShutdown.Ok)
+                {
+                    // The reload proceeds either way, but the failed goodbye of
+                    // the old instance must reach the log like an unload's would.
+                    Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
+                                oldShutdown.Message + (oldShutdown.Details.Length > 0 ? " (" + oldShutdown.Details + ")" : ""));
+                }
+                _settings?.RemoveMod(id);
+                if (!TryLoadFromDisk(host, id))
+                {
+                    return false;
+                }
+                // Init only the module that was reloaded; dispatching init to
+                // the host would re-run on_enable for every other guest.
+                InitOne(id);
+                return true;
             }
-            ModRunResult? oldShutdown = _host.Unload(id);
-            if (oldShutdown != null && !oldShutdown.Ok)
-            {
-                // The reload proceeds either way, but the failed goodbye of
-                // the old instance must reach the log like an unload's would.
-                Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
-                            oldShutdown.Message + (oldShutdown.Details.Length > 0 ? " (" + oldShutdown.Details + ")" : ""));
-            }
-            _settings?.RemoveMod(id);
-            if (!TryLoadFromDisk(_host, id))
-            {
-                return false;
-            }
-            // Init only the module that was reloaded; dispatching init to
-            // the host would re-run on_enable for every other guest.
-            InitOne(id);
-            return true;
         }
 
         public static bool Unload(string id)
         {
-            if (_host == null)
+            lock (Gate)
             {
-                return false;
+                WasmModHost? host = _host;
+                if (host == null)
+                {
+                    return false;
+                }
+                ModRunResult? shutdown = host.Unload(id);
+                if (shutdown == null)
+                {
+                    return false;
+                }
+                _settings?.RemoveMod(id);
+                if (!shutdown.Ok)
+                {
+                    // Fail soft: the mod is gone either way, but a trapped or
+                    // failing shutdown must reach the operator instead of a
+                    // bare "unloaded" from the console command.
+                    Log.Warning("[WasmHost] unload of " + id + ": " + shutdown.Message +
+                                (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
+                }
+                return true;
             }
-            ModRunResult? shutdown = _host.Unload(id);
-            if (shutdown == null)
-            {
-                return false;
-            }
-            _settings?.RemoveMod(id);
-            if (!shutdown.Ok)
-            {
-                // Fail soft: the mod is gone either way, but a trapped or
-                // failing shutdown must reach the operator instead of a
-                // bare "unloaded" from the console command.
-                Log.Warning("[WasmHost] unload of " + id + ": " + shutdown.Message +
-                            (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
-            }
-            return true;
         }
 
         /// <summary>
@@ -428,17 +472,20 @@ namespace HordeForge.GameBridge.Bridge
 
         public static void Shutdown()
         {
-            if (_host != null)
+            lock (Gate)
             {
-                _host.Dispose();
-                _host = null;
+                if (_host != null)
+                {
+                    _host.Dispose();
+                    _host = null;
+                }
+                // Release what Start() built so a shutdown leaves no static
+                // references behind; the next Start() recreates all of them.
+                _gameApi = null;
+                _servant = null;
+                _settings = null;
+                Started = false;
             }
-            // Release what Start() built so a shutdown leaves no static
-            // references behind; the next Start() recreates all of them.
-            _gameApi = null;
-            _servant = null;
-            _settings = null;
-            Started = false;
         }
     }
 }

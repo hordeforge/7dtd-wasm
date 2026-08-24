@@ -82,6 +82,14 @@ for every guest, which keeps modules inside the host caps by construction.
 - `CmdWasm` implements the V3 console command contract
   (`getCommands()`, `getDescription()`, `getHelp()`, `Execute(List<string>,
   CommandSenderInfo)`) with subcommands list, load, reload, unload, status.
+- Threading: tick and player-join dispatch run on the game main loop, but
+  console commands execute on the telnet/console thread. Every
+  `BridgeHost` entry point therefore serializes on one internal gate so
+  the single-threaded host library is never touched from two threads at
+  once (a mid-dispatch unload would corrupt the load-order walk, and the
+  one store must not be instantiated into while a guest call runs). The
+  gate can pause a console command until the current dispatch returns;
+  both sides are bounded by fuel and module size caps.
 
 ## Game API verification (tools/targetcheck)
 
