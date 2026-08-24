@@ -10,5 +10,11 @@ members = [
     "guest-fixtures/noexports",
 ]
 
+[workspace.lints.rust]
+# Every default-warn rustc lint is a build error in guest crates. The
+# tree compiles clean today, so a new diagnostic fails the build
+# instead of scrolling by as ignorable noise.
+warnings = "deny"
+
 [profile.release]
 panic = "abort"

@@ -1,0 +1,19 @@
+<Project>
+
+  <!-- Analyzer and warning posture for every project in this repo
+       (host library, tests, targetcheck, net48 GameBridge).
+       The tree builds warning-free, so warnings are treated as
+       defects: a new compiler or analyzer diagnostic fails the build
+       instead of scrolling by. Opting out is a per-project,
+       rule-scoped decision, never silence by default. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <!-- Default ("latest") analysis level: the tree passes it today.
+         Stepping up to latest-recommended is a later pass; it currently
+         surfaces ~120 findings across CA1051/CA1510/CA1859 and friends,
+         which is code-review territory, not a config flip. -->
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>

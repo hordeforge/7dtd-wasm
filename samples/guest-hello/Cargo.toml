@@ -9,3 +9,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 guest-common = { path = "../guest-common" }
+
+[lints]
+workspace = true

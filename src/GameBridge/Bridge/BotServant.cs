@@ -281,7 +281,7 @@ namespace HordeForge.GameBridge.Bridge
             float x = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
             float y = float.Parse(parts[4], System.Globalization.CultureInfo.InvariantCulture);
             float z = float.Parse(parts[5], System.Globalization.CultureInfo.InvariantCulture);
-            Entity e = FindBot(id);
+            Entity? e = FindBot(id);
             if (e != null)
             {
                 e.SetPosition(new UnityEngine.Vector3(x, y, z), true);
@@ -301,7 +301,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             int id = int.Parse(parts[2]);
             float yaw = float.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
-            Entity e = FindBot(id);
+            Entity? e = FindBot(id);
             if (e != null)
             {
                 // The brain emits radians; the game uses degrees.
@@ -348,7 +348,7 @@ namespace HordeForge.GameBridge.Bridge
             return 0;
         }
 
-        private Entity FindBot(int entityId)
+        private Entity? FindBot(int entityId)
         {
             if (!_bots.Contains(entityId))
             {

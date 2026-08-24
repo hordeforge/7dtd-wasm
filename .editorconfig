@@ -1,0 +1,33 @@
+# Editor conventions matching what the tree already does. These are not
+# build-enforced today; they keep editors from fighting the existing
+# formatting across C#, Rust, Python, and the build files.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+
+[*.rs]
+indent_style = space
+indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.{csproj,props,xml}]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml,json,toml}]
+indent_style = space
+indent_size = 2
+
+[{Makefile,*.mk}]
+indent_style = tab

@@ -41,20 +41,21 @@ GAME_DIR ?= $(HOME)/.local/share/Steam/steamapps/common/7 Days to Die Dedicated 
 
 SLN = HordeForge.WasmHost.sln
 
-.PHONY: help build test samples boss boss-zig fixtures bridge bridge-check dist check clean
+.PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check clean
 
 help:
 	@echo "Targets:"
 	@echo "  make build          build the host library and test suite (net8)"
 	@echo "  make test           run the host test suite"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
+	@echo "  make samples-check  guest lint gate (rustc warnings denied)"
 	@echo "  make boss           compile the C guest (samples/guest-boss) with zig"
 	@echo "  make boss-zig       compile the Zig guest (samples/guest-boss-zig)"
 	@echo "  make fixtures       rebuild fixtures and copy them into tests/fixtures"
 	@echo "  make bridge         build the net48 in-game mod against GAME_DIR"
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
-	@echo "  make check          docs gate + build + test (CI entry point)"
+	@echo "  make check          docs gate + guest lint gate + build + test (CI entry point)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 
 build:
@@ -63,10 +64,16 @@ build:
 test:
 	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release
 
-# Build guests from inside samples/ on purpose: cargo discovers
-# .cargo/config.toml by walking up from the current directory, and
-# samples/.cargo/config.toml pins --max-memory and the guest stack size.
+# Compile guests from inside samples/ on purpose: cargo discovers
+# config by walking up from the current directory, and the workspace
+# [lints] in samples/Cargo.toml deny every default rustc warning.
 samples:
+	cd samples && $(CARGO) build --release --target wasm32-wasip1
+
+# Guest lint gate: a plain build already fails on any default rustc
+# warning (workspace [lints]); this keeps that gate in make check so
+# guest code cannot regress silently between fixture rebuilds.
+samples-check:
 	cd samples && $(CARGO) build --release --target wasm32-wasip1
 
 # The C guest (samples/guest-boss) is compiled with zig to wasm32-wasi
@@ -135,6 +142,7 @@ dist: build fixtures bridge
 
 check:
 	python3 tools/doccheck.py
+	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test
 	$(MAKE) bridge

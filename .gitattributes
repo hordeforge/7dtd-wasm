@@ -1,0 +1,11 @@
+# Line-ending policy. The repo is edited across platforms; these files
+# break when checked out with CRLF, so they are pinned to LF everywhere.
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.rs text eol=lf
+Makefile text eol=lf
+*.mk text eol=lf
+
+# Binaries: never normalize.
+*.wasm binary

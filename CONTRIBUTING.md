@@ -29,10 +29,13 @@ welcome; contributions that weaken it are not.
 
 ```bash
 make fixtures     # if you touched samples/ or guests
+make samples-check # guest lint gate: rustc warnings are build errors
 make test         # host suite must stay green
 make bridge       # net48 bridge against GAME_DIR
 make bridge-check # game targets must pass after any game update
-make check        # docs gate + build + test + bridge + bridge-check
+make check        # docs gate + guest lint gate + build + test + bridge
 ```
 
 Every change lands with its tests and its docs updated in the same commit.
+Compiler, analyzer, and rustc lint warnings fail the build (warnings are
+errors repo-wide); a suppression needs a written reason next to it.

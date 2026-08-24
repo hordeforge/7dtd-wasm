@@ -15,10 +15,12 @@ namespace HordeForge.GameBridge.Bridge
     /// </summary>
     public static class BridgeHost
     {
-        private static WasmModHost _host;
-        private static WasmSettingsProvider _settings;
-        private static GameHostApi _gameApi;
-        private static BotServant _servant;
+        // Nullable by design: null before Start() and after Shutdown();
+        // every entry point re-checks per the fail-soft contract below.
+        private static WasmModHost? _host;
+        private static WasmSettingsProvider? _settings;
+        private static GameHostApi? _gameApi;
+        private static BotServant? _servant;
         private static long _tick;
 
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>
@@ -116,8 +118,10 @@ namespace HordeForge.GameBridge.Bridge
             lines.Add("host started, modules dir: " + WasmRoot);
             foreach (string id in _host.ModIds)
             {
-                _host.TryGetMod(id, out var mod);
-                lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
+                if (_host.TryGetMod(id, out var mod) && mod != null)
+                {
+                    lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
+                }
             }
             string dropped = _gameApi != null ? _gameApi.RateLimiter.DescribeDropped("guest log lines") : string.Empty;
             if (dropped.Length > 0)
@@ -156,7 +160,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     continue;
                 }
-                if (!TryReadManifest(id, out ModManifest manifest))
+                if (!TryReadManifest(id, out ModManifest? manifest))
                 {
                     // Invalid manifest: skip the module rather than run it
                     // with weaker-than-intended limits.
@@ -165,7 +169,7 @@ namespace HordeForge.GameBridge.Bridge
                 try
                 {
                     _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
-                    _settings.UpdateMod(id, manifest);
+                    _settings?.UpdateMod(id, manifest);
                     loaded++;
                 }
                 catch (WasmModLoadException ex)
@@ -183,13 +187,13 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
             _host.Unload(id);
-            _settings.RemoveMod(id);
+            _settings?.RemoveMod(id);
             string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
             if (!File.Exists(modulePath))
             {
                 return false;
             }
-            if (!TryReadManifest(id, out ModManifest manifest))
+            if (!TryReadManifest(id, out ModManifest? manifest))
             {
                 // Invalid manifest: refuse to reload with weaker-than-
                 // intended limits; the mod stays unloaded until fixed.
@@ -198,8 +202,8 @@ namespace HordeForge.GameBridge.Bridge
             try
             {
                 _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
-                _settings.UpdateMod(id, manifest);
-                if (_host.TryGetMod(id, out var mod))
+                _settings?.UpdateMod(id, manifest);
+                if (_host.TryGetMod(id, out var mod) && mod != null)
                 {
                     // Init only the module that was reloaded; DispatchInit
                     // would re-run on_enable for every other guest too.
@@ -218,7 +222,7 @@ namespace HordeForge.GameBridge.Bridge
         {
             if (_host != null && _host.Unload(id))
             {
-                _settings.RemoveMod(id);
+                _settings?.RemoveMod(id);
                 return true;
             }
             return false;
@@ -261,7 +265,7 @@ namespace HordeForge.GameBridge.Bridge
         /// invalid (logged); true with a null manifest when the module ships
         /// none, so host defaults apply.
         /// </summary>
-        private static bool TryReadManifest(string id, out ModManifest manifest)
+        private static bool TryReadManifest(string id, out ModManifest? manifest)
         {
             string dir = Path.Combine(WasmRoot, id);
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");

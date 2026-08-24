@@ -4,8 +4,6 @@
 //! Keep the constants in sync with the host: any drift is a silent ABI
 //! break.
 
-#![allow(static_mut_refs)]
-
 /// Module under which the host defines its game API functions.
 pub const HOST_MODULE: &str = "hordeforge";
 
@@ -47,19 +45,25 @@ extern "C" {
 
 /// Guest-side scratch buffer for strings passed to the host. Mods are
 /// single-threaded per the host contract, so one buffer is enough.
-static mut SCRATCH: [u8; 4096] = [0; 4096];
+pub const SCRATCH_LEN: usize = 4096;
+static mut SCRATCH: [u8; SCRATCH_LEN] = [0; SCRATCH_LEN];
 
 /// Copies a string into the scratch buffer and returns (pointer, length) for
 /// a host call. Panics when the string does not fit.
 pub fn scratch(s: &str) -> (i32, i32) {
     let bytes = s.as_bytes();
     let len = bytes.len();
-    // SAFETY: the host never touches this memory; the guest is
-    // single-threaded and the copy happens before the host call returns.
+    assert!(len <= SCRATCH_LEN, "scratch buffer overflow");
+    // SAFETY: the guest is single-threaded and the copy happens before the
+    // host call returns. Raw-pointer access (no references into the static)
+    // keeps `static_mut_refs` from ever applying here.
     unsafe {
-        assert!(len <= SCRATCH.len(), "scratch buffer overflow");
-        SCRATCH[..len].copy_from_slice(bytes);
-        (SCRATCH.as_ptr() as i32, len as i32)
+        core::ptr::copy_nonoverlapping(
+            bytes.as_ptr(),
+            core::ptr::addr_of_mut!(SCRATCH).cast::<u8>(),
+            len,
+        );
+        (core::ptr::addr_of!(SCRATCH) as *const u8 as i32, len as i32)
     }
 }
 
