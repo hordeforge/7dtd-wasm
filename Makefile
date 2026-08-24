@@ -42,6 +42,11 @@ GAME_DIR ?= $(HOME)/.local/share/Steam/steamapps/common/7 Days to Die Dedicated 
 
 SLN = HordeForge.WasmHost.sln
 
+# Wasmtime NuGet version as resolved into the committed lock file, so the
+# staged native engine always matches the managed binding (single source
+# of truth; bumping the PackageReference updates dist automatically).
+WASMTIME_VERSION := $(shell python3 -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
+
 .PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check clean
 
 help:
@@ -125,7 +130,7 @@ dist: build fixtures bridge
 	rm -f dist/Mods/1_HordeForge_WasmHost/System.Runtime.CompilerServices.Unsafe.dll
 	cp src/GameBridge/ModInfo.xml dist/Mods/1_HordeForge_WasmHost/
 	# Native engine for this platform ($(WASMTIME_RID), see header).
-	cp "$(HOME)/.nuget/packages/wasmtime/44.0.0/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
+	cp "$(HOME)/.nuget/packages/wasmtime/$(WASMTIME_VERSION)/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
 	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
 	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig dist/Mods/Wasm/fps-bot
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm

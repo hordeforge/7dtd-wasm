@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace HordeForge.WasmHost.Abi
@@ -115,6 +116,14 @@ namespace HordeForge.WasmHost.Abi
             public System.Collections.Generic.List<DamageEvent> Damage = new System.Collections.Generic.List<DamageEvent>();
             /// <summary>Bot loadout info events for the tick.</summary>
             public System.Collections.Generic.List<BotInfoEvent> BotInfo = new System.Collections.Generic.List<BotInfoEvent>();
+
+            /// <summary>Drops all records and events so the snapshot can be reused for the next call.</summary>
+            public void Clear()
+            {
+                Records.Clear();
+                Damage.Clear();
+                BotInfo.Clear();
+            }
         }
 
         /// <summary>
@@ -198,7 +207,16 @@ namespace HordeForge.WasmHost.Abi
 
         private static void WriteF32(Span<byte> b, ref int p, float v)
         {
-            WriteU32(b, ref p, BitConverter.ToUInt32(BitConverter.GetBytes(v), 0));
+            FloatBits bits = default;
+            bits.Float = v;
+            WriteU32(b, ref p, bits.UInt32);
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct FloatBits
+        {
+            [FieldOffset(0)] public float Float;
+            [FieldOffset(0)] public uint UInt32;
         }
     }
 }

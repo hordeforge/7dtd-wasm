@@ -16,4 +16,11 @@
     <AnalysisLevel>latest</AnalysisLevel>
   </PropertyGroup>
 
+  <!-- Commit a NuGet lock file (packages.lock.json) per project so every
+       resolved package carries its SHA512 content hash: restores verify
+       integrity and consumers get an exact inventory of what shipped. -->
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
 </Project>

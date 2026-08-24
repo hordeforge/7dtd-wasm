@@ -4,6 +4,28 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
+## Unreleased
+
+### Changed
+
+- Dependency audit pass: test stack moved to the newest serviced pins
+  (`Microsoft.NET.Test.Sdk` 17.14.1, `xunit` 2.9.3; runner stays 2.8.2,
+  the correct pairing for xunit 2.x). `Wasmtime` stays at 44.0.0: that is
+  the newest binding ever published on NuGet; engine advisories patched in
+  46/47/48 have no .NET binding yet, and the current host configuration
+  does not reach the affected surfaces (no filesystem preopens, single
+  Engine/Store). See the updated SECURITY.md note.
+
+### Added
+
+- Committed NuGet lock files (`packages.lock.json` per project) with
+  SHA512 content hashes for every direct and transitive package:
+  restores now verify integrity and consumers get an exact inventory of
+  what ships. Generated via `RestorePackagesWithLockFile` in
+  Directory.Build.props.
+- `make dist` derives the staged native Wasmtime version from the lock
+  file instead of a hardcoded copy of the package version.
+
 ## [0.1.5] - 2026-08-24
 
 ### Added

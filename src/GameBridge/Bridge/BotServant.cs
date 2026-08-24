@@ -40,8 +40,23 @@ namespace HordeForge.GameBridge.Bridge
 
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
+        // Sense runs once per tick per calling brain; the snapshot and its
+        // entity records are pooled and refilled per call instead of being
+        // reallocated every time (single main-loop thread by contract).
+        private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
+        private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
         private int _countFloor = DefaultBotCount;
         private bool _spawned;
+
+        private static SenseSnapshotWriter.EntityRecord[] CreateSenseRecords()
+        {
+            var records = new SenseSnapshotWriter.EntityRecord[MaxSenseRecords];
+            for (int i = 0; i < records.Length; i++)
+            {
+                records[i] = new SenseSnapshotWriter.EntityRecord();
+            }
+            return records;
+        }
 
         /// <summary>
         /// Handles one queued SimCommand. Returns true when the command was
@@ -114,13 +129,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return 0;
             }
-            var snapshot = new SenseSnapshotWriter.Snapshot
-            {
-                Tick = BridgeHost.CurrentTick,
-                SelfNetId = 0,
-                WorldTime = (long)game.World.GetWorldTime(),
-                BloodMoon = false,
-            };
+            SenseSnapshotWriter.Snapshot snapshot = _sense;
             try
             {
                 var entities = game.World.Entities;
@@ -128,6 +137,12 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0;
                 }
+                snapshot.Clear();
+                snapshot.Tick = BridgeHost.CurrentTick;
+                snapshot.SelfNetId = 0;
+                snapshot.WorldTime = (long)game.World.GetWorldTime();
+                snapshot.BloodMoon = false;
+                var records = _senseRecords;
                 foreach (Entity e in entities.list)
                 {
                     if (!(e is EntityAlive alive) || alive.IsDead())
@@ -138,19 +153,18 @@ namespace HordeForge.GameBridge.Bridge
                     {
                         break;
                     }
-                    snapshot.Records.Add(new SenseSnapshotWriter.EntityRecord
-                    {
-                        NetId = e.entityId,
-                        Kind = Classify(e),
-                        IsSelf = _bots.Contains(e.entityId),
-                        Alive = true,
-                        X = e.position.x,
-                        Y = e.position.y,
-                        Z = e.position.z,
-                        Hp = alive.Health,
-                        Yaw = _botYaw.TryGetValue(e.entityId, out float yaw) ? yaw : 0f,
-                        TargetId = 0,
-                    });
+                    SenseSnapshotWriter.EntityRecord record = records[snapshot.Records.Count];
+                    record.NetId = e.entityId;
+                    record.Kind = Classify(e);
+                    record.IsSelf = _bots.Contains(e.entityId);
+                    record.Alive = true;
+                    record.X = e.position.x;
+                    record.Y = e.position.y;
+                    record.Z = e.position.z;
+                    record.Hp = alive.Health;
+                    record.Yaw = _botYaw.TryGetValue(e.entityId, out float yaw) ? yaw : 0f;
+                    record.TargetId = 0;
+                    snapshot.Records.Add(record);
                 }
             }
             catch (Exception ex)

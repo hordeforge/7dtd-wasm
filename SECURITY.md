@@ -31,7 +31,15 @@ are not.
   validated by `tools/targetcheck`, but it is still game-process code.
 - **The Wasmtime engine**: the host inherits Wasmtime's security model. Keep
   the `Wasmtime` NuGet package current; upstream treats security seriously
-  and this host should track releases.
+  and this host should track releases. The .NET binding publishes far more
+  slowly than the engine (44.0.0 is the newest binding while the engine is
+  on 48), so engine advisories can stay unpatched for .NET consumers for
+  months. Current exposure, checked against the July/August 2026
+  advisories (GHSA-hgjw-h833-99q9, GHSA-vqjp-4c8c-hfgg): this host grants
+  guests no filesystem preopens (only inherited stdout/stderr), which keeps
+  the preview1 filesystem sandbox escapes unreachable, and it uses a single
+  `Engine` and `Store`, so cross-engine type confusion does not apply.
+  Re-check this paragraph against new advisories when the binding updates.
 - **Settings file**: `wasm.toml` and each mod's `wasm-mod.toml` are
   readable by any guest (the shared `[settings]` are shared by all
   guests). Do not put secrets there; secrets belong in serverconfig via

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Config;
@@ -39,6 +40,12 @@ namespace HordeForge.WasmHost.Core
         // Dispatch happens in load order (documented); Dictionary enumeration
         // order is an implementation detail, so the ids are tracked here.
         private readonly List<string> _modOrder = new List<string>();
+        // Live read-only view over _modOrder, built once: ModIds is read by
+        // the bridge on every game tick, and a per-call array copy would
+        // allocate at tick rate for no benefit. Callers get the same
+        // mutation protection as a copy (the wrapper rejects writes) while
+        // always seeing current load order.
+        private readonly ReadOnlyCollection<string> _modIdsView;
         private string _currentJoinName = string.Empty;
 
         /// <summary>
@@ -73,10 +80,11 @@ namespace HordeForge.WasmHost.Core
             _linker = new Linker(_engine);
             _linker.DefineWasi();
             DefineHostApi();
+            _modIdsView = new ReadOnlyCollection<string>(_modOrder);
         }
 
         /// <summary>Ids of the currently loaded mods, in load order.</summary>
-        public IReadOnlyList<string> ModIds => _modOrder.ToArray();
+        public IReadOnlyList<string> ModIds => _modIdsView;
 
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick { get; private set; }
@@ -491,8 +499,10 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         private static int WriteGuestString(Caller caller, int outPtr, int outCap, string value, int tooSmallStatus)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(value);
-            if (bytes.Length > outCap)
+            // Measure with a length pass only: encoding to a byte[] just to
+            // count would allocate and encode twice (here and in WriteString).
+            int byteCount = Encoding.UTF8.GetByteCount(value);
+            if (byteCount > outCap)
             {
                 return tooSmallStatus;
             }
@@ -502,7 +512,7 @@ namespace HordeForge.WasmHost.Core
                 return tooSmallStatus;
             }
             memory.WriteString(outPtr, value, Encoding.UTF8);
-            return bytes.Length;
+            return byteCount;
         }
 
         private static string ReadGuestString(Caller caller, int ptr, int len)
