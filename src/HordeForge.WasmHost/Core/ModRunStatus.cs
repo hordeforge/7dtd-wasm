@@ -1,4 +1,4 @@
-namespace HordeForge.WasmHost.Limits
+namespace HordeForge.WasmHost.Core
 {
     /// <summary>
     /// Outcome of a single guest call (init, tick, player join, shutdown).

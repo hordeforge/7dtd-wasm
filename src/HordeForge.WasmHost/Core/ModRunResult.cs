@@ -1,4 +1,4 @@
-namespace HordeForge.WasmHost.Limits
+namespace HordeForge.WasmHost.Core
 {
     /// <summary>
     /// Structured result of a guest call. The host never lets a misbehaving

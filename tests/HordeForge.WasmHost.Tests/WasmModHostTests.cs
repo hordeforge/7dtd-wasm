@@ -5,7 +5,6 @@ using System.Linq;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Config;
 using HordeForge.WasmHost.Core;
-using HordeForge.WasmHost.Limits;
 using HordeForge.WasmHost.Registry;
 using Xunit;
 

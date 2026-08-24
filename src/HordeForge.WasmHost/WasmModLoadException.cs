@@ -1,6 +1,6 @@
 using System;
 
-namespace HordeForge.WasmHost.Core
+namespace HordeForge.WasmHost
 {
     /// <summary>
     /// Raised when a module cannot be loaded: parse or compile failure,

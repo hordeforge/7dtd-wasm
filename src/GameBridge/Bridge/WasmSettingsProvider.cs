@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using HordeForge.WasmHost.Core;
 using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge

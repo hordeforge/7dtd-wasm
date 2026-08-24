@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Config;
-using HordeForge.WasmHost.Limits;
 using HordeForge.WasmHost.Registry;
 using Wasmtime;
 

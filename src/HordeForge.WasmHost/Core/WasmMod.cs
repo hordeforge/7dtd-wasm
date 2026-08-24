@@ -1,7 +1,6 @@
 using System;
 using System.Text;
 using HordeForge.WasmHost.Abi;
-using HordeForge.WasmHost.Limits;
 using Wasmtime;
 
 namespace HordeForge.WasmHost.Core
