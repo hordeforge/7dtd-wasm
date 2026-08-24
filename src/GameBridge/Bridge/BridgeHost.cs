@@ -160,6 +160,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 lines.Add("  " + droppedCommands);
             }
+            string droppedWorldTime = _gameApi != null ? _gameApi.WorldTimeErrorLimiter.DescribeDropped("world time failures") : string.Empty;
+            if (droppedWorldTime.Length > 0)
+            {
+                lines.Add("  " + droppedWorldTime);
+            }
             string droppedTick = DispatchFailureLimiter.DescribeDropped("tick failure logs");
             if (droppedTick.Length > 0)
             {
@@ -274,7 +279,14 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return false;
             }
-            _host.Unload(id);
+            ModRunResult? oldShutdown = _host.Unload(id);
+            if (oldShutdown != null && !oldShutdown.Ok)
+            {
+                // The reload proceeds either way, but the failed goodbye of
+                // the old instance must reach the log like an unload's would.
+                Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
+                            oldShutdown.Message + (oldShutdown.Details.Length > 0 ? " (" + oldShutdown.Details + ")" : ""));
+            }
             _settings?.RemoveMod(id);
             string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
             if (!File.Exists(modulePath))
@@ -315,12 +327,25 @@ namespace HordeForge.GameBridge.Bridge
 
         public static bool Unload(string id)
         {
-            if (_host != null && _host.Unload(id))
+            if (_host == null)
             {
-                _settings?.RemoveMod(id);
-                return true;
+                return false;
             }
-            return false;
+            ModRunResult? shutdown = _host.Unload(id);
+            if (shutdown == null)
+            {
+                return false;
+            }
+            _settings?.RemoveMod(id);
+            if (!shutdown.Ok)
+            {
+                // Fail soft: the mod is gone either way, but a trapped or
+                // failing shutdown must reach the operator instead of a
+                // bare "unloaded" from the console command.
+                Log.Warning("[WasmHost] unload of " + id + ": " + shutdown.Message +
+                            (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
+            }
+            return true;
         }
 
         /// <summary>
@@ -411,9 +436,9 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static string ReadBounded(string path)
         {
-            if (!ManifestFiles.TryRead(path, out string content))
+            if (!ManifestFiles.TryRead(path, out string content, out string? failureReason))
             {
-                throw new InvalidOperationException(path + " is unreadable or larger than " + ManifestFiles.MaxBytes + " bytes");
+                throw new InvalidOperationException(path + " is unreadable: " + failureReason);
             }
             return content;
         }

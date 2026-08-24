@@ -258,7 +258,14 @@ namespace HordeForge.WasmHost.Registry
                             throw new FormatException("line " + lineNumber + ": bad unicode escape");
                         }
                         string hex = body.Substring(i + 1, 4);
-                        sb.Append((char)ushort.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+                        // AllowHexSpecifier only: rejects signs and whitespace
+                        // that a plain HexNumber parse would accept, so the
+                        // cast below can never overflow.
+                        if (!int.TryParse(hex, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out int code))
+                        {
+                            throw new FormatException("line " + lineNumber + ": bad unicode escape \\u" + hex);
+                        }
+                        sb.Append((char)code);
                         i += 4;
                         break;
                     default:

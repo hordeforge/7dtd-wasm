@@ -21,6 +21,9 @@ namespace HordeForge.WasmHost.Tests
         /// <summary>Sense snapshot served through the zdtd sense import; null = no world data.</summary>
         public SenseSnapshotWriter.Snapshot? Sense { get; set; }
 
+        /// <summary>When true, WriteSenseSnapshot throws like a broken game-side service.</summary>
+        public bool SenseThrows { get; set; }
+
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
@@ -64,6 +67,10 @@ namespace HordeForge.WasmHost.Tests
 
         public int WriteSenseSnapshot(Span<byte> buffer)
         {
+            if (SenseThrows)
+            {
+                throw new InvalidOperationException("sense backend exploded");
+            }
             if (Sense == null)
             {
                 return 0;

@@ -178,21 +178,23 @@ namespace HordeForge.WasmHost.Core
 
         /// <summary>
         /// Removes a mod, invoking its shutdown export first (fail soft: a
-        /// trapped shutdown still removes the mod). Returns false when the id
-        /// was not loaded.
+        /// trapped shutdown still removes the mod). Returns null when the id
+        /// was not loaded; otherwise the shutdown call result (Ok when the
+        /// mod exports no shutdown handler) so callers can surface a failed
+        /// goodbye instead of reporting a clean unload.
         /// </summary>
-        public bool Unload(string id)
+        public ModRunResult? Unload(string id)
         {
             ThrowIfDisposed();
             if (_mods.TryGetValue(id, out var mod))
             {
                 _currentModId = mod.Id;
-                mod.Shutdown();
+                ModRunResult shutdown = mod.Shutdown();
                 _mods.Remove(id);
                 _modOrder.Remove(id);
-                return true;
+                return shutdown;
             }
-            return false;
+            return null;
         }
 
         /// <summary>
@@ -435,8 +437,12 @@ namespace HordeForge.WasmHost.Core
                 {
                     return _api.WriteSenseSnapshot(memory.GetSpan(outPtr, outCap));
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    // The wire contract is "0 = no data", but a host-side
+                    // failure must not leave the brain silently blind: report
+                    // through the capped log path so it can be diagnosed.
+                    _api.Log(LogSource(), AbiConstants.LogError, "sense failed: " + ex.Message);
                     return 0;
                 }
             });

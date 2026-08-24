@@ -216,8 +216,15 @@ namespace HordeForge.WasmHost.Registry
                                     throw new FormatException("bad unicode escape");
                                 }
                                 string hex = _text.Substring(_pos, 4);
+                                // AllowHexSpecifier only (see MiniToml): a
+                                // signed or malformed escape is a document
+                                // error, not an overflow at decode time.
+                                if (!int.TryParse(hex, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out int code))
+                                {
+                                    throw new FormatException("bad unicode escape \\u" + hex + " at " + (_pos - 2));
+                                }
                                 _pos += 4;
-                                sb.Append((char)ushort.Parse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture));
+                                sb.Append((char)code);
                                 break;
                             default:
                                 throw new FormatException("unknown escape \\" + e);

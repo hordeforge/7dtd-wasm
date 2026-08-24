@@ -92,10 +92,9 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return;
                 }
-                if (!ManifestFiles.TryRead(_sharedPath, out string text))
+                if (!ManifestFiles.TryRead(_sharedPath, out string text, out string? failureReason))
                 {
-                    throw new InvalidOperationException(
-                        _sharedPath + " is unreadable or larger than " + ManifestFiles.MaxBytes + " bytes");
+                    throw new InvalidOperationException(_sharedPath + " is unreadable: " + failureReason);
                 }
                 ModManifest shared = ModManifest.ParseToml(text, "shared");
                 _shared.Clear();

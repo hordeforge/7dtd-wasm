@@ -187,8 +187,10 @@ namespace HordeForge.WasmHost.Tests
                 Assert.NotNull(trap);
                 Assert.False(host.TryGetMod("nope", out _));
 
-                Assert.True(host.Unload("trap"));
-                Assert.False(host.Unload("trap"));
+                ModRunResult? unloaded = host.Unload("trap");
+                Assert.NotNull(unloaded);
+                Assert.True(unloaded.Ok);
+                Assert.Null(host.Unload("trap"));
                 Assert.Single(host.ModIds);
             }
         }
@@ -236,14 +238,19 @@ namespace HordeForge.WasmHost.Tests
         public void ShutdownIsOptional()
         {
             // fuel and trap fixtures have no shutdown export; unloading and
-            // disposing must still succeed.
+            // disposing must still succeed, and the reported shutdown result
+            // is Ok (nothing to fail).
             var (host, api) = NewHost();
             using (host)
             {
                 host.LoadModule("fuel", Fixture("fuel"));
                 host.LoadModule("trap", Fixture("trap"));
-                Assert.True(host.Unload("fuel"));
-                Assert.True(host.Unload("trap"));
+                ModRunResult? fuelShutdown = host.Unload("fuel");
+                ModRunResult? trapShutdown = host.Unload("trap");
+                Assert.NotNull(fuelShutdown);
+                Assert.NotNull(trapShutdown);
+                Assert.True(fuelShutdown.Ok);
+                Assert.True(trapShutdown.Ok);
                 Assert.Empty(api.Logs);
             }
         }
@@ -518,6 +525,26 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void SenseFailureIsLoggedNotSilentlySwallowed()
+        {
+            // A host-side sense failure must reach the capped log path with
+            // the calling module's attribution; the guest only sees "no
+            // data" and keeps running.
+            var api = new TestGameHostApi { SenseThrows = true };
+            using (WasmModHost host = NewHostForFpsBot(api))
+            {
+                WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
+                Assert.True(bot.Init(0).Ok);
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.True(tick.Ok, tick.Message + " " + tick.Details);
+                Assert.Contains(api.Logs, l =>
+                    l.Source.EndsWith("/fps-bot", StringComparison.Ordinal) &&
+                    l.Level == AbiConstants.LogError &&
+                    l.Message.Contains("sense failed"));
+            }
+        }
+
+        [Fact]
         public void ManifestDefaultsMatchNullManifest()
         {
             // Unknown fields are tolerated; an empty manifest behaves like
@@ -543,7 +570,7 @@ greeting = ""hello""
             {
                 host.LoadModule("strings", Fixture("strings"));
                 host.LoadModule("trap", Fixture("trap"));
-                Assert.True(host.Unload("strings"));
+                Assert.NotNull(host.Unload("strings"));
                 host.LoadModule("strings", Fixture("strings"));
 
                 var results = host.DispatchTick(1);

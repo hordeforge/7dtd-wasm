@@ -23,6 +23,7 @@ namespace HordeForge.GameBridge.Bridge
             RateLimiter = new GuestRateLimiter();
             ChatLimiter = new GuestRateLimiter();
             CommandLimiter = new GuestRateLimiter();
+            WorldTimeErrorLimiter = new GuestRateLimiter();
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
@@ -33,6 +34,9 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>Per-module SimCommand rate limiter; exposed for "wasm status".</summary>
         public GuestRateLimiter CommandLimiter { get; }
+
+        /// <summary>Rate limiter for get_world_time failure logs; exposed for "wasm status".</summary>
+        public GuestRateLimiter WorldTimeErrorLimiter { get; }
 
         /// <summary>Longest chat message accepted from a guest, in characters.</summary>
         public const int MaxChatMessageLength = 256;
@@ -76,8 +80,20 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 return (long)game.World.GetWorldTime();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // Guests silently read 0 when this fails; without a log line
+                // that degraded world view is undiagnosable. The limiter
+                // bounds the log like the other guest output paths so a
+                // persistently throwing game state cannot flood it.
+                if (WorldTimeErrorLimiter.TryWrite("world_time", out long dropped))
+                {
+                    global::Log.Warning("[WasmHost] get_world_time failed (" + ex.Message + "); guests read 0 until it recovers");
+                }
+                else if (dropped % 100 == 1)
+                {
+                    global::Log.Out("[WasmHost] suppressed " + dropped + " get_world_time failure log(s)");
+                }
                 return 0L;
             }
         }

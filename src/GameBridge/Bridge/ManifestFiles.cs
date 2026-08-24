@@ -16,24 +16,35 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Reads the whole file when it exists, is readable, and fits the
-        /// size bound; returns false otherwise.
+        /// size bound; returns false otherwise. <paramref name="failureReason"/>
+        /// then says which bound failed (missing file, oversize, or the IO
+        /// error) so callers can report the real cause instead of a generic
+        /// "unreadable".
         /// </summary>
-        public static bool TryRead(string path, out string content)
+        public static bool TryRead(string path, out string content, out string? failureReason)
         {
             content = string.Empty;
+            failureReason = null;
             try
             {
                 var info = new FileInfo(path);
-                if (!info.Exists || info.Length > MaxBytes)
+                if (!info.Exists)
                 {
+                    failureReason = "the file does not exist";
+                    return false;
+                }
+                if (info.Length > MaxBytes)
+                {
+                    failureReason = "the file is larger than " + MaxBytes + " bytes";
                     return false;
                 }
                 content = File.ReadAllText(path);
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 content = string.Empty;
+                failureReason = ex.Message;
                 return false;
             }
         }
