@@ -21,9 +21,6 @@ namespace HordeForge.WasmHost.Tests
         /// <summary>Sense snapshot served through the zdtd sense import; null = no world data.</summary>
         public SenseSnapshotWriter.Snapshot? Sense { get; set; }
 
-        /// <summary>Query answers served through the zdtd query import.</summary>
-        public Func<string, string?>? QueryAnswers { get; set; }
-
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
@@ -76,7 +73,7 @@ namespace HordeForge.WasmHost.Tests
 
         public string? TryQuery(string request)
         {
-            return QueryAnswers != null ? QueryAnswers(request) : null;
+            return null;
         }
     }
 }

@@ -48,12 +48,13 @@ namespace HordeForge.GameBridge.Bridge
 
             var config = new WasmHostConfig();
             ApplySharedLimits(config);
-            _servant = new BotServant(_settings);
+            _servant = new BotServant();
             _gameApi = new GameHostApi(_settings, _servant);
             _host = new WasmModHost(_gameApi, config);
 
+            // LoadAllModules runs each newly loaded module's on_enable (see
+            // there), so start and "wasm load" initialize exactly once.
             LoadAllModules();
-            _host.DispatchInit();
             Started = true;
             Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
         }
@@ -86,13 +87,16 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>Current value of the bridge's monotonic tick counter.</summary>
+        internal static long CurrentTick => _tick;
+
         /// <summary>
         /// Player-spawn handler invoked by the Harmony postfix on
-        /// GameManager.PlayerSpawnedInWorld (the server-side spawn event;
-        /// GameManager.OnClientSpawned does not fire on the dedicated
-        /// server, found live in the acceptance run). Forwards the joining
-        /// player's name to every guest that exports the optional
-        /// on_player_join handler.
+        /// GameManager.RequestToSpawnPlayer (Hooks/PlayerSpawnHook; the
+        /// server-side join entry point, since PlayerSpawnedInWorld and
+        /// OnClientSpawned do not fire on the dedicated server, found live
+        /// in the acceptance run). Forwards the joining player's name to
+        /// every guest that exports the optional on_player_join handler.
         /// </summary>
         public static void PlayerSpawnedInWorld(ClientInfo clientInfo)
         {
@@ -100,7 +104,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            string name = clientInfo != null ? clientInfo.playerName : string.Empty;
+            if (clientInfo == null)
+            {
+                return;
+            }
+            string name = clientInfo.playerName ?? string.Empty;
             if (name.Length == 0)
             {
                 return;
@@ -110,7 +118,7 @@ namespace HordeForge.GameBridge.Bridge
             // near-entity id, not the spawning player's id (found live in
             // the acceptance run: the Harmony postfix must not declare
             // parameters by names the target does not have).
-            int entityId = clientInfo != null ? clientInfo.entityId : 0;
+            int entityId = clientInfo.entityId;
             Log.Out("[WasmHost] player spawned: " + TextSanitizer.Clean(name) + " (entity " + entityId + ")");
             foreach (var result in _host.DispatchPlayerJoin(entityId, name))
             {
@@ -160,7 +168,12 @@ namespace HordeForge.GameBridge.Bridge
             return lines;
         }
 
-        /// <summary>Loads every module found under Mods/Wasm/&lt;id&gt;/module.wasm.</summary>
+        /// <summary>
+        /// Loads every module found under Mods/Wasm/&lt;id&gt;/module.wasm and
+        /// runs its on_enable export (docs/ABI.md: called once when the mod
+        /// is loaded and enabled), so "wasm load" leaves new modules in the
+        /// same state as a server start. Returns the number of new modules.
+        /// </summary>
         public static int LoadAllModules()
         {
             if (_host == null)
@@ -172,6 +185,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return 0;
             }
+            var loadedIds = new List<string>();
             foreach (string dir in Directory.GetDirectories(WasmRoot))
             {
                 string id = Path.GetFileName(dir);
@@ -206,6 +220,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     _host.LoadModule(id, wasmBytes, manifest);
                     _settings?.UpdateMod(id, manifest);
+                    loadedIds.Add(id);
                     loaded++;
                 }
                 catch (WasmModLoadException ex)
@@ -213,7 +228,30 @@ namespace HordeForge.GameBridge.Bridge
                     Log.Warning("[WasmHost] failed to load module " + id + ": " + ex.Message);
                 }
             }
+            foreach (string id in loadedIds)
+            {
+                InitOne(id);
+            }
             return loaded;
+        }
+
+        /// <summary>
+        /// Runs one module's on_enable, fail soft: a trapped enable is
+        /// logged and the module stays loaded (its next tick is budgeted
+        /// like any other).
+        /// </summary>
+        private static void InitOne(string id)
+        {
+            if (_host == null || !_host.TryGetMod(id, out WasmMod? mod) || mod == null)
+            {
+                return;
+            }
+            ModRunResult result = mod.Init(_host.Tick);
+            if (!result.Ok)
+            {
+                Log.Warning("[WasmHost] on_enable of " + id + ": " + result.Message +
+                            (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+            }
         }
 
         /// <summary>
@@ -263,12 +301,9 @@ namespace HordeForge.GameBridge.Bridge
             {
                 _host.LoadModule(id, wasmBytes, manifest);
                 _settings?.UpdateMod(id, manifest);
-                if (_host.TryGetMod(id, out var mod) && mod != null)
-                {
-                    // Init only the module that was reloaded; DispatchInit
-                    // would re-run on_enable for every other guest too.
-                    mod.Init(_host.Tick);
-                }
+                // Init only the module that was reloaded; dispatching init
+                // to the host would re-run on_enable for every other guest.
+                InitOne(id);
                 return true;
             }
             catch (WasmModLoadException ex)

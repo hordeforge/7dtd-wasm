@@ -55,12 +55,20 @@ namespace HordeForge.WasmHost.Registry
                     current = root;
                     foreach (string part in parts)
                     {
-                        if (!current.TryGet(part, out TomlValue child) || !(child is TomlTable childTable))
+                        if (current.TryGet(part, out TomlValue child))
                         {
-                            childTable = new TomlTable();
-                            current.Add(part, childTable);
+                            if (!(child is TomlTable childTable))
+                            {
+                                throw new FormatException("line " + (i + 1) + ": table [" + path + "] redefines the value '" + part + "' as a table");
+                            }
+                            current = childTable;
                         }
-                        current = childTable;
+                        else
+                        {
+                            var created = new TomlTable();
+                            current.Add(part, created);
+                            current = created;
+                        }
                     }
                     continue;
                 }
@@ -91,15 +99,38 @@ namespace HordeForge.WasmHost.Registry
             for (int i = 0; i < line.Length; i++)
             {
                 char c = line[i];
-                if (c == '"' && !inLiteral)
+                if (inBasic)
                 {
-                    inBasic = !inBasic;
+                    // A backslash escapes the next character inside a basic
+                    // string (so \" does not close it); literal strings have
+                    // no escapes. Mirrors SplitArrayItems.
+                    if (c == '\\')
+                    {
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        inBasic = false;
+                    }
+                    continue;
                 }
-                else if (c == '\'' && !inBasic)
+                if (inLiteral)
                 {
-                    inLiteral = !inLiteral;
+                    if (c == '\'')
+                    {
+                        inLiteral = false;
+                    }
+                    continue;
                 }
-                else if (c == '#' && !inBasic && !inLiteral)
+                if (c == '"')
+                {
+                    inBasic = true;
+                }
+                else if (c == '\'')
+                {
+                    inLiteral = true;
+                }
+                else if (c == '#')
                 {
                     return line.Substring(0, i);
                 }
@@ -151,12 +182,7 @@ namespace HordeForge.WasmHost.Registry
             return true;
         }
 
-        private static TomlValue ParseValue(string text, int lineNumber)
-        {
-            return ParseValue(text, lineNumber, 0);
-        }
-
-        private static TomlValue ParseValue(string text, int lineNumber, int depth)
+        private static TomlValue ParseValue(string text, int lineNumber, int depth = 0)
         {
             if (text.Length == 0)
             {

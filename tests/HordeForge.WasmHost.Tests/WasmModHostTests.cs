@@ -634,6 +634,27 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void TomlEscapedQuoteBeforeHashParses()
+        {
+            // The comment stripper must honor backslash escapes inside basic
+            // strings: "a\" # b" is one scalar whose value contains " # ",
+            // not a string followed by a comment.
+            ModManifest m = ModManifest.ParseToml("[settings]\nmotto = \"a\\\" # b\"\n", "x");
+            Assert.Equal("a\" # b", m.Settings["motto"]);
+        }
+
+        [Fact]
+        public void TomlHeaderOverValueIsRejected()
+        {
+            // A [header] path that collides with an existing scalar value
+            // must reject instead of silently replacing it; here the silent
+            // replace would drop the operator's fuel limit entirely.
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits]\nfuel_per_call = 100\n[limits.fuel_per_call]\ndeep = true\n", "bad"));
+            Assert.Contains("redefines", ex.Message);
+        }
+
+        [Fact]
         public void PlayerJoinDispatchPrintsBossMessage()
         {
             // The C guest (samples/guest-boss, built with zig) prints

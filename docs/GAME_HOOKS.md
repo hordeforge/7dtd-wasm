@@ -33,11 +33,8 @@ is try/caught so a host failure never breaks the game loop.
 | `GameManager.Instance` | static field |
 | `GameManager.World` | instance property |
 | `GameManager.ChatMessageServer` | `void(ClientInfo, EChatType, int, string, List<int>, EMessageSender, BbCodeSupportMode)` |
-| `GameTimer.Instance` | static property |
-| `GameTimer.ticks` | instance field |
 | `ConsoleCmdAbstract.getCommands/getDescription/getHelp/Execute` | `string[]()`, `string()`, `string()`, `void(List<string>, CommandSenderInfo)` |
 | `SdtdConsole.Output` | `void(string)` instance |
-| `SdtdConsole.ExecuteSync` | `List<string>(string, ClientInfo)` |
 | `SingletonMonoBehaviour<T>.Instance` | static field |
 | `World.GetWorldTime` | `ulong()` |
 | `Log` (LogLibrary) | static `Out`, `Warning`, `Error` |

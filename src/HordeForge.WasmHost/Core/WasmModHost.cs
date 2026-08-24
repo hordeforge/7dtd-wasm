@@ -237,17 +237,27 @@ namespace HordeForge.WasmHost.Core
         {
             ThrowIfDisposed();
             _currentJoinName = playerName ?? string.Empty;
-            var results = new List<ModRunResult>();
-            foreach (var mod in ModsInLoadOrder())
+            try
             {
-                _currentModId = mod.Id;
-                ModRunResult? result = mod.OnPlayerJoin((int)entityId);
-                if (result != null)
+                var results = new List<ModRunResult>();
+                foreach (var mod in ModsInLoadOrder())
                 {
-                    results.Add(result);
+                    _currentModId = mod.Id;
+                    ModRunResult? result = mod.OnPlayerJoin((int)entityId);
+                    if (result != null)
+                    {
+                        results.Add(result);
+                    }
                 }
+                return results;
             }
-            return results;
+            finally
+            {
+                // The join event is over: get_join_player_name must report
+                // "no event" (-1) again, per docs/ABI.md, instead of serving
+                // the stale name from this join to later calls.
+                _currentJoinName = string.Empty;
+            }
         }
 
         private IEnumerable<WasmMod> ModsInLoadOrder()

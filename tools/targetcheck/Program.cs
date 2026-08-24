@@ -86,19 +86,13 @@ namespace TargetCheck
 
             CheckType(md, "EntityFactory", t =>
             {
-                CheckMethod(md, t, "SetupEntityCreationData", "EntityCreationData(int, Vector3)", isStatic: true);
-                CheckMethod(md, t, "CreateEntity", "Entity(EntityCreationData)", isStatic: true);
+                // BotServant spawns through this exact overload.
+                CheckMethod(md, t, "CreateEntity", "Entity(int, Vector3, Vector3)", isStatic: true);
             });
 
             CheckType(md, "EntityClass", t =>
             {
                 CheckMethod(md, t, "FromString", "int(string)", isStatic: true);
-            });
-
-            CheckType(md, "GameTimer", t =>
-            {
-                CheckProperty(md, t, "Instance", isStatic: true);
-                CheckFieldOrProperty(md, t, "ticks", isStatic: false);
             });
 
             CheckType(md, "ConsoleCmdAbstract", t =>
@@ -114,7 +108,6 @@ namespace TargetCheck
             CheckType(md, "SdtdConsole", t =>
             {
                 CheckMethod(md, t, "Output", "void(string)", isStatic: false);
-                CheckMethod(md, t, "ExecuteSync", "List`1<string>(string, ClientInfo)", isStatic: false);
             });
 
             // SdtdConsole is reached through the Unity singleton pattern.

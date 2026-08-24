@@ -34,16 +34,10 @@ namespace HordeForge.GameBridge.Bridge
         // pistol 0, shotgun 1, ak 2, sniper 3, auto 4, smg 5).
         private static readonly int[] WeaponDamage = { 12, 18, 14, 45, 12, 10 };
 
-        private readonly WasmSettingsProvider _settings;
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
         private int _countFloor = DefaultBotCount;
         private bool _spawned;
-
-        public BotServant(WasmSettingsProvider settings)
-        {
-            _settings = settings;
-        }
 
         /// <summary>
         /// Handles one queued SimCommand. Returns true when the command was
@@ -115,7 +109,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             var snapshot = new SenseSnapshotWriter.Snapshot
             {
-                Tick = 0,
+                Tick = BridgeHost.CurrentTick,
                 SelfNetId = 0,
                 WorldTime = (long)game.World.GetWorldTime(),
                 BloodMoon = false,
@@ -147,7 +141,7 @@ namespace HordeForge.GameBridge.Bridge
                         Y = e.position.y,
                         Z = e.position.z,
                         Hp = alive.Health,
-                        Yaw = YawFor(e.entityId),
+                        Yaw = _botYaw.TryGetValue(e.entityId, out float yaw) ? yaw : 0f,
                         TargetId = 0,
                     });
                 }
@@ -340,11 +334,6 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        private float YawFor(int entityId)
-        {
-            return _botYaw.TryGetValue(entityId, out float yaw) ? yaw : 0f;
-        }
-
         private void LookBot(string[] parts)
         {
             if (parts.Length < 4)
@@ -374,6 +363,15 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
+            // Only a live servant bot may fire (zdtd BotManager.shoot parity:
+            // find(shooter) orelse return). Without this gate any guest id
+            // would deal game-side damage attributed to an entity that is
+            // not ours, players included.
+            Entity? shooter = FindBot(botId);
+            if (shooter == null)
+            {
+                return;
+            }
             bool head = parts.Length > 4 && parts[4] == "head";
             var game = GameManager.Instance;
             if (game == null || game.World == null)
@@ -381,13 +379,13 @@ namespace HordeForge.GameBridge.Bridge
                 return;
             }
             Entity target = game.World.GetEntity(targetId);
-            Entity bot = game.World.GetEntity(botId);
             if (!(target is EntityAlive targetAlive) || targetAlive.IsDead())
             {
                 return;
             }
-            int weapon = WeaponIdFor(bot);
-            int dmg = WeaponDamage[weapon];
+            int dmg = WeaponDamage[0];
+            // Stage 2: all bots carry the pistol (weapon 0) until loadout
+            // records are wired; the brain's default matches.
             if (head)
             {
                 dmg *= 2;
@@ -395,13 +393,6 @@ namespace HordeForge.GameBridge.Bridge
             var source = new DamageSourceEntity(EnumDamageSource.External, EnumDamageTypes.Piercing, botId);
             targetAlive.DamageEntity(source, dmg, head, 1f);
             global::Log.Out("[WasmHost] bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
-        }
-
-        private int WeaponIdFor(Entity bot)
-        {
-            // Stage 2: all bots carry the pistol (weapon 0) until loadout
-            // records are wired; the brain's default matches.
-            return 0;
         }
 
         private Entity? FindBot(int entityId)

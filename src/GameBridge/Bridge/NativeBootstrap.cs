@@ -54,10 +54,9 @@ namespace HordeForge.GameBridge.Bridge
                 return;
             }
 
-            string staged = haveStaged ? nativeDir : Path.Combine(modletDirectory, "Native");
             Log.Warning(
                 "[WasmHost] libwasmtime.so does not resolve yet; start the server with it on the loader path, " +
-                "for example LD_LIBRARY_PATH=\"" + staged + ":$LD_LIBRARY_PATH\". Setting the variable after " +
+                "for example LD_LIBRARY_PATH=\"" + nativeDir + ":$LD_LIBRARY_PATH\". Setting the variable after " +
                 "process start has no effect.");
         }
 

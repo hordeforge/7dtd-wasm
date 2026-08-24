@@ -32,9 +32,10 @@ are not.
 - **The Wasmtime engine**: the host inherits Wasmtime's security model. Keep
   the `Wasmtime` NuGet package current; upstream treats security seriously
   and this host should track releases.
-- **Settings file**: `wasm-settings.txt` is readable by any guest (all guests
-  share it). Do not put secrets there; secrets belong in serverconfig via the
-  normal env-only rule.
+- **Settings file**: `wasm.toml` and each mod's `wasm-mod.toml` are
+  readable by any guest (the shared `[settings]` are shared by all
+  guests). Do not put secrets there; secrets belong in serverconfig via
+  the normal env-only rule.
 
 ## Operational notes
 
