@@ -56,12 +56,13 @@ make test           # host test suite (needs prebuilt fixtures in tests/fixtures
 make fixtures       # rebuild guest fixtures from samples/ and stage them
 make bridge         # net48 mod against GAME_DIR (defaults to this machine's install)
 make bridge-check   # validate game API targets against GAME_DIR
-make dist           # assemble dist/Mods/1_HordeForge_WasmHost + sample guest
+make dist           # assemble dist/Mods/1_HordeForge_WasmHost + sample guests
 make check          # doccheck + build + test + bridge + bridge-check (CI entry)
 ```
 
-Known gaps (stated honestly): the bridge was accepted inside a live
-dedicated server in a docker container (fresh steamcmd install, V 3.1.0
-b14); the native install on this machine crashes at boot, so it was not
-used. Evidence: `evidence/acceptance-1/` and `docs/ACCEPTANCE.md`. The
-host library and all sandbox guarantees are covered by the test suite.
+Known gaps (stated honestly): the bridge has run inside a live dedicated
+server only in a docker container (acceptance succeeded; fresh steamcmd
+install, V 3.1.0 b14); the native install on this machine crashes at boot,
+so it was not used. Evidence: `evidence/acceptance-1/` and
+`docs/ACCEPTANCE.md`. The host library and all sandbox guarantees are
+covered by the test suite.

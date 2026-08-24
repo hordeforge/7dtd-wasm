@@ -33,7 +33,7 @@ make samples-check # guest lint gate: rustc warnings are build errors
 make test         # host suite must stay green
 make bridge       # net48 bridge against GAME_DIR
 make bridge-check # game targets must pass after any game update
-make check        # docs gate + guest lint gate + build + test + bridge
+make check        # docs gate + guest lint gate + build + test + bridge-check
 ```
 
 Every change lands with its tests and its docs updated in the same commit.

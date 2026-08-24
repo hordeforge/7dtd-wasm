@@ -71,7 +71,7 @@ namespace HordeForge.WasmHost.Tests
                 ModRunResult tick = host.DispatchTick(100).Single();
                 Assert.True(tick.Ok, tick.Message + " " + tick.Details);
 
-                // get_tick and get_world_time round trip into the log line.
+                // tick and get_world_time round trip into the log line.
                 Assert.Contains(api.Logs, l => l.Message.Contains("strings tick=100 world=12345"));
                 // get_setting round trip: host wrote the value into guest memory.
                 Assert.Contains(api.Logs, l => l.Message.Contains("setting='hello from host'"));

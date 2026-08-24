@@ -33,12 +33,29 @@ is try/caught so a host failure never breaks the game loop.
 | `GameManager.Instance` | static field |
 | `GameManager.World` | instance property |
 | `GameManager.ChatMessageServer` | `void(ClientInfo, EChatType, int, string, List<int>, EMessageSender, BbCodeSupportMode)` |
+| `GameManager.RequestToSpawnPlayer` | `void(ClientInfo, int, PlayerProfile, int)` |
+| `ClientInfo.playerName`, `ClientInfo.entityId` | instance fields |
 | `ConsoleCmdAbstract.getCommands/getDescription/getHelp/Execute` | `string[]()`, `string()`, `string()`, `void(List<string>, CommandSenderInfo)` |
 | `SdtdConsole.Output` | `void(string)` instance |
 | `SingletonMonoBehaviour<T>.Instance` | static field |
+| `World.Entities` | instance field |
+| `World.GetEntity` | `Entity(int)` |
+| `World.SpawnEntityInWorld` | `void(Entity)` |
 | `World.GetWorldTime` | `ulong()` |
+| `Entity.entityId`, `Entity.position` | instance fields |
+| `Entity.SetPosition` | `void(Vector3, bool)` |
+| `Entity.SetRotation` | `void(Vector3)` |
+| `EntityAlive.Health` | instance property |
+| `EntityAlive.IsDead` | `bool()` |
+| `EntityAlive.SetDead` | `void()` |
+| `EntityAlive.DamageEntity` | `int(DamageSource, int, bool, float)` |
+| `EntityFactory.CreateEntity` | static `Entity(int, Vector3, Vector3)` |
+| `EntityClass.FromString` | static `int(string)` |
 | `Log` (LogLibrary) | static `Out`, `Warning`, `Error` |
 | `EChatType.Global`, `EMessageSender.Server`, `GeneratedTextManager.BbCodeSupportMode.NotSupported` | enum members |
+
+The `World`, `Entity`, `EntityAlive`, `EntityFactory`, and `EntityClass`
+rows back the bot servant (`Bridge/BotServant.cs`).
 
 Console output goes through `SingletonMonoBehaviour<SdtdConsole>.Instance.Output(...)`.
 This differs from pre-V3 guides that used `SdtdConsole.Instance`, which no

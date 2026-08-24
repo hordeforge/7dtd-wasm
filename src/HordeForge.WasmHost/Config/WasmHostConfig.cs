@@ -10,10 +10,11 @@ namespace HordeForge.WasmHost.Config
     public sealed class WasmHostConfig
     {
         /// <summary>
-        /// Instruction budget granted to a guest for a single call (init,
-        /// tick, or shutdown). Fuel is consumed by executed instructions;
-        /// when it runs out the call stops with FuelExhausted and the host
-        /// stays healthy. Default 1,000,000 instructions per call.
+        /// Instruction budget granted to a guest for a single call
+        /// (on_enable, on_tick, on_player_join, or on_shutdown). Fuel is
+        /// consumed by executed instructions; when it runs out the call
+        /// stops with FuelExhausted and the host stays healthy. Default
+        /// 1,000,000 instructions per call.
         /// </summary>
         public ulong FuelPerCall { get; set; } = 1_000_000UL;
 

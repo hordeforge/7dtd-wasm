@@ -4,7 +4,8 @@ The contract between the host and any guest module. Breaking changes here
 require updating every guest and the tests together.
 
 The ABI is aligned with the sibling `zdtd-server` plugin contract
-(docs/PLUGIN_API.md): guest hooks are exported under their bare names
+(docs/PLUGIN_API.md in that repository): guest hooks are exported under
+their bare names
 (`on_enable`, `on_tick`, `on_player_join`, `on_shutdown`), host imports live
 under one project-named module with bare field names, and data crosses as
 flat bytes in the guest's linear memory. The one structural difference is
@@ -17,8 +18,11 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 - imports the host API functions under module name `hordeforge`
 - exports `on_enable`, `on_tick`, and optionally `on_shutdown` and
   `on_player_join`
-- declares an explicit memory maximum (the host rejects modules without one;
-  the shared guest toolchain pins 32 MiB via `--max-memory`)
+- declares an explicit memory maximum. A module without one is treated as
+  declaring the wasm32 ceiling (4 GiB) and loads only when the operator
+  raised the effective cap accordingly (see "Modules without a declared
+  memory maximum" below); the shared guest toolchain pins 32 MiB via
+  `--max-memory`, which fits the host default cap by construction
 
 ## Host imports (module `hordeforge`)
 

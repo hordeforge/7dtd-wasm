@@ -1,5 +1,5 @@
-//! Test fixture: traps unconditionally on the first tick. Used to verify
-//! that the host reports a structured trap result and stays healthy.
+//! Test fixture: traps unconditionally on every tick. Used to verify that
+//! the host reports a structured trap result and stays healthy.
 
 use guest_common as abi;
 

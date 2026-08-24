@@ -56,7 +56,7 @@ help:
 	@echo "  make bridge         build the net48 in-game mod against GAME_DIR"
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
-	@echo "  make check          docs gate + guest lint gate + build + test (CI entry point)"
+	@echo "  make check          docs gate + guest lint gate + build + test + bridge-check (CI entry point)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 
 build:

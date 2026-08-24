@@ -4,12 +4,14 @@ using System.Collections.Generic;
 namespace HordeForge.GameBridge.Bridge
 {
     /// <summary>
-    /// Caps guest output per module (log lines and chat messages) so a
-    /// talkative mod cannot flood the server log or the global chat. Each
-    /// source (mod id) may emit at most <see cref="MaxLinesPerSecond"/>
-    /// items per second, measured with the monotonic process clock so an
-    /// operator clock step or NTP correction can neither freeze output nor
-    /// open a burst; excess items are dropped and counted.
+    /// Caps guest output per source key so a talkative mod cannot flood the
+    /// server log or the global chat. A source is a mod id (per-module caps
+    /// for log lines and SimCommands) or a shared tag such as "chat" (the
+    /// global chat cap). Each source may emit at most
+    /// <see cref="MaxLinesPerSecond"/> items per second (or the override),
+    /// measured with the monotonic process clock so an operator clock step
+    /// or NTP correction can neither freeze output nor open a burst; excess
+    /// items are dropped and counted.
     /// The counters surface in "wasm status" and every 100th dropped item is
     /// logged so operators can see a mod is being throttled without the log
     /// itself being spammed.

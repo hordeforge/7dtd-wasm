@@ -5,10 +5,12 @@
 // the world. The name to watch is read through the host get_setting import,
 // so the operator can retune it in wasm-mod.toml without rebuilding.
 //
-// Build (zig 0.16):
+// Build (zig 0.16), same flags as "make boss-zig" in the Makefile:
 //   zig build-exe src/main.zig -target wasm32-wasi -O ReleaseSmall \
-//     -fno-entry -fstrip -flink-arg=--max-memory=33554432 \
-//     -o guest-boss-zig.wasm
+//     -fno-entry -fstrip -rdynamic --max-memory=33554432 \
+//     -femit-bin=guest-boss-zig.wasm
+// -rdynamic is load-bearing: without it the @export'ed symbols are
+// dead-code eliminated in release builds and the module has no hooks.
 //
 // ABI (docs/ABI.md): imports hordeforge.log / get_join_player_name /
 // get_setting; exports the bare hook names on_enable, on_tick, on_player_join.

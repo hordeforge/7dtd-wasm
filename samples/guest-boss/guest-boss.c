@@ -4,9 +4,9 @@
  * When a player named "maci" spawns into the world, this module prints
  * "THE BOSS IS HERE" to the server console via the host log import.
  *
- * Built with the zig compiler:
+ * Built with the zig compiler (see "make boss" in the Makefile):
  *   zig cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
- *          -Wl,--max-memory=33554432 -Wl,-zstack-size=1048576 \
+ *          -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
  *          -o guest-boss.wasm guest-boss.c
  *
  * ABI (see docs/ABI.md):

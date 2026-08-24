@@ -17,7 +17,7 @@ namespace HordeForge.WasmHost.Abi
         /// </summary>
         void Log(string source, int level, string message);
 
-        /// <summary>Returns the current world time in 7 Days to Die ticks (world time minutes), or 0 when not in a world.</summary>
+        /// <summary>Returns the current world time in game minutes, or 0 when no world is loaded.</summary>
         long GetWorldTime();
 
         /// <summary>

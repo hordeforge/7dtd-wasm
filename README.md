@@ -3,9 +3,10 @@
 > **Part of [HordeForge](https://github.com/hordeforge)** - High-Performance Systems Engineering for 7 Days to Die.
 
 > **EXPERIMENT.** This project is an experiment: the ABI and host API are
-> expected to change, the in-game bridge has not been accepted inside a live
-> dedicated server yet, and nothing here is production-ready. It exists to
-> answer one question: can 7 Days to Die dedicated servers host untrusted
+> expected to change, the in-game bridge has run live only inside a
+> containerized dedicated server (Windows native loading and long-soak
+> behavior remain unproven), and nothing here is production-ready. It exists
+> to answer one question: can 7 Days to Die dedicated servers host untrusted
 > mods safely inside a WebAssembly sandbox?
 
 ## What this is
@@ -149,7 +150,7 @@ ABI, and are always interrupted at their budget. Details and limits in
 ## Status
 
 - [x] Host library: load, dispatch, fuel, memory cap, traps (tested)
-- [x] Rust, C, and Zig guest SDKs + sample mods
+- [x] Rust guest SDK (`guest-common`) plus C and Zig sample guests
 - [x] net48 bridge compiles against V3.1.0 and all targets are verified
 - [x] In-game acceptance on a live dedicated server (docker container, fresh steamcmd install, V 3.1.0 b14)
 - [x] Unmodified zdtd fps_bot runs: sense, queue, and the bot servant drive live bots in combat

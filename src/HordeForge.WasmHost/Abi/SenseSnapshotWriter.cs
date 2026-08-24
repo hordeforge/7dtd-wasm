@@ -16,9 +16,10 @@ namespace HordeForge.WasmHost.Abi
     ///                      alive u8 @6, pad @7, x f32 @8, y f32 @12,
     ///                      z f32 @16, hp f32 @20, yaw f32 @24,
     ///                      target_id i32 @28
-    ///   events 16 bytes each: kind u8 @0 (3 damage, 4 bot-info),
-    ///                      attacker/wid u8 @1..3, attacker i32 @4,
-    ///                      victim i32 @8, amount f32 @12
+    ///   events 16 bytes each: kind u8 @0 (3 damage, 4 bot-info). Damage:
+    ///                      attacker i32 @4, victim i32 @8, amount f32 @12.
+    ///                      Bot info: weapon id u8 @1, bot net id i32 @4,
+    ///                      remaining bytes zero.
     ///
     /// Kinds: 0 player, 1 zombie, 2 bot, 3 damage event, 4 bot-info event.
     /// All integers little-endian, floats IEEE-754 binary32.
@@ -104,7 +105,7 @@ namespace HordeForge.WasmHost.Abi
             public long Tick;
             /// <summary>Net id of the calling bot.</summary>
             public int SelfNetId;
-            /// <summary>World time (world ticks, low 32 bits on the wire).</summary>
+            /// <summary>World time in game minutes (low 32 bits on the wire).</summary>
             public long WorldTime;
             /// <summary>True during a blood moon night.</summary>
             public bool BloodMoon;

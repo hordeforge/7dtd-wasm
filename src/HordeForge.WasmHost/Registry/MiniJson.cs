@@ -7,11 +7,11 @@ namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
     /// Minimal, dependency-free JSON parser used for wasm-mod.json manifests.
-    /// Supports the full JSON value grammar (objects, arrays, strings with
-    /// escapes, numbers, booleans, null) but produces a tiny value tree
-    /// instead of allocating document objects. The host keeps its dependency
-    /// surface deliberately small: the sandbox trust boundary should not
-    /// grow with JSON library dlls.
+    /// Supports the JSON value grammar except fractional and exponent
+    /// numbers (manifest values are integers; see <see cref="Parser.ParseNumber"/>):
+    /// objects, arrays, strings with escapes, integers, booleans, null. The
+    /// host keeps its dependency surface deliberately small: the sandbox
+    /// trust boundary should not grow with JSON library dlls.
     /// </summary>
     internal static class MiniJson
     {

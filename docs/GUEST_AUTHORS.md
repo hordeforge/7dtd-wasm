@@ -90,8 +90,10 @@ make boss
 ```
 
 The module declares its host imports and guest exports with clang
-attributes, and must declare a memory maximum (the host rejects modules
-without one; the Makefile passes `--max-memory=33554432`):
+attributes, and should declare a memory maximum: a module without one is
+treated as declaring the wasm32 ceiling and only loads when the operator
+raised the shared cap (docs/ABI.md). The Makefile passes
+`--max-memory=33554432`, which fits the host default cap:
 
 ```c
 __attribute__((import_module("hordeforge"), import_name("log")))

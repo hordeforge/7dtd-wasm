@@ -34,10 +34,11 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Host import: writes the joining player's name into a guest buffer.</summary>
         public const string ImportGetJoinPlayerName = "get_join_player_name";
 
-        // zdtd-server compatibility surface (docs/PLUGIN_API.md): the sibling
-        // fps_bot plugin and its kin import module "zdtd" with bare field
-        // names. Quarantine defines the same module so those plugins load
-        // unmodified; the functions are mapped onto the game host API.
+        // zdtd-server compatibility surface (docs/PLUGIN_API.md in the
+        // zdtd-server repository): the sibling fps_bot plugin and its kin
+        // import module "zdtd" with bare field names. Quarantine defines
+        // the same module so those plugins load unmodified; the functions
+        // are mapped onto the game host API.
         /// <summary>Import module name used by zdtd-server plugins.</summary>
         public const string ZdtdHostModule = "zdtd";
 

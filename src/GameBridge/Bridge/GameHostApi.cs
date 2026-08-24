@@ -27,7 +27,7 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
         public GuestRateLimiter RateLimiter { get; }
 
-        /// <summary>Per-module chat rate limiter; exposed for "wasm status".</summary>
+        /// <summary>Global guest chat rate limiter (one shared "chat" source); exposed for "wasm status".</summary>
         public GuestRateLimiter ChatLimiter { get; }
 
         /// <summary>Per-module SimCommand rate limiter; exposed for "wasm status".</summary>
