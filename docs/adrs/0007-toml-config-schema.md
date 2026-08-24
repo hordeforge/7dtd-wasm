@@ -33,7 +33,11 @@ Mod config is TOML: per-mod `Mods/Wasm/<id>/wasm-mod.toml` with `[limits]`
 (fuel_per_call, max_memory_bytes) and `[settings]` (served to the guest),
 plus shared `Mods/Wasm/wasm.toml` (`[limits]` applied at host start,
 `[settings]` re-read on change). Load order: host code defaults ->
-wasm.toml -> wasm-mod.toml, each layer able only to tighten the previous.
+wasm.toml -> wasm-mod.toml. The shared file replaces the code-default
+limits at start, so an operator may raise them (the fps_bot path in the
+ADR 0004 amendment needs that); a manifest's fuel_per_call overrides the
+effective default within the parser ceiling, and its max_memory_bytes can
+only tighten.
 Hook export names are exactly the zdtd plugin hooks (on_enable,
 on_tick, on_player_join, on_shutdown), exported bare like zdtd. The
 deprecated JSON manifest is still accepted.

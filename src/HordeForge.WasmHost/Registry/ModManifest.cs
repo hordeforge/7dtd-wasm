@@ -6,8 +6,9 @@ namespace HordeForge.WasmHost.Registry
     /// <summary>
     /// Operator-authored per-mod manifest (wasm-mod.toml, or the deprecated
     /// wasm-mod.json) placed next to a guest module. The manifest is a
-    /// trusted operator file: it can only tighten host defaults (fuel and
-    /// memory ceilings), never weaken the host caps. Unknown fields are
+    /// trusted operator file: its limits never exceed the host caps
+    /// (fuel_per_call overrides the effective default within the parser
+    /// ceiling; max_memory_bytes only tightens it). Unknown fields are
     /// tolerated; malformed values reject the module with a specific reason.
     ///
     /// TOML shape (canonical, docs/CONFIG.md, following the zdtd-server

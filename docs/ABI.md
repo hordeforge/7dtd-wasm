@@ -128,10 +128,12 @@ breaking.
 
 ## Per-mod manifests (wasm-mod.toml)
 
-An operator may place `wasm-mod.toml` next to a module to tighten the
-host defaults and set per-mod settings. The manifest is a trusted operator
-file; it can only lower limits, never raise them above the host caps. The
-schema follows the zdtd-server TOML conventions; see docs/CONFIG.md.
+An operator may place `wasm-mod.toml` next to a module to tune its limits
+and set per-mod settings. The manifest is a trusted operator file; it
+never sets limits beyond the host caps: `fuel_per_call` overrides the
+module's effective default but is rejected above the 50,000,000 ceiling,
+and `max_memory_bytes` can only tighten the effective cap. The schema
+follows the zdtd-server TOML conventions; see docs/CONFIG.md.
 
 ```toml
 [limits]

@@ -10,8 +10,10 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   onto the config surface is never a retune (same rule as zdtd's
   `RULES_CONFIG.md`).
 - **Load order** (mirroring zdtd ADR 0010): host code defaults -> shared
-  `Mods/Wasm/wasm.toml` -> per-mod `Mods/Wasm/<id>/wasm-mod.toml`. Each
-  layer can only tighten what the layer below set.
+  `Mods/Wasm/wasm.toml` -> per-mod `Mods/Wasm/<id>/wasm-mod.toml`. Shared
+  `[limits]` replace the code defaults at host start, so an operator may
+  raise them; a manifest's `fuel_per_call` overrides the effective default
+  within the host ceiling, and its `max_memory_bytes` can only tighten it.
 - A **new tunable is a new field**, not a new parse arm: the host binds the
   file onto `ModManifest` struct fields, so adding a supported key means
   adding a field in one place.
@@ -34,8 +36,9 @@ version = "0.1.0"
 # no path separators, no dot-only segments, no control characters. Invalid
 # folders are skipped with a warning at load.
 
-# Host-enforced caps. A manifest can only tighten the host defaults:
-# fuel_per_call above the host ceiling (50,000,000) is rejected at load.
+# Host-enforced caps. fuel_per_call overrides the effective default
+# (rejected above the 50,000,000 ceiling); max_memory_bytes can only
+# tighten the effective cap.
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432
@@ -49,8 +52,9 @@ boss_name = "maci"
 ## wasm.toml (shared)
 
 ```toml
-# Host defaults: the engine is created with these; per-mod [limits] can
-# only tighten them further.
+# Host defaults: the engine is created with these. Per-mod [limits]
+# override fuel_per_call within the host ceiling and tighten
+# max_memory_bytes; see the load-order rule above.
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432

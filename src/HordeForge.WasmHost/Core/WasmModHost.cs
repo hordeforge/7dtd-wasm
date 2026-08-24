@@ -14,8 +14,9 @@ namespace HordeForge.WasmHost.Core
     /// Owns the Wasmtime engine, a single store, and the linker with the
     /// "hordeforge" host API plus WASI preview1. Modules are loaded per id,
     /// validated against the configured limits, and driven through the
-    /// documented export surface (init, tick, player join, shutdown). The host is
-    /// single-threaded by design: call it from the game main loop only.
+    /// documented export surface (on_enable, on_tick, on_player_join,
+    /// on_shutdown). The host is single-threaded by design: call it from
+    /// the game main loop only.
     ///
     /// Sandbox guarantees: fuel budget per call, hard memory maximum enforced
     /// at load time from the module's declared memory maximum, module size
