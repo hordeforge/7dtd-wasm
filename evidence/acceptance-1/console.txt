@@ -17,28 +17,13 @@ Difficulty:  1
 
 Press 'help' to get a list of all commands. Press 'exit' to end session.
 
-2026-08-24T09:13:58 156.993 INF Executing command 'wasm status' by Telnet from 172.17.0.1:59484
+2026-08-24T14:12:13 135.801 INF Executing command 'wasm status' by Telnet from 172.17.0.1:57778
 status:
   host started, modules dir: /game/7DaysToDieServer_Data/../Mods/Wasm
-    hello (init tick 0, calls 63244, traps 0, fuel exhausted 0)
-    guest log lines dropped: wasm=517
-    chat guest log lines dropped: chat=5
-
----
-2026-08-24T09:14:00 158.991 INF Executing command 'wasm list' by Telnet from 172.17.0.1:59484
-modules:
-  host started, modules dir: /game/7DaysToDieServer_Data/../Mods/Wasm
-    hello (init tick 0, calls 63284, traps 0, fuel exhausted 0)
-    guest log lines dropped: wasm=517
-    chat guest log lines dropped: chat=5
-2026-08-24T09:14:01 159.792 INF [wasm] hello mod alive at tick 63300 (world 7000)
-
----
-2026-08-24T09:14:02 161.342 INF Executing command 'version' by Telnet from 172.17.0.1:59484
-Game version: V 3.1.0 (b14) Compatibility Version: V 3.1.0
-Mod TFP_Harmony: 1.1.0.4
-Mod 1_HordeForge_WasmHost: 0.1.0
-Mod TFP_CommandExtensions: 1.3.0.0
-Mod TFP_MarkersExample: 1.3.0.0
+    boss (init tick 0, calls 17111, traps 0, fuel exhausted 0)
+    boss-zig (init tick 0, calls 17111, traps 0, fuel exhausted 0)
+    fps-bot (init tick 0, calls 17111, traps 0, fuel exhausted 0)
+    hello (init tick 0, calls 17111, traps 0, fuel exhausted 0)
+    guest log lines dropped: wasm=86
 
 ---

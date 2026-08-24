@@ -25,6 +25,20 @@ Environment facts:
 3. An empty telnet password makes the server reset every session; the
    acceptance config uses a local throwaway password.
 
+## Bot servant verified live (2026-08-24)
+
+The bot servant (stage 2) now runs on a live dedicated server in the
+acceptance container: 4 bot entities spawned from the unmodified zdtd
+fps_bot brain's sense/queue loop, and the brain drove them into combat
+against each other with the servant applying the ordered damage (including
+headshots). 1555 shots over the run; evidence:
+`evidence/acceptance-1/servant-join.log`. Live-run fixes: spawn retries
+until the world is ready, and bot classification checks the roster before
+entity type (the bots are zombie-bodied).
+
+Remaining (stage 3): cover/path queries, on_admin_command console wiring,
+per-bot loadouts, and disabling the stock zombie AI on bot bodies.
+
 ## Aligned ABI verified live (2026-08-24)
 
 After the ABI was aligned with the zdtd-server contract (bare hook

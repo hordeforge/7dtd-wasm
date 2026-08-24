@@ -14,10 +14,12 @@ namespace HordeForge.GameBridge.Bridge
     public sealed class GameHostApi : IGameHostApi
     {
         private readonly WasmSettingsProvider _settings;
+        private readonly BotServant _servant;
 
-        public GameHostApi(WasmSettingsProvider settings)
+        public GameHostApi(WasmSettingsProvider settings, BotServant servant)
         {
             _settings = settings;
+            _servant = servant;
             RateLimiter = new GuestRateLimiter();
             ChatLimiter = new GuestRateLimiter();
         }
@@ -80,23 +82,24 @@ namespace HordeForge.GameBridge.Bridge
 
         public bool TryQueueCommand(string command)
         {
-            // Stage 1: the bot servant is not implemented yet, so commands
-            // are accepted (the guest keeps its cadence) and logged. The
-            // next slice maps them onto game actions (spawn, move, shoot).
-            global::Log.Out("[WasmHost] bot cmd: " + command);
+            // The bot servant dispatches the brain's SimCommands; non-bot
+            // commands are logged and accepted.
+            if (_servant.TryQueue(command))
+            {
+                return true;
+            }
+            global::Log.Out("[WasmHost] cmd: " + command);
             return true;
         }
 
         public int WriteSenseSnapshot(Span<byte> buffer)
         {
-            // Stage 1: no world snapshot yet. The next slice builds the ZBS3
-            // snapshot from the live entity list (players, zombies, bots).
-            return 0;
+            return _servant.WriteSense(buffer);
         }
 
         public string? TryQuery(string request)
         {
-            // Stage 1: no cover/path queries; the brain falls back to plain
+            // Stage 2: no cover/path queries; the brain falls back to plain
             // movement when the host has no answer.
             return null;
         }

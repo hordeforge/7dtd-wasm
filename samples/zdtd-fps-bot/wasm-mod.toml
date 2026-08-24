@@ -1,0 +1,7 @@
+# wasm-mod.toml for the unmodified zdtd fps_bot plugin (workspace sibling).
+# The module declares no memory maximum, so the shared wasm.toml must raise
+# limits.max_memory_bytes to 4294967296 (the wasm32 ceiling) for it to load;
+# see docs/ABI.md zdtd compatibility section.
+name = "fps-bot"
+description = "Unmodified zdtd fps_bot brain (mods/fps_bot/fps_bot.wasm): sense -> decide -> bot commands"
+version = "2.5.0"

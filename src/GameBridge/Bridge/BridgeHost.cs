@@ -18,6 +18,7 @@ namespace HordeForge.GameBridge.Bridge
         private static WasmModHost _host;
         private static WasmSettingsProvider _settings;
         private static GameHostApi _gameApi;
+        private static BotServant _servant;
         private static long _tick;
 
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>
@@ -39,7 +40,8 @@ namespace HordeForge.GameBridge.Bridge
 
             var config = new WasmHostConfig();
             ApplySharedLimits(config);
-            _gameApi = new GameHostApi(_settings);
+            _servant = new BotServant(_settings);
+            _gameApi = new GameHostApi(_settings, _servant);
             _host = new WasmModHost(_gameApi, config);
 
             LoadAllModules();

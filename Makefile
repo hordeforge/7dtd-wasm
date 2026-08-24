@@ -92,13 +92,17 @@ dist: build fixtures bridge
 	# Native engine for this platform.
 	cp "$(HOME)/.nuget/packages/wasmtime/44.0.0/runtimes/linux-x64/native/libwasmtime.so" dist/Mods/1_HordeForge_WasmHost/Native/
 	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
-	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig
+	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig dist/Mods/Wasm/fps-bot
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm
 	cp samples/guest-hello/wasm-mod.toml dist/Mods/Wasm/hello/
 	cp samples/target/guest-boss.wasm dist/Mods/Wasm/boss/module.wasm
 	cp samples/guest-boss/wasm-mod.toml dist/Mods/Wasm/boss/
 	cp samples/target/guest-boss-zig.wasm dist/Mods/Wasm/boss-zig/module.wasm
 	cp samples/guest-boss-zig/wasm-mod.toml dist/Mods/Wasm/boss-zig/
+	# The unmodified zdtd fps_bot plugin (workspace sibling); the shared
+	# wasm.toml must raise limits.max_memory_bytes for it to load.
+	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
+	cp samples/zdtd-fps-bot/wasm-mod.toml dist/Mods/Wasm/fps-bot/
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 

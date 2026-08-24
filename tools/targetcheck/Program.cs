@@ -59,6 +59,41 @@ namespace TargetCheck
                 CheckFieldOrProperty(md, t, "entityId", isStatic: false);
             });
 
+            // Bot servant entity APIs (BotServant.cs).
+            CheckAnyType(md, "World", t =>
+            {
+                CheckFieldOrProperty(md, t, "Entities", isStatic: false);
+                CheckMethod(md, t, "GetEntity", "Entity(int)", isStatic: false);
+                CheckMethod(md, t, "SpawnEntityInWorld", "void(Entity)", isStatic: false);
+            });
+
+            CheckAnyType(md, "Entity", t =>
+            {
+                CheckFieldOrProperty(md, t, "entityId", isStatic: false);
+                CheckFieldOrProperty(md, t, "position", isStatic: false);
+                CheckMethod(md, t, "SetPosition", "void(Vector3, bool)", isStatic: false);
+                CheckMethod(md, t, "SetRotation", "void(Vector3)", isStatic: false);
+            });
+
+            CheckAnyType(md, "EntityAlive", t =>
+            {
+                CheckProperty(md, t, "Health", isStatic: false);
+                CheckMethod(md, t, "SetDead", "void()", isStatic: false);
+                CheckMethod(md, t, "IsDead", "bool()", isStatic: false);
+                CheckMethod(md, t, "DamageEntity", "int(DamageSource, int, bool, float)", isStatic: false);
+            });
+
+            CheckAnyType(md, "EntityFactory", t =>
+            {
+                CheckMethod(md, t, "SetupEntityCreationData", "EntityCreationData(int, Vector3)", isStatic: true);
+                CheckMethod(md, t, "CreateEntity", "Entity(EntityCreationData)", isStatic: true);
+            });
+
+            CheckAnyType(md, "EntityClass", t =>
+            {
+                CheckMethod(md, t, "FromString", "int(string)", isStatic: true);
+            });
+
             CheckType(md, "GameTimer", t =>
             {
                 CheckProperty(md, t, "Instance", isStatic: true);
@@ -214,6 +249,7 @@ namespace TargetCheck
 
         private static void CheckMethod(MetadataReader md, TypeDefinition type, string name, string expectedSignature, bool isStatic)
         {
+            var seen = new List<string>();
             foreach (var handle in type.GetMethods())
             {
                 var m = md.GetMethodDefinition(handle);
@@ -227,12 +263,17 @@ namespace TargetCheck
                     continue;
                 }
                 string sig = DecodeSignature(md, m);
-                string status = sig == expectedSignature ? "OK " : "MISMATCH ";
-                Console.WriteLine("  " + status + (isStatic ? "static " : "inst ") + name + sig);
-                if (sig != expectedSignature)
+                seen.Add(sig);
+                if (sig == expectedSignature)
                 {
-                    Fail("signature mismatch on " + name + ": got " + sig + " expected " + expectedSignature);
+                    Console.WriteLine("  OK " + (isStatic ? "static " : "inst ") + name + sig);
+                    return;
                 }
+            }
+            if (seen.Count > 0)
+            {
+                Fail("no " + (isStatic ? "static " : "inst ") + name + " overload with signature " + expectedSignature + " on " +
+                     FullName(md, type) + " (found: " + string.Join("; ", seen) + ")");
                 return;
             }
             Fail("method " + name + " (static=" + isStatic + ") not found on " + FullName(md, type));

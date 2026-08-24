@@ -4,6 +4,41 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
+## [0.1.5] - 2026-08-24
+
+### Added
+
+- The bot servant (`BotServant`): spawns bot entities (zombieSoldier
+  bodies) on the live world, applies the brain's SimCommands (bot
+  spawn/remove/count/move/look/shoot/skill/cfg), and builds the 'ZBS3'
+  world snapshot from the live entity list (players, zombies, our bots).
+  `queue` and `sense` now dispatch through it; `query` still returns no
+  answer (cover/path is stage 3).
+- Game API targets for the servant added to `tools/targetcheck`
+  (World.Entities/GetEntity/SpawnEntityInWorld, Entity position/SetPosition/
+  SetRotation, EntityAlive Health/IsDead/SetDead/DamageEntity,
+  EntityFactory, EntityClass), with overload-aware method checking.
+
+### Verified live (container acceptance run)
+
+The unmodified zdtd fps_bot brain now drives real spawned bots on a live
+dedicated server: 4 bots spawned, and the brain (fed the live sense
+snapshot) targeted each other and ordered shots that the servant applied,
+including headshots (`bot 173 shot 171 dmg=24 head`). 1555 shots over the
+run; evidence `evidence/acceptance-1/servant-join.log`.
+
+Live-run fixes: spawn retries until the world is ready (the game's own
+EAIManager NREs during world creation, and a failed spawn must not latch
+the spawned flag), and the servant's own bots are reported as bot kind in
+the snapshot (they are zombie-bodied, so classification must check the bot
+roster first or the brain never drives them).
+
+### Not yet implemented (stage 3)
+
+- cover/path queries, on_admin_command console wiring, per-bot loadout
+  records (weapon info events), and disabling the stock zombie AI on bot
+  bodies so the game does not also move them.
+
 ## [0.1.4] - 2026-08-24
 
 ### Added

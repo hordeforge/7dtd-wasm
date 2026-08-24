@@ -81,6 +81,12 @@ Guest hooks are accepted with either an `i32` result (our ABI) or `void`
 `on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap) -> i32` export is
 resolved when present.
 
+The bot servant (Bridge/BotServant.cs) implements `queue` and `sense` over
+the live game: bots spawn as zombieSoldier bodies, `bot move` / `bot look` /
+`bot shoot` drive them, and `sense` reports players, zombies, and our bots
+in the ZBS3 layout. `query` (cover/path) and `on_admin_command` console
+wiring are stage 3.
+
 Modules without a declared memory maximum are treated as declaring the
 wasm32 ceiling (4 GiB) and load only when the effective cap allows it; an
 operator raises the cap via `wasm.toml [limits] max_memory_bytes`. This is
