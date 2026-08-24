@@ -34,6 +34,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Store _store;
         private readonly Linker _linker;
         private readonly Dictionary<string, WasmMod> _mods = new Dictionary<string, WasmMod>(StringComparer.Ordinal);
+        private string _currentJoinName = string.Empty;
         private bool _disposed;
 
         /// <summary>
@@ -205,6 +206,29 @@ namespace HordeForge.WasmHost.Core
             return results;
         }
 
+        /// <summary>
+        /// Notifies every loaded mod that a player spawned into the world.
+        /// Only mods that export the optional on_player_join handler are
+        /// called; the player name is available to them through the
+        /// get_join_player_name host import. Fail soft like tick: one
+        /// misbehaving handler never stops the others.
+        /// </summary>
+        public IReadOnlyList<ModRunResult> DispatchPlayerJoin(string playerName)
+        {
+            ThrowIfDisposed();
+            _currentJoinName = playerName ?? string.Empty;
+            var results = new List<ModRunResult>();
+            foreach (var mod in _mods.Values)
+            {
+                ModRunResult? result = mod.OnPlayerJoin();
+                if (result != null)
+                {
+                    results.Add(result);
+                }
+            }
+            return results;
+        }
+
         private ulong? DeclaredMemoryMaximumBytes(Module module)
         {
             foreach (var export in module.Exports)
@@ -308,6 +332,28 @@ namespace HordeForge.WasmHost.Core
             {
                 string message = ReadGuestString(caller, ptr, len);
                 return _api.SendChat(message) ? AbiConstants.ChatOk : AbiConstants.ChatRejected;
+            });
+
+            _linker.DefineFunction<int, int, int>(AbiConstants.HostModule, AbiConstants.ImportGetJoinPlayerName, (caller, outPtr, outCap) =>
+            {
+                // The name of the player that most recently spawned, made
+                // available to guests during DispatchPlayerJoin.
+                if (_currentJoinName.Length == 0)
+                {
+                    return AbiConstants.SettingNotFound;
+                }
+                byte[] bytes = Encoding.UTF8.GetBytes(_currentJoinName);
+                if (bytes.Length > outCap)
+                {
+                    return AbiConstants.SettingBufferTooSmall;
+                }
+                Memory? memory = caller.GetMemory("memory");
+                if (memory == null)
+                {
+                    return AbiConstants.SettingBufferTooSmall;
+                }
+                memory.WriteString(outPtr, _currentJoinName, Encoding.UTF8);
+                return bytes.Length;
             });
         }
 

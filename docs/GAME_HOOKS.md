@@ -48,6 +48,21 @@ longer exists on V3.
 `wasm list`, `wasm load`, `wasm reload <id>`, `wasm unload <id>`,
 `wasm status`.
 
+## Player join events
+
+The bridge patches `GameManager.RequestToSpawnPlayer` (verified:
+`void(ClientInfo, int, PlayerProfile, int)`) with a Harmony postfix
+(`Hooks/PlayerSpawnHook`). When a player requests to spawn into the world,
+the handler reads `ClientInfo.playerName` and dispatches it to every guest
+that exports the optional `hordeforge:mod/on_player_join` handler.
+
+Hook history (found live in the acceptance run): `GameManager.OnClientSpawned`
+does not fire on the dedicated server, and neither does the
+`PlayerSpawnedInWorld` method for remote joins; `RequestToSpawnPlayer` is
+the server-side entry point the game itself logs on every join. Note that
+the hook also fires on respawns, not only on first join; guests that care
+should track state across calls.
+
 ## Settings
 
 Guest settings live in `<install>/Mods/Wasm/wasm-settings.txt`, one

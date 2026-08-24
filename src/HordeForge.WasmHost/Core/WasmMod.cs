@@ -19,6 +19,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Func<int, int, int> _init;
         private readonly Func<long, int> _tick;
         private readonly Func<int>? _shutdown;
+        private readonly Func<int>? _onPlayerJoin;
 
         internal WasmMod(string id, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
@@ -28,6 +29,7 @@ namespace HordeForge.WasmHost.Core
             InitTick = initTick;
 
             _shutdown = instance.GetFunction<int>(AbiConstants.ExportShutdown);
+            _onPlayerJoin = instance.GetFunction<int>(AbiConstants.ExportPlayerJoin);
             var init = instance.GetFunction<int, int, int>(AbiConstants.ExportInit);
             var tick = instance.GetFunction<long, int>(AbiConstants.ExportTick);
             if (init == null)
@@ -87,6 +89,27 @@ namespace HordeForge.WasmHost.Core
                 return new ModRunResult(ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
             }
             return Run("shutdown", () => _shutdown());
+        }
+
+        /// <summary>True when the guest exports the optional player-join handler.</summary>
+        public bool HasPlayerJoinHandler
+        {
+            get { return _onPlayerJoin != null; }
+        }
+
+        /// <summary>
+        /// Invokes the guest's optional on_player_join export. The player
+        /// name is fetched inside the guest through the
+        /// get_join_player_name host import, so no arguments are passed.
+        /// Returns null when the guest does not handle the event.
+        /// </summary>
+        public ModRunResult? OnPlayerJoin()
+        {
+            if (_onPlayerJoin == null)
+            {
+                return null;
+            }
+            return Run("on_player_join", () => _onPlayerJoin());
         }
 
         private ModRunResult Run(string callName, Func<int> invoke)

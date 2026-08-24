@@ -22,6 +22,7 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 | `get_world_time` | `() -> i64` | World time in game minutes, 0 when no world is loaded |
 | `get_setting` | `(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Read a shared setting. Returns written byte count, -1 not found, -2 buffer too small |
 | `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected |
+| `get_join_player_name` | `(out_ptr: i32, out_cap: i32) -> i32` | During an `on_player_join` call: the joining player's name written into the guest buffer. Returns byte count, -1 no event, -2 buffer too small |
 
 Strings are passed as `(pointer, length)` pairs into the **guest's own
 linear memory**; the host reads exactly `len` bytes starting at `ptr` and
@@ -36,6 +37,7 @@ it.
 | `hordeforge:mod/init` | `(boot_ptr: i32, boot_len: i32) -> i32` | yes | Called once at load. Boot payload is empty (0, 0) in v0 |
 | `hordeforge:mod/tick` | `(tick: i64) -> i32` | yes | Called once per game tick |
 | `hordeforge:mod/shutdown` | `() -> i32` | no | Called on unload and host dispose |
+| `hordeforge:mod/on_player_join` | `() -> i32` | no | Called when a player spawns into the world; fetch the name via the `get_join_player_name` import |
 
 Export status codes: 0 ok, 1 not implemented, 2 internal error.
 

@@ -40,24 +40,39 @@ namespace HordeForge.GameBridge
         }
 
         /// <summary>
-        /// Patches GameManager.Update with the tick postfix. Fail soft: if the
-        /// target is missing on this game version the rest of the mod still
-        /// works (modules can be managed via "wasm" console commands, they
-        /// just do not receive ticks).
+        /// Patches GameManager.Update (tick dispatch) and
+        /// GameManager.PlayerSpawnedInWorld (player join dispatch). Fail
+        /// soft: if a target is missing on this game version the rest of the
+        /// mod still works (modules can be managed via "wasm" console
+        /// commands, they just do not receive that event).
         /// </summary>
         private static void ApplyHarmonyPatches()
         {
             try
             {
                 var harmony = new Harmony("hordeforge.7dtd.wasmhost");
-                var target = AccessTools.Method(typeof(GameManager), "Update");
-                if (target == null)
+
+                var tickTarget = AccessTools.Method(typeof(GameManager), "Update");
+                if (tickTarget == null)
                 {
                     Log.Warning("[WasmHost] GameManager.Update not found; tick hook disabled");
-                    return;
                 }
-                harmony.Patch(target, postfix: new HarmonyMethod(typeof(GameTickHook).GetMethod(nameof(GameTickHook.Postfix))));
-                Log.Out("[WasmHost] patched GameManager.Update");
+                else
+                {
+                    harmony.Patch(tickTarget, postfix: new HarmonyMethod(typeof(GameTickHook).GetMethod(nameof(GameTickHook.Postfix))));
+                    Log.Out("[WasmHost] patched GameManager.Update");
+                }
+
+                var spawnTarget = AccessTools.Method(typeof(GameManager), "RequestToSpawnPlayer");
+                if (spawnTarget == null)
+                {
+                    Log.Warning("[WasmHost] GameManager.RequestToSpawnPlayer not found; player join hook disabled");
+                }
+                else
+                {
+                    harmony.Patch(spawnTarget, postfix: new HarmonyMethod(typeof(PlayerSpawnHook).GetMethod(nameof(PlayerSpawnHook.Postfix))));
+                    Log.Out("[WasmHost] patched GameManager.RequestToSpawnPlayer");
+                }
             }
             catch (Exception ex)
             {

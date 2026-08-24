@@ -61,6 +61,29 @@ version:
 - `tools/targetcheck` passes against the container's fresh game build
   (V 3.1.0 b14), the same as this machine's install.
 
+## Player join event (boss demo)
+
+`boss-join-server.log` captures a live join by a loadgen bot
+(`--name maci`, which the harness names `maci1`):
+
+```
+RequestToSpawnPlayer: 171, maci1, 5
+[WasmHost] player spawned: maci1
+```
+
+The join reached the bridge and was dispatched to the guest's
+`on_player_join` handler. The guest compares the name exactly, so `maci1`
+does not print "THE BOSS IS HERE"; the exact `maci` match is covered by the
+host test suite (`PlayerJoinDispatchPrintsBossMessage`). The loadgen
+harness always appends its client id to bot names, so a live join with the
+bare name "maci" needs a real client; the exact-match behavior itself is
+unit-verified.
+
+Hook findings from the live run: `GameManager.OnClientSpawned` and
+`GameManager.PlayerSpawnedInWorld` never fire on the dedicated server for
+remote joins; `GameManager.RequestToSpawnPlayer` is the server-side entry
+point the game logs on every join, and the bridge patches that method.
+
 ## Findings that changed code
 
 1. `GameTimer.Instance.ticks` reads 0 on the dedicated server, so the

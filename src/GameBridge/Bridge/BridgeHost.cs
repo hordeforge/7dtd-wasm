@@ -67,6 +67,35 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// Player-spawn handler invoked by the Harmony postfix on
+        /// GameManager.PlayerSpawnedInWorld (the server-side spawn event;
+        /// GameManager.OnClientSpawned does not fire on the dedicated
+        /// server, found live in the acceptance run). Forwards the joining
+        /// player's name to every guest that exports the optional
+        /// on_player_join handler.
+        /// </summary>
+        public static void PlayerSpawnedInWorld(ClientInfo clientInfo)
+        {
+            if (_host == null)
+            {
+                return;
+            }
+            string name = clientInfo != null ? clientInfo.playerName : string.Empty;
+            if (name.Length == 0)
+            {
+                return;
+            }
+            Log.Out("[WasmHost] player spawned: " + name);
+            foreach (var result in _host.DispatchPlayerJoin(name))
+            {
+                if (!result.Ok)
+                {
+                    Log.Out("[WasmHost] on_player_join: " + result.Message + (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                }
+            }
+        }
+
         public static List<string> StatusLines()
         {
             var lines = new List<string>();

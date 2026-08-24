@@ -79,6 +79,33 @@ pub extern "C" fn shutdown() -> i32 {
 | `abi::send_chat_str(s)` | Send a global chat message, returns status |
 | `unsafe { abi::get_tick() }`, `unsafe { abi::get_world_time() }` | Read game time |
 
+## Writing a guest in C (with zig)
+
+C guests are compiled with the zig compiler (`zig cc`, no libc, no entry
+point). The reference implementation is `samples/guest-boss/guest-boss.c`:
+
+```bash
+make boss
+```
+
+The module declares its host imports and guest exports with clang
+attributes, and must declare a memory maximum (the host rejects modules
+without one; the Makefile passes `--max-memory=33554432`):
+
+```c
+__attribute__((import_module("hordeforge"), import_name("log")))
+extern void hf_log(int level, int ptr, int len);
+
+__attribute__((export_name("hordeforge:mod/init")))
+int hf_mod_init(int boot_ptr, int boot_len) { return 0; }
+```
+
+Event handlers follow the same shape as Rust guests: `on_player_join`
+receives no arguments; the guest fetches the player name into its own
+buffer via the `get_join_player_name` import and compares it exactly.
+`-nostdlib` keeps the module free of WASI libc imports; static strings in
+the data section are readable by the host through `(pointer, length)`.
+
 ## Deployment
 
 Copy the built `.wasm` into `<install>/Mods/Wasm/<id>/module.wasm` (the id

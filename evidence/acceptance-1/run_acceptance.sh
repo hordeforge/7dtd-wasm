@@ -16,11 +16,15 @@ docker rm -f 7dtd-wasm-acceptance >/dev/null 2>&1 || true
 
 docker run -d --name 7dtd-wasm-acceptance \
   -p 8081:8081 \
-  -p 26900:26900 \
+  -p 26900:26900/tcp \
+  -p 26900:26900/udp \
+  -p 26902:26902/tcp \
+  -p 26902:26902/udp \
   -e LD_LIBRARY_PATH=/game/Mods/1_HordeForge_WasmHost/Native \
   -v "$DIST/Mods/1_HordeForge_WasmHost:/game/Mods/1_HordeForge_WasmHost:ro" \
   -v "$DIST/Mods/Wasm:/game/Mods/Wasm:ro" \
   -v "$HERE/serverconfig.container.xml:/game/serverconfig.xml:ro" \
+  -v "$HERE/platform.cfg:/game/platform.cfg:ro" \
   -v "$HERE/logs:/logs" \
   7dtd-wasm-acceptance \
   /game/7DaysToDieServer.x86_64 \

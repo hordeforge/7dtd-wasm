@@ -50,6 +50,12 @@ namespace TargetCheck
                 CheckFieldOrProperty(md, t, "Instance", isStatic: true);
                 CheckProperty(md, t, "World", isStatic: false);
                 CheckMethod(md, t, "ChatMessageServer", "void(ClientInfo, EChatType, int, string, List`1<int>, EMessageSender, BbCodeSupportMode)", isStatic: false);
+                CheckMethod(md, t, "RequestToSpawnPlayer", "void(ClientInfo, int, PlayerProfile, int)", isStatic: false);
+            });
+
+            CheckAnyType(md, "ClientInfo", t =>
+            {
+                CheckFieldOrProperty(md, t, "playerName", isStatic: false);
             });
 
             CheckType(md, "GameTimer", t =>

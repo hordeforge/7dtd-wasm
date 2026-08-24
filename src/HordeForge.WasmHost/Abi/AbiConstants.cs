@@ -22,6 +22,16 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Guest export invoked when the mod is unloaded or the host shuts down.</summary>
         public const string ExportShutdown = GuestExportPrefix + "shutdown";
 
+        /// <summary>
+        /// Optional guest export invoked when a player spawns into the world.
+        /// The guest fetches the player name through the
+        /// <see cref="ImportGetJoinPlayerName"/> host import.
+        /// </summary>
+        public const string ExportPlayerJoin = GuestExportPrefix + "on_player_join";
+
+        /// <summary>Host import: writes the joining player's name into a guest buffer.</summary>
+        public const string ImportGetJoinPlayerName = "get_join_player_name";
+
         /// <summary>Log levels understood by the host log import.</summary>
         public const int LogDebug = 0;
 

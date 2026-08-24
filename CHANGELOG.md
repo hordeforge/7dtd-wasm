@@ -3,6 +3,30 @@
 All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 
+## [0.1.2] - 2026-08-24
+
+### Added
+
+- Player join events: optional guest export `hordeforge:mod/on_player_join`
+  plus the `get_join_player_name` host import; the bridge patches
+  `GameManager.RequestToSpawnPlayer` (verified via targetcheck) and
+  forwards the joining player's name. Guests without the handler are
+  unaffected.
+- `samples/guest-boss`: a C guest built with the zig compiler that prints
+  "THE BOSS IS HERE" to the console when the player "maci" spawns. Built
+  via `make boss`, staged in `dist/Mods/Wasm/boss`, covered by three new
+  host tests (26 total).
+
+### Verified live (container acceptance run)
+
+- A real player join (loadgen bot, named `maci1` by the harness) reached
+  the bridge (`[WasmHost] player spawned: maci1`) and was dispatched to
+  the guest handler. Evidence: `evidence/acceptance-1/boss-join-server.log`.
+- Hook findings: `GameManager.OnClientSpawned` and
+  `GameManager.PlayerSpawnedInWorld` never fire on the dedicated server
+  for remote joins; `RequestToSpawnPlayer` is the working server-side
+  entry point.
+
 ## [0.1.1] - 2026-08-24
 
 In-game acceptance completed (docker container, fresh steamcmd install,

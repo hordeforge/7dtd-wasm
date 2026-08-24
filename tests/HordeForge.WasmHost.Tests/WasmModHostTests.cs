@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using HordeForge.WasmHost.Config;
@@ -331,6 +332,56 @@ namespace HordeForge.WasmHost.Tests
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"), manifest);
                 Assert.True(mod.Init(0).Ok);
                 Assert.True(mod.Tick(1).Ok);
+            }
+        }
+
+        [Fact]
+        public void PlayerJoinDispatchPrintsBossMessage()
+        {
+            // The C guest (samples/guest-boss, built with zig) prints
+            // "THE BOSS IS HERE" when the joining player is named "maci".
+            var (host, api) = NewHost();
+            using (host)
+            {
+                WasmMod boss = host.LoadModule("boss", Fixture("boss"));
+                Assert.True(boss.HasPlayerJoinHandler);
+                Assert.True(boss.Init(0).Ok);
+
+                IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin("maci");
+                ModRunResult result = Assert.Single(joins);
+                Assert.True(result.Ok, result.Message + " " + result.Details);
+                Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+            }
+        }
+
+        [Fact]
+        public void PlayerJoinIgnoresOtherNames()
+        {
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("boss", Fixture("boss"));
+                host.DispatchInit();
+                host.DispatchPlayerJoin("xela");
+                Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+                // Case matters: "Maci" is not "maci".
+                host.DispatchPlayerJoin("Maci");
+                Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+            }
+        }
+
+        [Fact]
+        public void PlayerJoinIsOptionalForGuests()
+        {
+            // Modules without the on_player_join export load and tick fine,
+            // and the dispatch is a no-op for them.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmMod strings = host.LoadModule("strings", Fixture("strings"));
+                Assert.False(strings.HasPlayerJoinHandler);
+                Assert.Empty(host.DispatchPlayerJoin("maci"));
+                Assert.True(strings.Tick(1).Ok);
             }
         }
     }
