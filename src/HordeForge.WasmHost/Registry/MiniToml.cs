@@ -98,7 +98,17 @@ namespace HordeForge.WasmHost.Registry
             {
                 throw new FormatException("line " + lineNumber + ": empty table header");
             }
-            return inner.Split('.');
+            var parts = new List<string>();
+            foreach (string part in inner.Split('.'))
+            {
+                string name = part.Trim();
+                if (name.Length == 0)
+                {
+                    throw new FormatException("line " + lineNumber + ": empty table header part");
+                }
+                parts.Add(name);
+            }
+            return parts.ToArray();
         }
 
         private static bool IsValidKey(string key)
@@ -180,7 +190,7 @@ namespace HordeForge.WasmHost.Registry
                     case 'r': sb.Append('\r'); break;
                     case 't': sb.Append('\t'); break;
                     case 'u':
-                        if (i + 4 >= body.Length + 1)
+                        if (i + 4 >= body.Length)
                         {
                             throw new FormatException("line " + lineNumber + ": bad unicode escape");
                         }
@@ -197,17 +207,72 @@ namespace HordeForge.WasmHost.Registry
 
         private static TomlArray ParseArray(string text, int lineNumber)
         {
+            if (text[text.Length - 1] != ']')
+            {
+                throw new FormatException("line " + lineNumber + ": unterminated array");
+            }
             string inner = text.Substring(1, text.Length - 2).Trim();
             var array = new TomlArray();
             if (inner.Length == 0)
             {
                 return array;
             }
-            foreach (string item in inner.Split(','))
+            foreach (string item in SplitArrayItems(inner))
             {
                 array.Add(ParseValue(item.Trim(), lineNumber));
             }
             return array;
+        }
+
+        /// <summary>
+        /// Splits an array body on commas that are outside quoted strings, so
+        /// scalars containing commas (for example ["a, b", "c"]) parse.
+        /// </summary>
+        private static IEnumerable<string> SplitArrayItems(string inner)
+        {
+            var items = new List<string>();
+            bool inBasic = false;
+            bool inLiteral = false;
+            int start = 0;
+            for (int i = 0; i < inner.Length; i++)
+            {
+                char c = inner[i];
+                if (inBasic)
+                {
+                    if (c == '\\')
+                    {
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        inBasic = false;
+                    }
+                    continue;
+                }
+                if (inLiteral)
+                {
+                    if (c == '\'')
+                    {
+                        inLiteral = false;
+                    }
+                    continue;
+                }
+                if (c == '"')
+                {
+                    inBasic = true;
+                }
+                else if (c == '\'')
+                {
+                    inLiteral = true;
+                }
+                else if (c == ',')
+                {
+                    items.Add(inner.Substring(start, i - start));
+                    start = i + 1;
+                }
+            }
+            items.Add(inner.Substring(start));
+            return items;
         }
 
         private static TomlValue ParseNumber(string text, int lineNumber)

@@ -119,15 +119,15 @@ namespace HordeForge.GameBridge.Bridge
                 _host.TryGetMod(id, out var mod);
                 lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
             }
-            string dropped = _gameApi != null ? _gameApi.RateLimiter.DescribeDropped() : string.Empty;
+            string dropped = _gameApi != null ? _gameApi.RateLimiter.DescribeDropped("guest log lines") : string.Empty;
             if (dropped.Length > 0)
             {
                 lines.Add("  " + dropped);
             }
-            string droppedChat = _gameApi != null ? _gameApi.ChatLimiter.DescribeDropped() : string.Empty;
+            string droppedChat = _gameApi != null ? _gameApi.ChatLimiter.DescribeDropped("chat messages") : string.Empty;
             if (droppedChat.Length > 0)
             {
-                lines.Add("  chat " + droppedChat);
+                lines.Add("  " + droppedChat);
             }
             return lines;
         }
@@ -216,7 +216,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
                 _settings.UpdateMod(id, manifest);
-                _host.DispatchInit();
+                if (_host.TryGetMod(id, out var mod))
+                {
+                    // Init only the module that was reloaded; DispatchInit
+                    // would re-run on_enable for every other guest too.
+                    mod.Init(_host.Tick);
+                }
                 return true;
             }
             catch (WasmModLoadException ex)

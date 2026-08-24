@@ -515,6 +515,78 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void LoadOrderSurvivesUnloadAndReload()
+        {
+            // Dispatch order must follow the load order of the currently
+            // loaded mods, even after an unload + reload cycle (what
+            // `wasm reload <id>` does): the reloaded mod goes last.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                host.LoadModule("strings", Fixture("strings"));
+                host.LoadModule("trap", Fixture("trap"));
+                Assert.True(host.Unload("strings"));
+                host.LoadModule("strings", Fixture("strings"));
+
+                var results = host.DispatchTick(1);
+                Assert.Equal(2, results.Count);
+                Assert.Equal(ModRunStatus.Trap, results[0].Status); // trap reloaded first
+                Assert.Equal(ModRunStatus.Ok, results[1].Status);   // strings reloaded last
+
+                host.LoadModule("hello", Fixture("hello"));
+                Assert.Equal(new[] { "trap", "strings", "hello" }, host.ModIds.ToArray());
+            }
+        }
+
+        [Fact]
+        public void TomlBadUnicodeEscapeIsRejectedCleanly()
+        {
+            // A truncated \uXXX escape must reject the manifest with the
+            // normal load error, not crash with an unexpected exception.
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("name = \"\\u123\"", "bad"));
+            Assert.Contains("unicode", ex.Message);
+            Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("name = \"\\u12\"", "bad"));
+        }
+
+        [Fact]
+        public void TomlUnicodeEscapeDecodes()
+        {
+            ModManifest m = ModManifest.ParseToml("[settings]\nboss_name = \"h\\u00e9llo\"\n", "x");
+            Assert.Equal("héllo", m.Settings["boss_name"]);
+        }
+
+        [Fact]
+        public void TomlUnterminatedArrayIsRejected()
+        {
+            // "[abc" without the closing bracket must be rejected, not
+            // silently parsed as the string "ab".
+            Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("future = [abc\n", "bad"));
+        }
+
+        [Fact]
+        public void TomlArrayStringsMayContainCommas()
+        {
+            // Scalars containing commas stay single items inside arrays.
+            ModManifest m = ModManifest.ParseToml("future = [\"a, b\", \"c\"]\n", "x");
+            Assert.Null(m.FuelPerCall);
+        }
+
+        [Fact]
+        public void TomlTableHeaderToleratesWhitespace()
+        {
+            // Whitespace inside a header must not change the table name;
+            // before, [limits ] created a table named "limits " and the
+            // limit was silently dropped.
+            ModManifest m = ModManifest.ParseToml("[ limits ]\nfuel_per_call = 5000\n", "x");
+            Assert.Equal(5000UL, m.FuelPerCall);
+            Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits.]\nfuel_per_call = 1\n", "bad"));
+        }
+
+        [Fact]
         public void PlayerJoinDispatchPrintsBossMessage()
         {
             // The C guest (samples/guest-boss, built with zig) prints

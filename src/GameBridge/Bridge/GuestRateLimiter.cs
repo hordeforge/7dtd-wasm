@@ -55,8 +55,8 @@ namespace HordeForge.GameBridge.Bridge
             return true;
         }
 
-        /// <summary>One-line summary of dropped lines per source, for "wasm status".</summary>
-        public string DescribeDropped()
+        /// <summary>One-line summary of dropped items per source, for "wasm status".</summary>
+        public string DescribeDropped(string noun)
         {
             var parts = new List<string>();
             foreach (var pair in _windows)
@@ -66,7 +66,7 @@ namespace HordeForge.GameBridge.Bridge
                     parts.Add(pair.Key + "=" + pair.Value.Dropped);
                 }
             }
-            return parts.Count == 0 ? string.Empty : "guest log lines dropped: " + string.Join(", ", parts);
+            return parts.Count == 0 ? string.Empty : noun + " dropped: " + string.Join(", ", parts);
         }
     }
 }

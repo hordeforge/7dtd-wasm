@@ -37,6 +37,9 @@ namespace HordeForge.WasmHost.Core
         private readonly Store _store;
         private readonly Linker _linker;
         private readonly Dictionary<string, WasmMod> _mods = new Dictionary<string, WasmMod>(StringComparer.Ordinal);
+        // Dispatch happens in load order (documented); Dictionary enumeration
+        // order is an implementation detail, so the ids are tracked here.
+        private readonly List<string> _modOrder = new List<string>();
         private string _currentJoinName = string.Empty;
 
         /// <summary>
@@ -74,15 +77,7 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>Ids of the currently loaded mods, in load order.</summary>
-        public IReadOnlyCollection<string> ModIds
-        {
-            get
-            {
-                var ids = new string[_mods.Count];
-                _mods.Keys.CopyTo(ids, 0);
-                return ids;
-            }
-        }
+        public IReadOnlyCollection<string> ModIds => _modOrder.ToArray();
 
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick { get; private set; }
@@ -172,6 +167,7 @@ namespace HordeForge.WasmHost.Core
 
             var mod = new WasmMod(id, _store, fuelPerCall, instance, Tick);
             _mods.Add(id, mod);
+            _modOrder.Add(id);
             return mod;
         }
 
@@ -194,6 +190,7 @@ namespace HordeForge.WasmHost.Core
                 _currentModId = mod.Id;
                 mod.Shutdown();
                 _mods.Remove(id);
+                _modOrder.Remove(id);
                 return true;
             }
             return false;
@@ -209,7 +206,7 @@ namespace HordeForge.WasmHost.Core
             ThrowIfDisposed();
             Tick = tick;
             var results = new List<ModRunResult>(_mods.Count);
-            foreach (var mod in _mods.Values)
+            foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
                 results.Add(mod.Tick(tick));
@@ -222,7 +219,7 @@ namespace HordeForge.WasmHost.Core
         {
             ThrowIfDisposed();
             var results = new List<ModRunResult>(_mods.Count);
-            foreach (var mod in _mods.Values)
+            foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
                 results.Add(mod.Init(Tick));
@@ -242,7 +239,7 @@ namespace HordeForge.WasmHost.Core
             ThrowIfDisposed();
             _currentJoinName = playerName ?? string.Empty;
             var results = new List<ModRunResult>();
-            foreach (var mod in _mods.Values)
+            foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
                 ModRunResult? result = mod.OnPlayerJoin((int)entityId);
@@ -252,6 +249,17 @@ namespace HordeForge.WasmHost.Core
                 }
             }
             return results;
+        }
+
+        private IEnumerable<WasmMod> ModsInLoadOrder()
+        {
+            foreach (string id in _modOrder)
+            {
+                if (_mods.TryGetValue(id, out WasmMod? mod))
+                {
+                    yield return mod;
+                }
+            }
         }
 
         private ulong? DeclaredMemoryMaximumBytes(Module module)
@@ -501,12 +509,13 @@ namespace HordeForge.WasmHost.Core
             {
                 return;
             }
-            foreach (var mod in _mods.Values)
+            foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
                 mod.Shutdown();
             }
             _mods.Clear();
+            _modOrder.Clear();
             _linker.Dispose();
             _store.Dispose();
             _engine.Dispose();
