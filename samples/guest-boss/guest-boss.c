@@ -12,9 +12,9 @@
  * ABI (see docs/ABI.md):
  *   imports  hordeforge.log(level, ptr, len)
  *            hordeforge.get_join_player_name(out_ptr, out_cap) -> i32
- *   exports  hordeforge:mod/on_enable(boot_ptr, boot_len) -> i32   (required)
- *            hordeforge:mod/on_tick(tick) -> i32                 (required)
- *            hordeforge:mod/on_player_join() -> i32           (optional)
+ *   exports  on_enable() -> i32                    (required)
+ *            on_tick() -> i32                      (required)
+ *            on_player_join(entity_id) -> i32      (optional)
  */
 
 typedef unsigned int u32;

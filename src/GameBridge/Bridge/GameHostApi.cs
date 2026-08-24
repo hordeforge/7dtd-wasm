@@ -105,8 +105,8 @@ namespace HordeForge.GameBridge.Bridge
 
         public string? TryQuery(string request)
         {
-            // Stage 2: no cover/path queries; the brain falls back to plain
-            // movement when the host has no answer.
+            // Stage 3: cover/path queries are not wired yet; the brain falls
+            // back to plain movement when the host has no answer.
             return null;
         }
 

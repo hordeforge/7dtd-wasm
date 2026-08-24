@@ -2,7 +2,7 @@
 
 Guest mods are configured with TOML files that follow the same conventions
 as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
-`util/toml_bind.zig`):
+`src/util/toml_bind.zig`):
 
 - **snake_case** keys everywhere.
 - **[section] groups** carry related tunables (`[limits]`, `[settings]`).
@@ -56,13 +56,19 @@ max_memory_bytes = 33554432
 greeting = "hello survivor"
 ```
 
+The example keeps the 32 MiB default. The `wasm.toml` staged by
+`make dist` (from `samples/wasm.toml.example`) raises `max_memory_bytes`
+to the wasm32 ceiling (4294967296) so plugins built without a declared
+maximum load unmodified; see docs/ABI.md, "Modules without a declared
+memory maximum".
+
 ## Supported TOML subset
 
 Comments (`#`), top-level `key = value`, `[table]` and `[table.sub]`
 headers, basic `"..."` strings with escapes, literal `'...'` strings,
 integers, floats, booleans, and arrays of scalars. Multi-line strings and
 dotted keys are not supported. The parser is dependency-free (`MiniToml`,
-decided in ADR 0007) and rejects anything outside this subset with a
+ADRs 0005 and 0007) and rejects anything outside this subset with a
 specific error; the bridge skips the module and logs the reason.
 
 ## Settings resolution

@@ -28,8 +28,6 @@ dependency, not priority.
 
 - [ ] Confirm native library loading on Windows in-game (documented, not
       exercised).
-- [ ] Consider per-module settings files (today all guests share
-      wasm-settings.txt).
 
 ## Docs and gates
 

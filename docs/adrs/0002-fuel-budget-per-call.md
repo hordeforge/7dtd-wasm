@@ -27,7 +27,8 @@ every run).
 
 ## Decision
 
-Every guest call (init, tick, shutdown) runs under a fresh fuel budget,
+Every guest call (init, tick, player join, shutdown) runs under a fresh
+fuel budget,
 default 1,000,000 instructions, set per call before invocation. Exhaustion
 returns `ModRunResult` with status `FuelExhausted`; the module stays loaded
 for the next call. Per-mod manifests may lower the budget but not raise it

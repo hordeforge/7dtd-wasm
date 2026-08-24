@@ -11,7 +11,7 @@
 //     -o guest-boss-zig.wasm
 //
 // ABI (docs/ABI.md): imports hordeforge.log / get_join_player_name /
-// get_setting; exports hordeforge:mod/on_enable, tick, on_player_join.
+// get_setting; exports the bare hook names on_enable, on_tick, on_player_join.
 
 const std = @import("std");
 

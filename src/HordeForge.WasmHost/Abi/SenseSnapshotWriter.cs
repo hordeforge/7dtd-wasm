@@ -52,67 +52,67 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Event kind: bot loadout info (net id, weapon id).</summary>
         public const byte KindEventBotInfo = 4;
 
-/// <summary>One entity in the sense snapshot (record layout above).</summary>
+        /// <summary>One entity in the sense snapshot (record layout above).</summary>
         public sealed class EntityRecord
         {
-        /// <summary>Network id used to key the entity.</summary>
+            /// <summary>Network id used to key the entity.</summary>
             public int NetId;
-        /// <summary>Entity kind (player, zombie, bot).</summary>
+            /// <summary>Entity kind (player, zombie, bot).</summary>
             public byte Kind;
-        /// <summary>True for the calling bot itself.</summary>
+            /// <summary>True for the calling bot itself.</summary>
             public bool IsSelf;
-        /// <summary>True while the entity is alive.</summary>
+            /// <summary>True while the entity is alive.</summary>
             public bool Alive;
-        /// <summary>World x position in blocks.</summary>
+            /// <summary>World x position in blocks.</summary>
             public float X;
-        /// <summary>World y position in blocks.</summary>
+            /// <summary>World y position in blocks.</summary>
             public float Y;
-        /// <summary>World z position in blocks.</summary>
+            /// <summary>World z position in blocks.</summary>
             public float Z;
-        /// <summary>Hit points.</summary>
+            /// <summary>Hit points.</summary>
             public float Hp;
-        /// <summary>Facing in radians (yaw zero faces +X).</summary>
+            /// <summary>Facing in radians (yaw zero faces +X).</summary>
             public float Yaw;
-        /// <summary>Current target net id, or 0.</summary>
+            /// <summary>Current target net id, or 0.</summary>
             public int TargetId;
         }
 
-/// <summary>Damage event trailer record.</summary>
+        /// <summary>Damage event trailer record.</summary>
         public sealed class DamageEvent
         {
-        /// <summary>Net id of the attacker.</summary>
+            /// <summary>Net id of the attacker.</summary>
             public int Attacker;
-        /// <summary>Net id of the victim.</summary>
+            /// <summary>Net id of the victim.</summary>
             public int Victim;
-        /// <summary>Damage amount.</summary>
+            /// <summary>Damage amount.</summary>
             public float Amount;
         }
 
-/// <summary>Bot loadout info event record.</summary>
+        /// <summary>Bot loadout info event record.</summary>
         public sealed class BotInfoEvent
         {
-        /// <summary>Network id used to key the entity.</summary>
+            /// <summary>Network id used to key the entity.</summary>
             public int NetId;
-        /// <summary>Host loadout pool index (pistol 0 ... sniper 3, etc).</summary>
+            /// <summary>Host loadout pool index (pistol 0 ... sniper 3, etc).</summary>
             public int WeaponId;
         }
 
-/// <summary>World snapshot to serialize (header fields plus records and events).</summary>
+        /// <summary>World snapshot to serialize (header fields plus records and events).</summary>
         public sealed class Snapshot
         {
-        /// <summary>Game tick of the snapshot.</summary>
+            /// <summary>Game tick of the snapshot.</summary>
             public long Tick;
-        /// <summary>Net id of the calling bot.</summary>
+            /// <summary>Net id of the calling bot.</summary>
             public int SelfNetId;
-        /// <summary>World time (world ticks, low 32 bits on the wire).</summary>
+            /// <summary>World time (world ticks, low 32 bits on the wire).</summary>
             public long WorldTime;
-        /// <summary>True during a blood moon night.</summary>
+            /// <summary>True during a blood moon night.</summary>
             public bool BloodMoon;
-        /// <summary>Entity records (players, zombies, bots).</summary>
+            /// <summary>Entity records (players, zombies, bots).</summary>
             public System.Collections.Generic.List<EntityRecord> Records = new System.Collections.Generic.List<EntityRecord>();
-        /// <summary>Damage events for the tick.</summary>
+            /// <summary>Damage events for the tick.</summary>
             public System.Collections.Generic.List<DamageEvent> Damage = new System.Collections.Generic.List<DamageEvent>();
-        /// <summary>Bot loadout info events for the tick.</summary>
+            /// <summary>Bot loadout info events for the tick.</summary>
             public System.Collections.Generic.List<BotInfoEvent> BotInfo = new System.Collections.Generic.List<BotInfoEvent>();
         }
 

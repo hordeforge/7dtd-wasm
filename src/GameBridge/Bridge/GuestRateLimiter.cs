@@ -7,7 +7,9 @@ namespace HordeForge.GameBridge.Bridge
     /// Caps guest output per module (log lines and chat messages) so a
     /// talkative mod cannot flood the server log or the global chat. Each
     /// source (mod id) may emit at most <see cref="MaxLinesPerSecond"/>
-    /// items per wall-clock second; excess items are dropped and counted.
+    /// items per second, measured with the monotonic process clock so an
+    /// operator clock step or NTP correction can neither freeze output nor
+    /// open a burst; excess items are dropped and counted.
     /// The counters surface in "wasm status" and every 100th dropped item is
     /// logged so operators can see a mod is being throttled without the log
     /// itself being spammed.
@@ -16,9 +18,11 @@ namespace HordeForge.GameBridge.Bridge
     {
         public const int MaxLinesPerSecond = 10;
 
+        private const int WindowMs = 1000;
+
         private sealed class Window
         {
-            public long StartSecond;
+            public int StartTickMs;
             public int Count;
             public long Dropped;
         }
@@ -33,18 +37,21 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public bool TryWrite(string source, out long droppedTotal)
         {
-            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            int nowMs = Environment.TickCount;
             if (!_windows.TryGetValue(source, out var window))
             {
-                window = new Window { StartSecond = now };
+                window = new Window { StartTickMs = nowMs };
                 _windows[source] = window;
             }
-            // Reset only when time moved forward. On a backward wall-clock
-            // step (NTP correction) "!= now" would reset the window on every
-            // call until the clock caught up, opening an unlimited burst.
-            if (now > window.StartSecond)
+            // Reset only after a full window of monotonic time. Wall-clock
+            // seconds here would drop every line for as long as a backward
+            // clock step (manual change, NTP correction) takes to catch up,
+            // and hand every source a free burst on a forward step. Unchecked
+            // int subtraction stays correct across TickCount wraparound
+            // (~24.9 days) for any sane window length.
+            if (nowMs - window.StartTickMs >= WindowMs)
             {
-                window.StartSecond = now;
+                window.StartTickMs = nowMs;
                 window.Count = 0;
             }
             if (window.Count >= MaxLinesPerSecond)

@@ -10,13 +10,6 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Module name under which the host defines its game API functions.</summary>
         public const string HostModule = "hordeforge";
 
-        /// <summary>
-        /// The ABI follows the sibling zdtd-server plugin contract
-        /// (docs/PLUGIN_API.md): guest hooks are exported under their bare
-        /// names (on_enable, on_tick, on_player_join, on_shutdown), host
-        /// imports live under one project-named module with bare field
-        /// names, and data crosses as flat bytes in guest linear memory.
-        /// </summary>
         /// <summary>Guest export invoked once when the mod is loaded and started.</summary>
         public const string ExportInit = "on_enable";
 

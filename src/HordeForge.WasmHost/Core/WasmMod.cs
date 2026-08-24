@@ -88,7 +88,7 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Number of calls that ended in a host or guest error.</summary>
         public long ErrorCalls { get; private set; }
 
-        /// <summary>Total number of calls (init, tick, shutdown) made so far.</summary>
+        /// <summary>Total number of calls (init, tick, player join, shutdown) made so far.</summary>
         public long TotalCalls { get; private set; }
 
         /// <summary>

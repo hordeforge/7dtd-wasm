@@ -1,7 +1,7 @@
 namespace HordeForge.WasmHost.Limits
 {
     /// <summary>
-    /// Outcome of a single guest call (init, tick, shutdown).
+    /// Outcome of a single guest call (init, tick, player join, shutdown).
     /// </summary>
     public enum ModRunStatus
     {

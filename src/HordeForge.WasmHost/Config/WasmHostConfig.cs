@@ -4,7 +4,8 @@ namespace HordeForge.WasmHost.Config
     /// Hard limits and behavior flags for a <see cref="Core.WasmModHost"/>.
     /// The defaults are chosen so that an out-of-control guest can burn its
     /// budget quickly and the server main loop (20 TPS) is never blocked for
-    /// long. Tune per deployment, never below the documented floors.
+    /// long. Tune per deployment; shared overrides come from wasm.toml
+    /// [limits] (docs/CONFIG.md).
     /// </summary>
     public sealed class WasmHostConfig
     {

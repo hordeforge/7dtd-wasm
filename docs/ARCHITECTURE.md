@@ -63,8 +63,8 @@ for every guest, which keeps modules inside the host caps by construction.
 ## Bridge (GameBridge, net48)
 
 - `ModApi.InitMod` gates on `GameManager.IsDedicatedServer`, bootstraps the
-  native library, starts the host, patches `GameManager.Update`, and logs.
-  Every step is fail soft.
+  native library, starts the host, patches `GameManager.Update` and
+  `GameManager.RequestToSpawnPlayer`, and logs. Every step is fail soft.
 - `GameTickHook` is a Harmony postfix on `GameManager.Update` that calls
   `BridgeHost.Tick()`, which dispatches with the bridge's own monotonic
   counter (`GameTimer.Instance.ticks` reads 0 on the dedicated server, and

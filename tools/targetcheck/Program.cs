@@ -103,8 +103,11 @@ namespace TargetCheck
 
             CheckType(md, "ConsoleCmdAbstract", t =>
             {
-                CheckMethod(md, t, "GetCommands", "string[]()", isStatic: false);
-                CheckMethod(md, t, "GetDescription", "string()", isStatic: false);
+                // The bridge's CmdWasm overrides these exact (lowercase) names;
+                // the PascalCase legacy wrappers on the same class are not used.
+                CheckMethod(md, t, "getCommands", "string[]()", isStatic: false);
+                CheckMethod(md, t, "getDescription", "string()", isStatic: false);
+                CheckMethod(md, t, "getHelp", "string()", isStatic: false);
                 CheckMethod(md, t, "Execute", "void(List`1<string>, CommandSenderInfo)", isStatic: false);
             });
 

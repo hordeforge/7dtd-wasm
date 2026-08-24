@@ -41,7 +41,7 @@ namespace HordeForge.GameBridge
 
         /// <summary>
         /// Patches GameManager.Update (tick dispatch) and
-        /// GameManager.PlayerSpawnedInWorld (player join dispatch). Fail
+        /// GameManager.RequestToSpawnPlayer (player join dispatch). Fail
         /// soft: if a target is missing on this game version the rest of the
         /// mod still works (modules can be managed via "wasm" console
         /// commands, they just do not receive that event).
