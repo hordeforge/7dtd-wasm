@@ -94,16 +94,26 @@ namespace HordeForge.WasmHost.Registry
 
         private static string StripComment(string line)
         {
+            int hash = IndexOfOutsideStrings(line, '#', 0);
+            return hash < 0 ? line : line.Substring(0, hash);
+        }
+
+        /// <summary>
+        /// First index of <paramref name="target"/> at or after
+        /// <paramref name="start"/> that sits outside quoted strings, or -1
+        /// when there is none. A backslash escapes the next character inside
+        /// a basic "..." string (so \" does not close it); literal '...'
+        /// strings have no escapes.
+        /// </summary>
+        private static int IndexOfOutsideStrings(string text, char target, int start)
+        {
             bool inBasic = false;
             bool inLiteral = false;
-            for (int i = 0; i < line.Length; i++)
+            for (int i = start; i < text.Length; i++)
             {
-                char c = line[i];
+                char c = text[i];
                 if (inBasic)
                 {
-                    // A backslash escapes the next character inside a basic
-                    // string (so \" does not close it); literal strings have
-                    // no escapes. Mirrors SplitArrayItems.
                     if (c == '\\')
                     {
                         i++;
@@ -112,17 +122,15 @@ namespace HordeForge.WasmHost.Registry
                     {
                         inBasic = false;
                     }
-                    continue;
                 }
-                if (inLiteral)
+                else if (inLiteral)
                 {
                     if (c == '\'')
                     {
                         inLiteral = false;
                     }
-                    continue;
                 }
-                if (c == '"')
+                else if (c == '"')
                 {
                     inBasic = true;
                 }
@@ -130,12 +138,12 @@ namespace HordeForge.WasmHost.Registry
                 {
                     inLiteral = true;
                 }
-                else if (c == '#')
+                else if (c == target)
                 {
-                    return line.Substring(0, i);
+                    return i;
                 }
             }
-            return line;
+            return -1;
         }
 
         private static string[] ParseTableHeader(string line, int lineNumber)
@@ -286,45 +294,16 @@ namespace HordeForge.WasmHost.Registry
         private static IEnumerable<string> SplitArrayItems(string inner)
         {
             var items = new List<string>();
-            bool inBasic = false;
-            bool inLiteral = false;
             int start = 0;
-            for (int i = 0; i < inner.Length; i++)
+            while (true)
             {
-                char c = inner[i];
-                if (inBasic)
+                int comma = IndexOfOutsideStrings(inner, ',', start);
+                if (comma < 0)
                 {
-                    if (c == '\\')
-                    {
-                        i++;
-                    }
-                    else if (c == '"')
-                    {
-                        inBasic = false;
-                    }
-                    continue;
+                    break;
                 }
-                if (inLiteral)
-                {
-                    if (c == '\'')
-                    {
-                        inLiteral = false;
-                    }
-                    continue;
-                }
-                if (c == '"')
-                {
-                    inBasic = true;
-                }
-                else if (c == '\'')
-                {
-                    inLiteral = true;
-                }
-                else if (c == ',')
-                {
-                    items.Add(inner.Substring(start, i - start));
-                    start = i + 1;
-                }
+                items.Add(inner.Substring(start, comma - start));
+                start = comma + 1;
             }
             items.Add(inner.Substring(start));
             return items;
