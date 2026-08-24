@@ -257,7 +257,7 @@ namespace HordeForge.WasmHost.Tests
             var (host, api) = NewHost();
             using (host)
             {
-                api.Settings["wasm.greeting"] = "hello survivor";
+                api.Settings["greeting"] = "hello survivor";
                 host.LoadModule("hello", Fixture("hello"));
                 host.DispatchInit();
 
@@ -321,6 +321,93 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void TomlManifestBindsLimitsAndSettings()
+        {
+            const string toml = @"
+name = ""boss""
+description = ""watcher""
+
+[limits]
+fuel_per_call = 5000
+max_memory_bytes = 1048576
+
+[settings]
+boss_name = ""maci""
+greeting = ""hello""
+";
+            ModManifest m = ModManifest.ParseToml(toml, "boss");
+            Assert.Equal(5000UL, m.FuelPerCall);
+            Assert.Equal(1048576UL, m.MaxMemoryBytes);
+            Assert.Equal("maci", m.Settings["boss_name"]);
+            Assert.Equal("hello", m.Settings["greeting"]);
+        }
+
+        [Fact]
+        public void TomlManifestDefaultsAndUnknownKeys()
+        {
+            ModManifest m = ModManifest.ParseToml("name = \"x\"\n[future]\nflag = true\n", "x");
+            Assert.Null(m.FuelPerCall);
+            Assert.Null(m.MaxMemoryBytes);
+            Assert.Empty(m.Settings);
+        }
+
+        [Theory]
+        [InlineData("not toml")]
+        [InlineData("[limits]\nfuel_per_call = 0\n")]
+        [InlineData("[limits]\nfuel_per_call = 99999999999\n")]
+        [InlineData("[settings]\nbad = [1, 2]\n")]
+        [InlineData("key without equals\n")]
+        [InlineData("[limits\nfuel_per_call = 1\n")]
+        public void MalformedTomlManifestIsRejected(string toml)
+        {
+            Assert.Throws<WasmModLoadException>(() => ModManifest.ParseToml(toml, "bad"));
+        }
+
+        [Fact]
+        public void TomlManifestLimitsAreEnforcedAtLoad()
+        {
+            var (host, _) = NewHost();
+            using (host)
+            {
+                var manifest = ModManifest.ParseToml("[limits]\nmax_memory_bytes = 1048576\n", "hello");
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("hello", Fixture("hello"), manifest));
+                Assert.Contains("exceeds the effective cap", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void PerModSettingsResolveBeforeShared()
+        {
+            // get_setting is calling-mod aware: a mod's own [settings] win
+            // over shared settings with the same key.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.Settings["welcome"] = "shared value";
+                api.ModSettings["strings"] = new Dictionary<string, string> { ["welcome"] = "per-mod value" };
+
+                host.LoadModule("strings", Fixture("strings"));
+                host.DispatchInit();
+                Assert.True(host.DispatchTick(1).Single().Ok);
+                Assert.Contains(api.Logs, l => l.Message.Contains("setting='per-mod value'"));
+            }
+        }
+
+        [Fact]
+        public void SharedSettingsServeWhenNoPerModValue()
+        {
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.Settings["welcome"] = "shared value";
+                host.LoadModule("strings", Fixture("strings"));
+                host.DispatchInit();
+                Assert.True(host.DispatchTick(1).Single().Ok);
+                Assert.Contains(api.Logs, l => l.Message.Contains("setting='shared value'"));
+            }
+        }
+
+        [Fact]
         public void ManifestDefaultsMatchNullManifest()
         {
             // Unknown fields are tolerated; an empty manifest behaves like
@@ -347,7 +434,7 @@ namespace HordeForge.WasmHost.Tests
                 Assert.True(boss.HasPlayerJoinHandler);
                 Assert.True(boss.Init(0).Ok);
 
-                IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin("maci");
+                IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin(171, "maci");
                 ModRunResult result = Assert.Single(joins);
                 Assert.True(result.Ok, result.Message + " " + result.Details);
                 Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
@@ -362,10 +449,10 @@ namespace HordeForge.WasmHost.Tests
             {
                 host.LoadModule("boss", Fixture("boss"));
                 host.DispatchInit();
-                host.DispatchPlayerJoin("xela");
+                host.DispatchPlayerJoin(172, "xela");
                 Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
                 // Case matters: "Maci" is not "maci".
-                host.DispatchPlayerJoin("Maci");
+                host.DispatchPlayerJoin(173, "Maci");
                 Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
             }
         }
@@ -380,8 +467,44 @@ namespace HordeForge.WasmHost.Tests
             {
                 WasmMod strings = host.LoadModule("strings", Fixture("strings"));
                 Assert.False(strings.HasPlayerJoinHandler);
-                Assert.Empty(host.DispatchPlayerJoin("maci"));
+                Assert.Empty(host.DispatchPlayerJoin(171, "maci"));
                 Assert.True(strings.Tick(1).Ok);
+            }
+        }
+
+        [Fact]
+        public void ZigBossPrintsForConfiguredName()
+        {
+            // The Zig guest (samples/guest-boss-zig) reads boss_name through
+            // get_setting; the built-in default is "maci".
+            var (host, api) = NewHost();
+            using (host)
+            {
+                WasmMod boss = host.LoadModule("boss-zig", Fixture("boss-zig"));
+                Assert.True(boss.HasPlayerJoinHandler);
+                Assert.True(boss.Init(0).Ok);
+
+                // No setting: the guest falls back to "maci".
+                Assert.True(host.DispatchPlayerJoin(171, "maci").Single().Ok);
+                Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+            }
+        }
+
+        [Fact]
+        public void ZigBossUsesSettingWhenPresent()
+        {
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.Settings["boss_name"] = "boss";
+                host.LoadModule("boss-zig", Fixture("boss-zig"));
+                host.DispatchInit();
+
+                host.DispatchPlayerJoin(171, "maci");
+                Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+
+                host.DispatchPlayerJoin(174, "boss");
+                Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
             }
         }
     }

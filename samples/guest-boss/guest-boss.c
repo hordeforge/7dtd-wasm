@@ -12,8 +12,8 @@
  * ABI (see docs/ABI.md):
  *   imports  hordeforge.log(level, ptr, len)
  *            hordeforge.get_join_player_name(out_ptr, out_cap) -> i32
- *   exports  hordeforge:mod/init(boot_ptr, boot_len) -> i32   (required)
- *            hordeforge:mod/tick(tick) -> i32                 (required)
+ *   exports  hordeforge:mod/on_enable(boot_ptr, boot_len) -> i32   (required)
+ *            hordeforge:mod/on_tick(tick) -> i32                 (required)
  *            hordeforge:mod/on_player_join() -> i32           (optional)
  */
 
@@ -53,29 +53,28 @@ static void hf_log_info(const char *s)
 }
 
 /* Required export: called once when the module is loaded. */
-__attribute__((export_name("hordeforge:mod/init")))
-i32 hf_mod_init(i32 boot_ptr, i32 boot_len)
+__attribute__((export_name("on_enable")))
+i32 hf_mod_on_enable(void)
 {
-    (void)boot_ptr;
-    (void)boot_len;
     hf_log_info(MSG_LOADED);
     return 0; /* status ok */
 }
 
 /* Required export: called once per game tick. Nothing to do here. */
-__attribute__((export_name("hordeforge:mod/tick")))
-i32 hf_mod_tick(i64 tick)
+__attribute__((export_name("on_tick")))
+i32 hf_mod_on_tick(void)
 {
-    (void)tick;
     return 0; /* status ok */
 }
 
-/* Optional export: called when a player spawns into the world. The name is
- * fetched through the host import into this module's own buffer, then
+/* Optional export: called when a player spawns into the world, with the
+ * entity id (zdtd passes slot and entity id; we have no ECS slot). The name
+ * is fetched through the host import into this module's own buffer, then
  * compared exactly ("maci" is case-sensitive). */
-__attribute__((export_name("hordeforge:mod/on_player_join")))
-i32 hf_mod_on_player_join(void)
+__attribute__((export_name("on_player_join")))
+i32 hf_mod_on_player_join(i32 entity_id)
 {
+    (void)entity_id;
     i32 n = hf_get_join_player_name((i32)(long)JOIN_NAME, (i32)sizeof(JOIN_NAME));
     if (n != 4)
         return 0;

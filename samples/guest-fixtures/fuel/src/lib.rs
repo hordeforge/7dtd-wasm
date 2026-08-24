@@ -4,14 +4,14 @@
 
 use guest_common as abi;
 
-#[export_name = "hordeforge:mod/init"]
-pub extern "C" fn init(_boot_ptr: i32, _boot_len: i32) -> i32 {
+#[export_name = "on_enable"]
+pub extern "C" fn on_enable() -> i32 {
     abi::log_info("fuel fixture init");
     abi::STATUS_OK
 }
 
-#[export_name = "hordeforge:mod/tick"]
-pub extern "C" fn tick(_tick: i64) -> i32 {
+#[export_name = "on_tick"]
+pub extern "C" fn on_tick() -> i32 {
     let mut x: u64 = 0;
     loop {
         x = x.wrapping_add(1);

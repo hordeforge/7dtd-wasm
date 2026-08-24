@@ -3,14 +3,14 @@
 
 use guest_common as abi;
 
-#[export_name = "hordeforge:mod/init"]
-pub extern "C" fn init(_boot_ptr: i32, _boot_len: i32) -> i32 {
+#[export_name = "on_enable"]
+pub extern "C" fn on_enable() -> i32 {
     abi::log_info("trap fixture init");
     abi::STATUS_OK
 }
 
-#[export_name = "hordeforge:mod/tick"]
-pub extern "C" fn tick(_tick: i64) -> i32 {
+#[export_name = "on_tick"]
+pub extern "C" fn on_tick() -> i32 {
     abi::log_info("trap fixture about to trap");
     // This is the fixture's whole purpose.
     core::arch::wasm32::unreachable()

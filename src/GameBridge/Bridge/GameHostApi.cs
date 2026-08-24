@@ -13,9 +13,9 @@ namespace HordeForge.GameBridge.Bridge
     /// </summary>
     public sealed class GameHostApi : IGameHostApi
     {
-        private readonly WasmSettingsFile _settings;
+        private readonly WasmSettingsProvider _settings;
 
-        public GameHostApi(WasmSettingsFile settings)
+        public GameHostApi(WasmSettingsProvider settings)
         {
             _settings = settings;
             RateLimiter = new GuestRateLimiter();
@@ -73,9 +73,9 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        public bool TryGetSetting(string key, out string value)
+        public bool TryGetSetting(string modId, string key, out string value)
         {
-            return _settings.TryRead(key, out value);
+            return _settings.TryGetSetting(modId, key, out value);
         }
 
         public bool SendChat(string message)

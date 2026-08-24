@@ -4,16 +4,16 @@
 
 use guest_common as abi;
 
-#[export_name = "hordeforge:mod/init"]
-pub extern "C" fn init(_boot_ptr: i32, _boot_len: i32) -> i32 {
+#[export_name = "on_enable"]
+pub extern "C" fn on_enable() -> i32 {
     // Multi-byte UTF-8 on purpose: the host must decode it losslessly.
     abi::log_info("strings fixture init: héllo wörld 🧟");
     abi::STATUS_OK
 }
 
-#[export_name = "hordeforge:mod/tick"]
-pub extern "C" fn tick(tick: i64) -> i32 {
-    let t = unsafe { abi::get_tick() };
+#[export_name = "on_tick"]
+pub extern "C" fn on_tick() -> i32 {
+    let t = unsafe { abi::tick() };
     let w = unsafe { abi::get_world_time() };
     let mut out = [0u8; 256];
     let setting = abi::get_setting_str("welcome", &mut out).unwrap_or_default();
@@ -24,7 +24,7 @@ pub extern "C" fn tick(tick: i64) -> i32 {
         abi::log_info("strings missing-key correctly reported");
     }
 
-    let r = abi::send_chat_str(&format!("strings fixture chat at tick {}", tick));
+    let r = abi::send_chat_str(&format!("strings fixture chat at tick {}", t));
     if r == abi::CHAT_OK {
         abi::log_info("strings chat accepted");
     } else {
@@ -33,8 +33,8 @@ pub extern "C" fn tick(tick: i64) -> i32 {
     abi::STATUS_OK
 }
 
-#[export_name = "hordeforge:mod/shutdown"]
-pub extern "C" fn shutdown() -> i32 {
+#[export_name = "on_shutdown"]
+pub extern "C" fn on_shutdown() -> i32 {
     abi::log_info("strings fixture shutdown");
     abi::STATUS_OK
 }

@@ -16,10 +16,10 @@ namespace HordeForge.WasmHost.Core
     {
         private readonly Store _store;
         private readonly ulong _fuelPerCall;
-        private readonly Func<int, int, int> _init;
-        private readonly Func<long, int> _tick;
+        private readonly Func<int> _init;
+        private readonly Func<int> _tick;
         private readonly Func<int>? _shutdown;
-        private readonly Func<int>? _onPlayerJoin;
+        private readonly Func<int, int>? _onPlayerJoin;
 
         internal WasmMod(string id, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
@@ -29,9 +29,9 @@ namespace HordeForge.WasmHost.Core
             InitTick = initTick;
 
             _shutdown = instance.GetFunction<int>(AbiConstants.ExportShutdown);
-            _onPlayerJoin = instance.GetFunction<int>(AbiConstants.ExportPlayerJoin);
-            var init = instance.GetFunction<int, int, int>(AbiConstants.ExportInit);
-            var tick = instance.GetFunction<long, int>(AbiConstants.ExportTick);
+            _onPlayerJoin = instance.GetFunction<int, int>(AbiConstants.ExportPlayerJoin);
+            var init = instance.GetFunction<int>(AbiConstants.ExportInit);
+            var tick = instance.GetFunction<int>(AbiConstants.ExportTick);
             if (init == null)
             {
                 throw new WasmModLoadException(id, "missing required export " + AbiConstants.ExportInit);
@@ -66,19 +66,18 @@ namespace HordeForge.WasmHost.Core
         public long TotalCalls { get; private set; }
 
         /// <summary>
-        /// Invokes the guest init export. The boot payload pointer is passed
-        /// as zero for now; guests read boot configuration through
-        /// get_setting instead. See docs/ABI.md.
+        /// Invokes the guest on_enable export. Guests read configuration
+        /// through get_setting. See docs/ABI.md.
         /// </summary>
         public ModRunResult Init(long tick)
         {
-            return Run("init", () => _init(0, 0));
+            return Run("on_enable", () => _init());
         }
 
-        /// <summary>Invokes the guest tick export with the current game tick.</summary>
+        /// <summary>Invokes the guest on_tick export; the tick number is read via the tick import.</summary>
         public ModRunResult Tick(long tick)
         {
-            return Run("tick", () => _tick(tick));
+            return Run("on_tick", () => _tick());
         }
 
         /// <summary>Invokes the guest shutdown export when present.</summary>
@@ -98,18 +97,19 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
-        /// Invokes the guest's optional on_player_join export. The player
-        /// name is fetched inside the guest through the
-        /// get_join_player_name host import, so no arguments are passed.
-        /// Returns null when the guest does not handle the event.
+        /// Invokes the guest's optional on_player_join export with the
+        /// spawning player's entity id (zdtd passes slot and entity id; we
+        /// have no ECS slot). The player name is fetched inside the guest
+        /// through the get_join_player_name host import. Returns null when
+        /// the guest does not handle the event.
         /// </summary>
-        public ModRunResult? OnPlayerJoin()
+        public ModRunResult? OnPlayerJoin(int entityId)
         {
             if (_onPlayerJoin == null)
             {
                 return null;
             }
-            return Run("on_player_join", () => _onPlayerJoin());
+            return Run("on_player_join", () => _onPlayerJoin(entityId));
         }
 
         private ModRunResult Run(string callName, Func<int> invoke)

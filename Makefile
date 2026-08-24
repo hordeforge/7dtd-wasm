@@ -14,7 +14,7 @@ GAME_DIR ?= $(HOME)/.local/share/Steam/steamapps/common/7 Days to Die Dedicated 
 
 SLN = HordeForge.WasmHost.sln
 
-.PHONY: help build test samples boss fixtures bridge bridge-check dist check clean
+.PHONY: help build test samples boss boss-zig fixtures bridge bridge-check dist check clean
 
 help:
 	@echo "Targets:"
@@ -22,6 +22,7 @@ help:
 	@echo "  make test           run the host test suite"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
 	@echo "  make boss           compile the C guest (samples/guest-boss) with zig"
+	@echo "  make boss-zig       compile the Zig guest (samples/guest-boss-zig)"
 	@echo "  make fixtures       rebuild fixtures and copy them into tests/fixtures"
 	@echo "  make bridge         build the net48 in-game mod against GAME_DIR"
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
@@ -50,7 +51,16 @@ boss:
 	  -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
 	  -o samples/target/guest-boss.wasm samples/guest-boss/guest-boss.c
 
-fixtures: samples boss
+# Zig guest (zig 0.16): -rdynamic keeps the @export'ed symbols in the
+# -fno-entry module (without it everything is dead-code eliminated).
+boss-zig:
+	mkdir -p samples/target
+	cd samples/guest-boss-zig && zig build-exe src/main.zig \
+	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \
+	  --max-memory=33554432 -femit-bin=guest-boss-zig.wasm
+	cp samples/guest-boss-zig/guest-boss-zig.wasm samples/target/
+
+fixtures: samples boss boss-zig
 	mkdir -p tests/fixtures
 	cp samples/target/wasm32-wasip1/release/guest_trap.wasm     tests/fixtures/trap.wasm
 	cp samples/target/wasm32-wasip1/release/guest_fuel.wasm     tests/fixtures/fuel.wasm
@@ -59,6 +69,7 @@ fixtures: samples boss
 	cp samples/target/wasm32-wasip1/release/guest_noexports.wasm tests/fixtures/noexports.wasm
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm    tests/fixtures/hello.wasm
 	cp samples/target/guest-boss.wasm                           tests/fixtures/boss.wasm
+	cp samples/target/guest-boss-zig.wasm                       tests/fixtures/boss-zig.wasm
 
 bridge:
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)"
@@ -77,13 +88,15 @@ dist: build fixtures bridge
 	cp src/GameBridge/ModInfo.xml dist/Mods/1_HordeForge_WasmHost/
 	# Native engine for this platform.
 	cp "$(HOME)/.nuget/packages/wasmtime/44.0.0/runtimes/linux-x64/native/libwasmtime.so" dist/Mods/1_HordeForge_WasmHost/Native/
-	# Sample guest mods + settings.
-	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss
+	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
+	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm
-	cp samples/guest-hello/wasm-mod.json dist/Mods/Wasm/hello/
+	cp samples/guest-hello/wasm-mod.toml dist/Mods/Wasm/hello/
 	cp samples/target/guest-boss.wasm dist/Mods/Wasm/boss/module.wasm
-	cp samples/guest-boss/wasm-mod.json dist/Mods/Wasm/boss/
-	cp samples/guest-hello/wasm-settings.txt.example dist/Mods/Wasm/wasm-settings.txt
+	cp samples/guest-boss/wasm-mod.toml dist/Mods/Wasm/boss/
+	cp samples/target/guest-boss-zig.wasm dist/Mods/Wasm/boss-zig/module.wasm
+	cp samples/guest-boss-zig/wasm-mod.toml dist/Mods/Wasm/boss-zig/
+	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
 check:

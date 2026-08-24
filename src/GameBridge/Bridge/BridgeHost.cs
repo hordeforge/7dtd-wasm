@@ -16,7 +16,7 @@ namespace HordeForge.GameBridge.Bridge
     public static class BridgeHost
     {
         private static WasmModHost _host;
-        private static WasmSettingsFile _settings;
+        private static WasmSettingsProvider _settings;
         private static GameHostApi _gameApi;
         private static long _tick;
 
@@ -35,9 +35,10 @@ namespace HordeForge.GameBridge.Bridge
             NativeBootstrap.Prepare(modletDir);
 
             WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
-            _settings = new WasmSettingsFile(Path.Combine(WasmRoot, "wasm-settings.txt"));
+            _settings = new WasmSettingsProvider(Path.Combine(WasmRoot, "wasm.toml"));
 
             var config = new WasmHostConfig();
+            ApplySharedLimits(config);
             _gameApi = new GameHostApi(_settings);
             _host = new WasmModHost(_gameApi, config);
 
@@ -75,7 +76,7 @@ namespace HordeForge.GameBridge.Bridge
         /// player's name to every guest that exports the optional
         /// on_player_join handler.
         /// </summary>
-        public static void PlayerSpawnedInWorld(ClientInfo clientInfo)
+        public static void PlayerSpawnedInWorld(ClientInfo clientInfo, int entityId)
         {
             if (_host == null)
             {
@@ -86,8 +87,8 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            Log.Out("[WasmHost] player spawned: " + name);
-            foreach (var result in _host.DispatchPlayerJoin(name))
+            Log.Out("[WasmHost] player spawned: " + name + " (entity " + entityId + ")");
+            foreach (var result in _host.DispatchPlayerJoin(entityId, name))
             {
                 if (!result.Ok)
                 {
@@ -148,12 +149,26 @@ namespace HordeForge.GameBridge.Bridge
                     continue;
                 }
                 ModManifest manifest = null;
-                string manifestPath = Path.Combine(dir, "wasm-mod.json");
-                if (File.Exists(manifestPath))
+                string tomlPath = Path.Combine(dir, "wasm-mod.toml");
+                string jsonPath = Path.Combine(dir, "wasm-mod.json");
+                if (File.Exists(tomlPath))
                 {
                     try
                     {
-                        manifest = ModManifest.Parse(File.ReadAllText(manifestPath), id);
+                        manifest = ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
+                    }
+                    catch (WasmModLoadException ex)
+                    {
+                        Log.Warning("[WasmHost] invalid wasm-mod.toml for " + id + ": " + ex.Message + "; module skipped");
+                        continue;
+                    }
+                }
+                else if (File.Exists(jsonPath))
+                {
+                    // Deprecated format, kept for older modules.
+                    try
+                    {
+                        manifest = ModManifest.Parse(File.ReadAllText(jsonPath), id);
                     }
                     catch (WasmModLoadException ex)
                     {
@@ -164,6 +179,7 @@ namespace HordeForge.GameBridge.Bridge
                 try
                 {
                     _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
+                    _settings.UpdateMod(id, manifest);
                     loaded++;
                 }
                 catch (WasmModLoadException ex)
@@ -181,14 +197,17 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
             _host.Unload(id);
+            _settings.RemoveMod(id);
             string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
             if (!File.Exists(modulePath))
             {
                 return false;
             }
+            ModManifest manifest = TryReadManifest(id);
             try
             {
-                _host.LoadModule(id, File.ReadAllBytes(modulePath));
+                _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
+                _settings.UpdateMod(id, manifest);
                 _host.DispatchInit();
                 return true;
             }
@@ -201,7 +220,67 @@ namespace HordeForge.GameBridge.Bridge
 
         public static bool Unload(string id)
         {
-            return _host != null && _host.Unload(id);
+            if (_host != null && _host.Unload(id))
+            {
+                _settings.RemoveMod(id);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Applies the shared Mods/Wasm/wasm.toml [limits] over the host code
+        /// defaults before the engine is created (start time only; per-mod
+        /// manifests can still tighten further at load). Load order follows
+        /// the zdtd convention: code defaults -> wasm.toml -> wasm-mod.toml.
+        /// </summary>
+        private static void ApplySharedLimits(WasmHostConfig config)
+        {
+            try
+            {
+                string sharedPath = Path.Combine(WasmRoot, "wasm.toml");
+                if (!File.Exists(sharedPath))
+                {
+                    return;
+                }
+                ModManifest shared = ModManifest.ParseToml(File.ReadAllText(sharedPath), "shared");
+                if (shared.FuelPerCall.HasValue)
+                {
+                    config.FuelPerCall = shared.FuelPerCall.Value;
+                }
+                if (shared.MaxMemoryBytes.HasValue)
+                {
+                    config.StaticMemoryMaximumBytes = shared.MaxMemoryBytes.Value;
+                }
+            }
+            catch (WasmModLoadException ex)
+            {
+                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + ex.Message + "; using code defaults");
+            }
+        }
+
+        /// <summary>Reads wasm-mod.toml (preferred) or wasm-mod.json for a module id; null when absent or invalid.</summary>
+        private static ModManifest TryReadManifest(string id)
+        {
+            string dir = Path.Combine(WasmRoot, id);
+            string tomlPath = Path.Combine(dir, "wasm-mod.toml");
+            string jsonPath = Path.Combine(dir, "wasm-mod.json");
+            try
+            {
+                if (File.Exists(tomlPath))
+                {
+                    return ModManifest.ParseToml(File.ReadAllText(tomlPath), id);
+                }
+                if (File.Exists(jsonPath))
+                {
+                    return ModManifest.Parse(File.ReadAllText(jsonPath), id);
+                }
+            }
+            catch (WasmModLoadException ex)
+            {
+                Log.Warning("[WasmHost] invalid manifest for " + id + ": " + ex.Message);
+            }
+            return null;
         }
 
         public static void Shutdown()

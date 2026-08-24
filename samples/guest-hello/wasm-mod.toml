@@ -1,0 +1,11 @@
+# wasm-mod.toml: per-mod config (zdtd-server TOML conventions, docs/CONFIG.md).
+name = "hello"
+description = "Demo guest mod: logs on init, reports every 100 ticks, sends a chat greeting every 1000 ticks"
+version = "0.1.0"
+
+[limits]
+fuel_per_call = 1000000
+max_memory_bytes = 33554432
+
+[settings]
+greeting = "hello survivor"

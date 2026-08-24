@@ -19,10 +19,12 @@ namespace HordeForge.WasmHost.Abi
         long GetWorldTime();
 
         /// <summary>
-        /// Looks up a server setting or mod setting by key. Returns false when
-        /// the key is unknown so the guest can fall back to a default.
+        /// Looks up a setting by key for the given mod. The mod id is the
+        /// registry id (folder name); the implementation resolves per-mod
+        /// settings before shared ones. Returns false when the key is
+        /// unknown so the guest can fall back to a default.
         /// </summary>
-        bool TryGetSetting(string key, out string value);
+        bool TryGetSetting(string modId, string key, out string value);
 
         /// <summary>
         /// Sends a message to the global chat channel. Returns true when the

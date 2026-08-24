@@ -10,24 +10,33 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Module name under which the host defines its game API functions.</summary>
         public const string HostModule = "hordeforge";
 
-        /// <summary>Prefix for guest exports; full names are host-exports like "hordeforge:mod/init".</summary>
-        public const string GuestExportPrefix = "hordeforge:mod/";
-
+        /// <summary>
+        /// The ABI follows the sibling zdtd-server plugin contract
+        /// (docs/PLUGIN_API.md): guest hooks are exported under their bare
+        /// names (on_enable, on_tick, on_player_join, on_shutdown), host
+        /// imports live under one project-named module with bare field
+        /// names, and data crosses as flat bytes in guest linear memory.
+        /// </summary>
         /// <summary>Guest export invoked once when the mod is loaded and started.</summary>
-        public const string ExportInit = GuestExportPrefix + "init";
+        public const string ExportInit = "on_enable";
 
-        /// <summary>Guest export invoked once per game tick with the tick number.</summary>
-        public const string ExportTick = GuestExportPrefix + "tick";
+        /// <summary>Guest export invoked once per game tick; the tick number is read via the tick import.</summary>
+        public const string ExportTick = "on_tick";
 
         /// <summary>Guest export invoked when the mod is unloaded or the host shuts down.</summary>
-        public const string ExportShutdown = GuestExportPrefix + "shutdown";
+        public const string ExportShutdown = "on_shutdown";
 
         /// <summary>
         /// Optional guest export invoked when a player spawns into the world.
-        /// The guest fetches the player name through the
+        /// Signature (entity_id: i32) -> i32, mirroring zdtd's
+        /// on_player_join(slot, entity_id): we pass the entity id; there is
+        /// no ECS slot here. The player name is fetched through the
         /// <see cref="ImportGetJoinPlayerName"/> host import.
         /// </summary>
-        public const string ExportPlayerJoin = GuestExportPrefix + "on_player_join";
+        public const string ExportPlayerJoin = "on_player_join";
+
+        /// <summary>Host import: current game tick (zdtd: tick()).</summary>
+        public const string ImportTick = "tick";
 
         /// <summary>Host import: writes the joining player's name into a guest buffer.</summary>
         public const string ImportGetJoinPlayerName = "get_join_player_name";

@@ -35,6 +35,12 @@ namespace HordeForge.WasmHost.Core
         private readonly Linker _linker;
         private readonly Dictionary<string, WasmMod> _mods = new Dictionary<string, WasmMod>(StringComparer.Ordinal);
         private string _currentJoinName = string.Empty;
+
+        /// <summary>
+        /// Mod id of the guest currently being called; lets the get_setting
+        /// import resolve per-mod settings. Set before every guest call.
+        /// </summary>
+        private string _currentModId = string.Empty;
         private bool _disposed;
 
         /// <summary>
@@ -130,8 +136,12 @@ namespace HordeForge.WasmHost.Core
                 throw new WasmModLoadException(id, "guest memory maximum " + maxBytes.Value + " bytes exceeds the effective cap " + memoryCeiling);
             }
 
-            RequireExportSignature(module, id, AbiConstants.ExportInit, new[] { ValueKind.Int32, ValueKind.Int32 }, new[] { ValueKind.Int32 });
-            RequireExportSignature(module, id, AbiConstants.ExportTick, new[] { ValueKind.Int64 }, new[] { ValueKind.Int32 });
+            RequireExportSignature(module, id, AbiConstants.ExportInit, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 });
+            RequireExportSignature(module, id, AbiConstants.ExportTick, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 });
+            if (HasExport(module, AbiConstants.ExportPlayerJoin))
+            {
+                RequireExportSignature(module, id, AbiConstants.ExportPlayerJoin, new[] { ValueKind.Int32 }, new[] { ValueKind.Int32 });
+            }
 
             ulong fuelPerCall = manifest != null && manifest.FuelPerCall.HasValue ? manifest.FuelPerCall.Value : _config.FuelPerCall;
 
@@ -170,6 +180,7 @@ namespace HordeForge.WasmHost.Core
             ThrowIfDisposed();
             if (_mods.TryGetValue(id, out var mod))
             {
+                _currentModId = mod.Id;
                 mod.Shutdown();
                 _mods.Remove(id);
                 return true;
@@ -189,6 +200,7 @@ namespace HordeForge.WasmHost.Core
             var results = new List<ModRunResult>(_mods.Count);
             foreach (var mod in _mods.Values)
             {
+                _currentModId = mod.Id;
                 results.Add(mod.Tick(tick));
             }
             return results;
@@ -201,6 +213,7 @@ namespace HordeForge.WasmHost.Core
             var results = new List<ModRunResult>(_mods.Count);
             foreach (var mod in _mods.Values)
             {
+                _currentModId = mod.Id;
                 results.Add(mod.Init(Tick));
             }
             return results;
@@ -213,14 +226,15 @@ namespace HordeForge.WasmHost.Core
         /// get_join_player_name host import. Fail soft like tick: one
         /// misbehaving handler never stops the others.
         /// </summary>
-        public IReadOnlyList<ModRunResult> DispatchPlayerJoin(string playerName)
+        public IReadOnlyList<ModRunResult> DispatchPlayerJoin(long entityId, string playerName)
         {
             ThrowIfDisposed();
             _currentJoinName = playerName ?? string.Empty;
             var results = new List<ModRunResult>();
             foreach (var mod in _mods.Values)
             {
-                ModRunResult? result = mod.OnPlayerJoin();
+                _currentModId = mod.Id;
+                ModRunResult? result = mod.OnPlayerJoin((int)entityId);
                 if (result != null)
                 {
                     results.Add(result);
@@ -273,6 +287,18 @@ namespace HordeForge.WasmHost.Core
             throw new WasmModLoadException(id, "missing required export " + name);
         }
 
+        private static bool HasExport(Module module, string name)
+        {
+            foreach (var export in module.Exports)
+            {
+                if (export.Name == name)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static bool Matches(IReadOnlyList<ValueKind> actual, ValueKind[] expected)
         {
             if (actual.Count != expected.Length)
@@ -297,7 +323,7 @@ namespace HordeForge.WasmHost.Core
                 _api.Log(_config.LogSourcePrefix, level, message);
             });
 
-            _linker.DefineFunction<long>(AbiConstants.HostModule, "get_tick", caller =>
+            _linker.DefineFunction<long>(AbiConstants.HostModule, AbiConstants.ImportTick, caller =>
             {
                 return Tick;
             });
@@ -310,7 +336,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int, int, int>(AbiConstants.HostModule, "get_setting", (caller, keyPtr, keyLen, outPtr, outCap) =>
             {
                 string key = ReadGuestString(caller, keyPtr, keyLen);
-                if (!_api.TryGetSetting(key, out string value))
+                if (!_api.TryGetSetting(_currentModId, key, out string value))
                 {
                     return AbiConstants.SettingNotFound;
                 }
@@ -391,6 +417,7 @@ namespace HordeForge.WasmHost.Core
             }
             foreach (var mod in _mods.Values)
             {
+                _currentModId = mod.Id;
                 mod.Shutdown();
             }
             _mods.Clear();

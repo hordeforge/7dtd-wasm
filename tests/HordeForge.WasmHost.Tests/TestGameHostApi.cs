@@ -17,6 +17,9 @@ namespace HordeForge.WasmHost.Tests
 
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
+        public Dictionary<string, Dictionary<string, string>> ModSettings { get; } = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+
         public long WorldTime { get; set; } = 600;
 
         public void Log(string source, int level, string message)
@@ -29,10 +32,15 @@ namespace HordeForge.WasmHost.Tests
             return WorldTime;
         }
 
-        public bool TryGetSetting(string key, out string value)
+        public bool TryGetSetting(string modId, string key, out string value)
         {
-            bool found = Settings.TryGetValue(key, out string? v);
-            value = v ?? string.Empty;
+            if (modId.Length > 0 && ModSettings.TryGetValue(modId, out var modSettings) && modSettings.TryGetValue(key, out string? perMod))
+            {
+                value = perMod ?? string.Empty;
+                return true;
+            }
+            bool found = Settings.TryGetValue(key, out string? shared);
+            value = shared ?? string.Empty;
             return found;
         }
 

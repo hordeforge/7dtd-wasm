@@ -10,6 +10,7 @@ to fix in the same change.
 | Document | Owns | Canonical for |
 |---|---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime pipeline, host library, bridge, guest toolchain, target verification | Component responsibilities, thread rules, limit mechanics, source layout |
+| [CONFIG.md](CONFIG.md) | Mod config schema: wasm.toml, wasm-mod.toml, limits, settings, load order | Every config key, its default, and the resolution order |
 | [ABI.md](ABI.md) | Guest contract: imports, exports, strings, status codes, manifests, versioning | Every symbol a guest may import or export and its signature |
 | [GAME_HOOKS.md](GAME_HOOKS.md) | In-game integration: tick hook, console commands, settings, verified game API surface | Which game members the bridge touches and how |
 | [GUEST_AUTHORS.md](GUEST_AUTHORS.md) | How to write a guest mod | Guest-side rules, deployment, manifest usage |

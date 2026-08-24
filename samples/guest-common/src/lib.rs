@@ -10,9 +10,9 @@
 pub const HOST_MODULE: &str = "hordeforge";
 
 /// Guest export names. The host requires init and tick; shutdown is optional.
-pub const EXPORT_INIT: &str = "hordeforge:mod/init";
-pub const EXPORT_TICK: &str = "hordeforge:mod/tick";
-pub const EXPORT_SHUTDOWN: &str = "hordeforge:mod/shutdown";
+pub const EXPORT_INIT: &str = "on_enable";
+pub const EXPORT_TICK: &str = "on_tick";
+pub const EXPORT_SHUTDOWN: &str = "on_shutdown";
 
 /// Status codes returned by guest exports. Zero always means ok.
 pub const STATUS_OK: i32 = 0;
@@ -39,7 +39,7 @@ pub const CHAT_REJECTED: i32 = -1;
 #[link(wasm_import_module = "hordeforge")]
 extern "C" {
     pub fn log(level: i32, ptr: i32, len: i32);
-    pub fn get_tick() -> i64;
+    pub fn tick() -> i64;
     pub fn get_world_time() -> i64;
     pub fn get_setting(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32;
     pub fn send_chat(ptr: i32, len: i32) -> i32;

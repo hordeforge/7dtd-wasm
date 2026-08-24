@@ -1,8 +1,0 @@
-# Settings for guest mods running under the HordeForge WasmHost.
-# Format: one "key: value" per line. Lines starting with # are comments.
-# The file is re-read when it changes, so edits apply without a restart.
-#
-# The hello sample reads wasm.greeting and sends it as a global chat
-# message every 1000 game ticks.
-
-wasm.greeting: hello survivor

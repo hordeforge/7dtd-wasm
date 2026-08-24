@@ -3,6 +3,34 @@
 All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 
+## [0.1.3] - 2026-08-24
+
+### Added
+
+- `samples/guest-boss-zig`: the boss watcher written in Zig
+  (zig build-exe, wasm32-wasi), reading its target name from the
+  `get_setting` import so `[settings] boss_name` in wasm-mod.toml retunes
+  it without rebuilding. Built via `make boss-zig`, staged in
+  `dist/Mods/Wasm/boss-zig`, covered by two host tests (39 total).
+- TOML mod config following the zdtd-server conventions (docs/CONFIG.md):
+  `wasm-mod.toml` (`[limits]`, `[settings]`) per mod, shared
+  `Mods/Wasm/wasm.toml` (`[limits]` at host start, `[settings]` re-read on
+  change), snake_case keys, load order code defaults -> wasm.toml ->
+  wasm-mod.toml. Parsed by a dependency-free MiniToml (ADR 0007). The
+  deprecated JSON manifest is still accepted.
+- get_setting is now calling-mod aware: a mod's own `[settings]` win over
+  shared keys, so two mods can use the same key with different values.
+
+### Changed (breaking ABI, aligned with zdtd-server)
+
+The guest ABI now follows the zdtd-server plugin contract exactly:
+exports are the bare hook names `on_enable`, `on_tick`, `on_shutdown`,
+`on_player_join` (the `hordeforge:mod/` prefix is gone), hooks are no-arg
+(the tick number is read via the `tick` import, renamed from `get_tick`),
+and `on_player_join` receives `(entity_id)` (zdtd passes slot and entity
+id; we have no ECS slot, and the name comes via `get_join_player_name`).
+All guests (Rust, C, Zig), fixtures, tests, and docs updated.
+
 ## [0.1.2] - 2026-08-24
 
 ### Added

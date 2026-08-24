@@ -48,8 +48,8 @@ measurable.
 ## Guest modules
 
 Guests are `wasm32-wasip1` cdylibs built from Rust (see
-[docs/GUEST_AUTHORS.md](GUEST_AUTHORS.md)). They export `hordeforge:mod/init`,
-`hordeforge:mod/tick`, and optionally `hordeforge:mod/shutdown`, and import
+[docs/GUEST_AUTHORS.md](GUEST_AUTHORS.md)). They export `on_enable`,
+`on_tick`, and optionally `on_shutdown`, and import
 the `hordeforge` host API. String arguments are (pointer, length) pairs into
 the guest's own memory; the host reads them only within the given range and
 never holds a reference across calls.

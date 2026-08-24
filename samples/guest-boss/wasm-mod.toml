@@ -1,0 +1,8 @@
+# wasm-mod.toml: per-mod config (zdtd-server TOML conventions, docs/CONFIG.md).
+name = "boss"
+description = "C guest (zig cc): prints THE BOSS IS HERE when the player 'maci' spawns into the world"
+version = "0.1.0"
+
+[limits]
+fuel_per_call = 1000000
+max_memory_bytes = 33554432

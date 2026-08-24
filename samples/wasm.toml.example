@@ -1,0 +1,16 @@
+# Mods/Wasm/wasm.toml: shared settings and host defaults for guest mods.
+# Follows the zdtd-server TOML conventions (snake_case, [section] groups);
+# see docs/CONFIG.md. This file is re-read when it changes, so edits apply
+# without a server restart.
+#
+# Load order: host code defaults -> wasm.toml -> per-mod wasm-mod.toml.
+
+# Host defaults (each mod's wasm-mod.toml [limits] can only tighten these).
+[limits]
+fuel_per_call = 1000000
+max_memory_bytes = 33554432
+
+# Shared settings, served to every guest through the get_setting host
+# import. A mod's own [settings] (wasm-mod.toml) wins over these.
+[settings]
+greeting = "hello survivor"

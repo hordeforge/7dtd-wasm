@@ -1,0 +1,17 @@
+# wasm-mod.toml: per-mod config following the zdtd-server TOML conventions
+# (snake_case keys, [section] groups bound to struct fields, defaults
+# identical to the code defaults; see docs/CONFIG.md).
+name = "boss-zig"
+description = "Boss watcher written in Zig: prints THE BOSS IS HERE when a named player spawns"
+version = "0.1.0"
+
+# Host-enforced limits. A manifest can only tighten the host defaults;
+# fuel_per_call above the host ceiling is rejected at load.
+[limits]
+fuel_per_call = 1000000
+max_memory_bytes = 33554432
+
+# Operator policy exposed to the guest through the get_setting host import.
+# The guest reads boss_name and matches it exactly (case-sensitive).
+[settings]
+boss_name = "maci"
