@@ -39,12 +39,20 @@ namespace HordeForge.GameBridge.Bridge
             _settings = settings;
         }
 
-        public bool TryQueue(string command)
+        /// <summary>
+        /// Handles one queued SimCommand. Returns true when the command was
+        /// accepted. <paramref name="handled"/> reports whether the command
+        /// belonged to the bot surface at all, so the caller can tell a
+        /// rejected bot command from a command that was never ours.
+        /// </summary>
+        public bool TryQueue(string command, out bool handled)
         {
+            handled = false;
             if (command == null || !command.StartsWith("bot ", StringComparison.Ordinal))
             {
                 return false;
             }
+            handled = true;
             string[] parts = command.Split(' ');
             string verb = parts.Length > 1 ? parts[1] : string.Empty;
             try
@@ -86,7 +94,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                global::Log.Warning("[WasmHost] bot " + verb + " failed: " + ex.Message);
+                global::Log.Warning("[WasmHost] bot " + verb + " failed: " + ex);
                 return false;
             }
         }

@@ -84,9 +84,15 @@ namespace HordeForge.GameBridge.Bridge
         {
             // The bot servant dispatches the brain's SimCommands; non-bot
             // commands are logged and accepted.
-            if (_servant.TryQueue(command))
+            if (_servant.TryQueue(command, out bool handled))
             {
                 return true;
+            }
+            if (handled)
+            {
+                // A bot command that failed mid-execution must reach the
+                // guest as rejected (queue -> -1), not as accepted.
+                return false;
             }
             global::Log.Out("[WasmHost] cmd: " + command);
             return true;
@@ -124,8 +130,12 @@ namespace HordeForge.GameBridge.Bridge
                 game.ChatMessageServer(null, EChatType.Global, -1, message, null, EMessageSender.Server, GeneratedTextManager.BbCodeSupportMode.NotSupported);
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // The guest only sees ChatRejected; an unexpected game-side
+                // failure must stay visible in the server log. Rate is
+                // bounded by the chat limiter check above.
+                global::Log.Warning("[WasmHost] send_chat failed: " + ex.Message);
                 return false;
             }
         }

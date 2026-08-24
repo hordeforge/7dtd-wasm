@@ -26,6 +26,9 @@ namespace HordeForge.WasmHost.Registry
             }
             var root = new TomlTable();
             var current = root;
+            // Tables named by a [header] so far; TOML forbids defining the
+            // same table twice while allowing [a] after [a.b].
+            var definedTables = new HashSet<string>(StringComparer.Ordinal);
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
             for (int i = 0; i < lines.Length; i++)
             {
@@ -36,8 +39,14 @@ namespace HordeForge.WasmHost.Registry
                 }
                 if (line[0] == '[')
                 {
+                    string[] parts = ParseTableHeader(line, i + 1);
+                    string path = string.Join(".", parts);
+                    if (!definedTables.Add(path))
+                    {
+                        throw new FormatException("line " + (i + 1) + ": table [" + path + "] is defined more than once");
+                    }
                     current = root;
-                    foreach (string part in ParseTableHeader(line, i + 1))
+                    foreach (string part in parts)
                     {
                         if (!current.TryGet(part, out TomlValue child) || !(child is TomlTable childTable))
                         {
@@ -58,6 +67,10 @@ namespace HordeForge.WasmHost.Registry
                 if (!IsValidKey(key))
                 {
                     throw new FormatException("line " + (i + 1) + ": invalid key '" + key + "'");
+                }
+                if (current.HasKey(key))
+                {
+                    throw new FormatException("line " + (i + 1) + ": duplicate key '" + key + "' in this table");
                 }
                 current.Add(key, ParseValue(valueText, i + 1));
             }
@@ -311,6 +324,11 @@ namespace HordeForge.WasmHost.Registry
             bool found = _values.TryGetValue(key, out TomlValue? v);
             value = v!;
             return found;
+        }
+
+        public bool HasKey(string key)
+        {
+            return _values.ContainsKey(key);
         }
 
         public void Add(string key, TomlValue value)

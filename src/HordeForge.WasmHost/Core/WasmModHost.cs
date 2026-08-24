@@ -77,7 +77,7 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>Ids of the currently loaded mods, in load order.</summary>
-        public IReadOnlyCollection<string> ModIds => _modOrder.ToArray();
+        public IReadOnlyList<string> ModIds => _modOrder.ToArray();
 
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick { get; private set; }

@@ -575,6 +575,35 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void TomlDuplicateKeyIsRejected()
+        {
+            // A repeated key inside one table must reject the manifest
+            // instead of silently letting the last value win.
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits]\nfuel_per_call = 1\nfuel_per_call = 2\n", "bad"));
+            Assert.Contains("duplicate key", ex.Message);
+        }
+
+        [Fact]
+        public void TomlDuplicateTableIsRejected()
+        {
+            // Redefining [limits] to smuggle in a second value must reject.
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits]\nfuel_per_call = 1\n[limits]\nmax_memory_bytes = 2\n", "bad"));
+            Assert.Contains("more than once", ex.Message);
+        }
+
+        [Fact]
+        public void TomlSuperTableAfterSubTableParses()
+        {
+            // [a.b] followed by [a] is valid TOML and must keep parsing;
+            // unknown tables are tolerated by the manifest binder.
+            ModManifest m = ModManifest.ParseToml("[future.sub]\nk = \"v\"\n[future]\nflag = true\n", "x");
+            Assert.Null(m.FuelPerCall);
+            Assert.Empty(m.Settings);
+        }
+
+        [Fact]
         public void TomlTableHeaderToleratesWhitespace()
         {
             // Whitespace inside a header must not change the table name;

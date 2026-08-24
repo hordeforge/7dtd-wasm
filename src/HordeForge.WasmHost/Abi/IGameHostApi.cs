@@ -13,7 +13,7 @@ namespace HordeForge.WasmHost.Abi
     {
         /// <summary>
         /// Writes a log line from a guest mod. Level is one of the
-        /// <see cref="AbiConstants.LogDebug"/> constants.
+        /// <see cref="AbiConstants.LogDebug"/>..<see cref="AbiConstants.LogError"/> constants.
         /// </summary>
         void Log(string source, int level, string message);
 

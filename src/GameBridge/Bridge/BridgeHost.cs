@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using HordeForge.WasmHost.Config;
 using HordeForge.WasmHost.Core;
+using HordeForge.WasmHost.Limits;
 using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge
@@ -28,6 +29,11 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>True once Start completed (mods may still be empty).</summary>
         public static bool Started { get; private set; }
+
+        // Caps the per-tick dispatch-failure log lines per module so a
+        // permanently trapping or fuel-burning guest cannot flood the server
+        // log at tick rate; totals surface in "wasm status".
+        private static readonly GuestRateLimiter DispatchFailureLimiter = new GuestRateLimiter();
 
         public static void Start()
         {
@@ -63,11 +69,19 @@ namespace HordeForge.GameBridge.Bridge
             // the bridge keeps its own monotonic counter: the hook runs once
             // per game tick (20 TPS), which is the same rhythm.
             _tick++;
-            foreach (var result in _host.DispatchTick(_tick))
+            var ids = _host.ModIds;
+            IReadOnlyList<ModRunResult> results = _host.DispatchTick(_tick);
+            for (int i = 0; i < results.Count; i++)
             {
-                if (!result.Ok)
+                if (results[i].Ok)
                 {
-                    Log.Out("[WasmHost] tick: " + result.Message + (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                    continue;
+                }
+                string source = "tick/" + (i < ids.Count ? ids[i] : "?");
+                if (DispatchFailureLimiter.TryWrite(source, out _))
+                {
+                    Log.Out("[WasmHost] tick: " + results[i].Message +
+                            (results[i].Details.Length > 0 ? " (" + results[i].Details + ")" : ""));
                 }
             }
         }
@@ -133,6 +147,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 lines.Add("  " + droppedChat);
             }
+            string droppedTick = DispatchFailureLimiter.DescribeDropped("tick failure logs");
+            if (droppedTick.Length > 0)
+            {
+                lines.Add("  " + droppedTick);
+            }
             return lines;
         }
 
@@ -166,9 +185,21 @@ namespace HordeForge.GameBridge.Bridge
                     // with weaker-than-intended limits.
                     continue;
                 }
+                byte[] wasmBytes;
                 try
                 {
-                    _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
+                    wasmBytes = File.ReadAllBytes(modulePath);
+                }
+                catch (Exception ex)
+                {
+                    // An unreadable module file must not abort the scan or
+                    // the bridge start; skip it like any other bad module.
+                    Log.Warning("[WasmHost] cannot read " + modulePath + ": " + ex.Message + "; module skipped");
+                    continue;
+                }
+                try
+                {
+                    _host.LoadModule(id, wasmBytes, manifest);
                     _settings?.UpdateMod(id, manifest);
                     loaded++;
                 }
@@ -199,9 +230,19 @@ namespace HordeForge.GameBridge.Bridge
                 // intended limits; the mod stays unloaded until fixed.
                 return false;
             }
+            byte[] wasmBytes;
             try
             {
-                _host.LoadModule(id, File.ReadAllBytes(modulePath), manifest);
+                wasmBytes = File.ReadAllBytes(modulePath);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("[WasmHost] reload of " + id + " failed: cannot read " + modulePath + ": " + ex.Message);
+                return false;
+            }
+            try
+            {
+                _host.LoadModule(id, wasmBytes, manifest);
                 _settings?.UpdateMod(id, manifest);
                 if (_host.TryGetMod(id, out var mod) && mod != null)
                 {
@@ -257,6 +298,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + ex.Message + "; using code defaults");
             }
+            catch (Exception ex)
+            {
+                // Same degradation as a malformed file: the bridge starts
+                // with code defaults instead of failing to start.
+                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + ex.Message + "; using code defaults");
+            }
         }
 
         /// <summary>
@@ -289,6 +336,14 @@ namespace HordeForge.GameBridge.Bridge
             catch (WasmModLoadException ex)
             {
                 Log.Warning("[WasmHost] invalid manifest for " + id + ": " + ex.Message + "; module skipped");
+                manifest = null;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                // An unreadable manifest file is treated like a malformed
+                // one: skip the module instead of running it with defaults.
+                Log.Warning("[WasmHost] cannot read manifest for " + id + ": " + ex.Message + "; module skipped");
                 manifest = null;
                 return false;
             }

@@ -24,6 +24,11 @@ namespace HordeForge.GameBridge.Bridge
             new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _shared = new Dictionary<string, string>(StringComparer.Ordinal);
         private DateTime _sharedMtime = DateTime.MinValue;
+        // mtime of the last reload attempt that failed and was logged, so a
+        // broken wasm.toml is reported once per change instead of on every
+        // get_setting miss.
+        private DateTime _loggedFailureMtime = DateTime.MinValue;
+        private bool _loggedFailureValid;
 
         public WasmSettingsProvider(string sharedPath)
         {
@@ -57,16 +62,20 @@ namespace HordeForge.GameBridge.Bridge
 
         private void ReloadSharedIfChanged()
         {
+            DateTime attemptedMtime = DateTime.MinValue;
+            bool attempted = false;
             try
             {
                 if (!File.Exists(_sharedPath))
                 {
                     _shared.Clear();
                     _sharedMtime = DateTime.MinValue;
+                    _loggedFailureValid = false;
                     return;
                 }
-                DateTime mtime = File.GetLastWriteTimeUtc(_sharedPath);
-                if (mtime == _sharedMtime)
+                attemptedMtime = File.GetLastWriteTimeUtc(_sharedPath);
+                attempted = true;
+                if (attemptedMtime == _sharedMtime)
                 {
                     return;
                 }
@@ -76,13 +85,22 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     _shared[pair.Key] = pair.Value;
                 }
-                _sharedMtime = mtime;
+                _sharedMtime = attemptedMtime;
+                _loggedFailureValid = false;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Keep the previous shared settings on any read error; a
-                // malformed wasm.toml is an operator error reported in the
-                // server log by the caller that first touches it.
+                // Keep the previous shared settings on any read error, but
+                // say so once per file change: silently serving stale values
+                // would hide operator mistakes from the log entirely. The
+                // mtime stays unapplied, so a later fixed save re-reads.
+                if (!attempted || !_loggedFailureValid || attemptedMtime != _loggedFailureMtime)
+                {
+                    global::Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + ex.Message +
+                                        "; serving previous shared settings");
+                    _loggedFailureMtime = attemptedMtime;
+                    _loggedFailureValid = true;
+                }
             }
         }
     }
