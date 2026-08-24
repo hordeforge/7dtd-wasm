@@ -433,6 +433,11 @@ namespace HordeForge.GameBridge.Bridge
                 _host.Dispose();
                 _host = null;
             }
+            // Release what Start() built so a shutdown leaves no static
+            // references behind; the next Start() recreates all of them.
+            _gameApi = null;
+            _servant = null;
+            _settings = null;
             Started = false;
         }
     }

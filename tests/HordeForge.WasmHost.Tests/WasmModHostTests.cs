@@ -161,6 +161,29 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void RepeatedRejectedLoadsKeepHostUsable()
+        {
+            // Each failed attempt compiles a module that is then rejected;
+            // its compiled code must be released, and no attempt may corrupt
+            // the engine: after many rejections the host still accepts and
+            // runs a healthy mod.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                for (int i = 0; i < 50; i++)
+                {
+                    Assert.Throws<WasmModLoadException>(
+                        () => host.LoadModule("bigmem", Fixture("bigmem")));
+                    Assert.Throws<WasmModLoadException>(
+                        () => host.LoadModule("noexports", Fixture("noexports")));
+                    Assert.Empty(host.ModIds);
+                }
+                WasmMod mod = host.LoadModule("strings", Fixture("strings"));
+                Assert.True(mod.Tick(1).Ok);
+            }
+        }
+
+        [Fact]
         public void MissingRequiredExportsAreRejected()
         {
             var (host, _) = NewHost();

@@ -3,9 +3,10 @@
 # Toolchains. The workspace uses net8.0 for tooling and net48 for in-game
 # mod DLLs; guests are built with an in-project rustup toolchain so nothing
 # is installed system-wide. The C guest is built with the zig compiler.
-# DOTNET falls back to the workspace-local SDK under $(HOME)/.cache (the
-# system dotnet may be SDK-less); it must never name a specific user.
-DOTNET ?= $(shell command -v dotnet 2>/dev/null || echo $(HOME)/.cache/dotnet-sdk/dotnet)
+# DOTNET prefers the workspace-local SDK under $(HOME)/.cache when present
+# and falls back to PATH dotnet (which may be missing or SDK-less); it must
+# never name a specific user.
+DOTNET ?= $(shell test -x $(HOME)/.cache/dotnet-sdk/dotnet && echo $(HOME)/.cache/dotnet-sdk/dotnet || command -v dotnet 2>/dev/null || echo $(HOME)/.cache/dotnet-sdk/dotnet)
 CARGO  ?= $(PWD)/.cargo/bin/cargo
 ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
 export RUSTUP_HOME := $(PWD)/.rustup

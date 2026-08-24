@@ -80,7 +80,17 @@ namespace HordeForge.GameBridge.Bridge
         {
             try
             {
-                return dlopen("libwasmtime.so", RtldNow) != IntPtr.Zero;
+                IntPtr handle = dlopen("libwasmtime.so", RtldNow);
+                if (handle == IntPtr.Zero)
+                {
+                    return false;
+                }
+                // Release the probe's own reference: the later
+                // DllImport("wasmtime") loads the library again through the
+                // same loader path, so holding this handle buys nothing and
+                // would pin the image without an owner.
+                dlclose(handle);
+                return true;
             }
             catch (Exception)
             {
@@ -90,6 +100,9 @@ namespace HordeForge.GameBridge.Bridge
 
         [DllImport("libc", EntryPoint = "dlopen")]
         private static extern IntPtr dlopen(string path, int mode);
+
+        [DllImport("libc", EntryPoint = "dlclose")]
+        private static extern int dlclose(IntPtr handle);
 
         private static void PrependToPathVariable(string variable, string directory)
         {

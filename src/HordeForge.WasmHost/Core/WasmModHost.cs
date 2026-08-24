@@ -117,6 +117,23 @@ namespace HordeForge.WasmHost.Core
                 throw new WasmModLoadException(id, "failed to parse or compile module: " + ex.Message, ex);
             }
 
+            // The compiled module holds native machine code behind its own
+            // handle. Every rejection from here on must release it, or each
+            // repeated failed load attempt (operator retrying "wasm reload")
+            // accumulates engine memory until finalization.
+            try
+            {
+                return LoadValidated(id, module, manifest);
+            }
+            catch
+            {
+                module.Dispose();
+                throw;
+            }
+        }
+
+        private WasmMod LoadValidated(string id, Module module, ModManifest? manifest)
+        {
             ulong? declaredMax = DeclaredMemoryMaximumBytes(module);
             // A module with no declared maximum is treated as declaring the
             // wasm32 ceiling (4 GiB). Such modules load only when the
