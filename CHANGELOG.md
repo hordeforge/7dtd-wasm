@@ -31,6 +31,17 @@ and `on_player_join` receives `(entity_id)` (zdtd passes slot and entity
 id; we have no ECS slot, and the name comes via `get_join_player_name`).
 All guests (Rust, C, Zig), fixtures, tests, and docs updated.
 
+### Verified live (aligned ABI + TOML config)
+
+Second container acceptance run after the alignment: the Zig guest printed
+"THE BOSS IS HERE" for `boss_name = "maci1"` read from its wasm-mod.toml
+(no rebuild), with the join dispatched as `player spawned: maci1 (entity
+171)`. Evidence: `evidence/acceptance-1/aligned-abi-join.log`. The run
+fixed a Harmony postfix naming bug: `RequestToSpawnPlayer`'s int
+parameters are `_chunkViewDim` and `_nearEntityId` (not the player's id),
+so the postfix must not declare `_entityId`; the entity id comes from
+`ClientInfo.entityId`, now also verified by `tools/targetcheck`.
+
 ## [0.1.2] - 2026-08-24
 
 ### Added

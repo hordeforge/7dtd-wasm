@@ -11,11 +11,11 @@ namespace HordeForge.GameBridge.Hooks
     /// </summary>
     public static class PlayerSpawnHook
     {
-        public static void Postfix(ClientInfo _cInfo, int _entityId)
+        public static void Postfix(ClientInfo _cInfo)
         {
             try
             {
-                BridgeHost.PlayerSpawnedInWorld(_cInfo, _entityId);
+                BridgeHost.PlayerSpawnedInWorld(_cInfo);
             }
             catch (System.Exception ex)
             {

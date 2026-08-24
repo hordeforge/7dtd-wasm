@@ -76,7 +76,7 @@ namespace HordeForge.GameBridge.Bridge
         /// player's name to every guest that exports the optional
         /// on_player_join handler.
         /// </summary>
-        public static void PlayerSpawnedInWorld(ClientInfo clientInfo, int entityId)
+        public static void PlayerSpawnedInWorld(ClientInfo clientInfo)
         {
             if (_host == null)
             {
@@ -87,6 +87,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
+            // The entity id comes from ClientInfo.entityId:
+            // RequestToSpawnPlayer's int parameters are chunk view dim and
+            // near-entity id, not the spawning player's id (found live in
+            // the acceptance run: the Harmony postfix must not declare
+            // parameters by names the target does not have).
+            int entityId = clientInfo != null ? clientInfo.entityId : 0;
             Log.Out("[WasmHost] player spawned: " + name + " (entity " + entityId + ")");
             foreach (var result in _host.DispatchPlayerJoin(entityId, name))
             {

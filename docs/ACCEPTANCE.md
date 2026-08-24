@@ -25,6 +25,21 @@ Environment facts:
 3. An empty telnet password makes the server reset every session; the
    acceptance config uses a local throwaway password.
 
+## Aligned ABI verified live (2026-08-24)
+
+After the ABI was aligned with the zdtd-server contract (bare hook
+exports, TOML config), the container acceptance was re-run: a loadgen bot
+join dispatched `on_player_join` to the Zig guest, which printed
+"THE BOSS IS HERE" for the name configured in its `wasm-mod.toml`
+(`boss_name = "maci1"`, set to the bot's harness-appended name). Evidence:
+`evidence/acceptance-1/aligned-abi-join.log`.
+
+Live-run finding fixed in this pass: `RequestToSpawnPlayer`'s int
+parameters are `_chunkViewDim` and `_nearEntityId`, not the spawning
+player's id, and Harmony postfix parameters must match the target's
+parameter names exactly; the entity id comes from `ClientInfo.entityId`
+(now also verified by `tools/targetcheck`).
+
 ## Native install status
 
 The dedicated server installed on this machine still crashes at boot (Mono

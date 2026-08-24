@@ -84,6 +84,25 @@ Hook findings from the live run: `GameManager.OnClientSpawned` and
 remote joins; `GameManager.RequestToSpawnPlayer` is the server-side entry
 point the game logs on every join, and the bridge patches that method.
 
+## Aligned ABI + TOML config, verified live
+
+`aligned-abi-join.log` is a second live run after the ABI was aligned with
+the sibling zdtd-server contract (bare hook exports, TOML config). The
+dist `boss-zig` module's `wasm-mod.toml` was temporarily set to
+`boss_name = "maci1"` (the loadgen bot's actual name, since the harness
+appends its client id), and the join produced:
+
+```
+[WasmHost] player spawned: maci1 (entity 171)
+[wasm] THE BOSS IS HERE
+```
+
+This proves end to end: the aligned hooks dispatch live, the entity id
+comes from ClientInfo.entityId (RequestToSpawnPlayer's int parameters are
+chunk view dim and near-entity id, a Harmony postfix naming bug found and
+fixed in this run), and the guest's target name is driven by TOML config
+with no rebuild.
+
 ## Findings that changed code
 
 1. `GameTimer.Instance.ticks` reads 0 on the dedicated server, so the

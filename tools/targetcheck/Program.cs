@@ -56,6 +56,7 @@ namespace TargetCheck
             CheckAnyType(md, "ClientInfo", t =>
             {
                 CheckFieldOrProperty(md, t, "playerName", isStatic: false);
+                CheckFieldOrProperty(md, t, "entityId", isStatic: false);
             });
 
             CheckType(md, "GameTimer", t =>
