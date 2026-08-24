@@ -254,9 +254,11 @@ namespace HordeForge.WasmHost.Core
         /// Only mods that export the optional on_player_join handler are
         /// called; the player name is available to them through the
         /// get_join_player_name host import. Fail soft like tick: one
-        /// misbehaving handler never stops the others.
+        /// misbehaving handler never stops the others. The entity id is
+        /// i32 on the wire (the on_player_join parameter), so it is taken
+        /// as int and never narrowed silently.
         /// </summary>
-        public IReadOnlyList<ModRunResult> DispatchPlayerJoin(long entityId, string playerName)
+        public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
         {
             ThrowIfDisposed();
             _currentJoinName = playerName ?? string.Empty;
@@ -266,7 +268,7 @@ namespace HordeForge.WasmHost.Core
                 foreach (var mod in ModsInLoadOrder())
                 {
                     _currentModId = mod.Id;
-                    ModRunResult? result = mod.OnPlayerJoin((int)entityId);
+                    ModRunResult? result = mod.OnPlayerJoin(entityId);
                     if (result != null)
                     {
                         results.Add(result);
@@ -456,7 +458,7 @@ namespace HordeForge.WasmHost.Core
                 }
                 try
                 {
-                    return _api.WriteSenseSnapshot(memory.GetSpan(outPtr, outCap));
+                    return _api.WriteSenseSnapshot(_currentModId, memory.GetSpan(outPtr, outCap));
                 }
                 catch (Exception ex)
                 {

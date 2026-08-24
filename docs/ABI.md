@@ -96,6 +96,10 @@ budget does not cover game-side work):
 
 - SimCommands are rate capped (200/second/module); excess commands are
   rejected (-1) and counted, visible in `wasm status`.
+- Sense requests are rate capped (200/second/module): each one scans the
+  live world entity list on the host side, work the wasm fuel budget does
+  not cover. Excess requests report no world data (0) and are counted,
+  visible in `wasm status`.
 - Live servant bots are capped at 16; spawn requests beyond the cap are
   refused. `bot remove` only ever despawns the servant's own bots.
 

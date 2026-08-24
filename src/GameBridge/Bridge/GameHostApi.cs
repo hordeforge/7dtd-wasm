@@ -21,6 +21,7 @@ namespace HordeForge.GameBridge.Bridge
             RateLimiter = new GuestRateLimiter();
             ChatLimiter = new GuestRateLimiter();
             CommandLimiter = new GuestRateLimiter();
+            SenseLimiter = new GuestRateLimiter();
             WorldTimeErrorLimiter = new GuestRateLimiter();
         }
 
@@ -32,6 +33,14 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>Per-module SimCommand rate limiter; exposed for "wasm status".</summary>
         public GuestRateLimiter CommandLimiter { get; }
+
+        /// <summary>
+        /// Per-module sense request rate limiter; exposed for "wasm status".
+        /// Each snapshot scans the live entity list, game-side work outside
+        /// the wasm fuel budget, so it is capped like the other imports that
+        /// trigger game-side work (ADR 0006 reasoning).
+        /// </summary>
+        public GuestRateLimiter SenseLimiter { get; }
 
         /// <summary>Rate limiter for get_world_time failure logs; exposed for "wasm status".</summary>
         public GuestRateLimiter WorldTimeErrorLimiter { get; }
@@ -127,8 +136,17 @@ namespace HordeForge.GameBridge.Bridge
             return true;
         }
 
-        public int WriteSenseSnapshot(Span<byte> buffer)
+        public int WriteSenseSnapshot(string modId, Span<byte> buffer)
         {
+            // Building a snapshot scans the live world entity list; that is
+            // game-side work the wasm fuel budget never sees, so each module
+            // is rate capped like its SimCommands (ADR 0006 reasoning). A
+            // capped request reports "no world data" (0), the same verdict a
+            // blind brain already handles, and the drop is counted.
+            if (!SenseLimiter.TryWrite(modId, out _, GuestRateLimiter.MaxSensePerSecond))
+            {
+                return 0;
+            }
             return _servant.WriteSense(buffer);
         }
 

@@ -568,6 +568,24 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void SenseRequestCarriesCallingModId()
+        {
+            // The sense import must tell the implementation which module is
+            // asking: bridge-side rate caps and attribution key on it (the
+            // wasm fuel budget does not cover the game-side entity scan).
+            var api = new TestGameHostApi { Sense = new SenseSnapshotWriter.Snapshot { Tick = 1 } };
+            using (WasmModHost host = NewHostForFpsBot(api))
+            {
+                WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
+                Assert.True(bot.Init(0).Ok);
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.True(tick.Ok, tick.Message + " " + tick.Details);
+                Assert.NotEmpty(api.SenseSources);
+                Assert.All(api.SenseSources, id => Assert.Equal("fps-bot", id));
+            }
+        }
+
+        [Fact]
         public void ManifestDefaultsMatchNullManifest()
         {
             // Unknown fields are tolerated; an empty manifest behaves like

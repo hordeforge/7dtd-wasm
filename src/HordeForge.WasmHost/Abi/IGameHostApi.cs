@@ -46,9 +46,12 @@ namespace HordeForge.WasmHost.Abi
         /// Builds the binary world snapshot ('ZBS3', see docs/ABI.md) into
         /// the given buffer (the guest's own linear memory). Returns the
         /// number of bytes written, or 0 when there is no world data to
-        /// report.
+        /// report. The mod id is the registry id of the calling module, so
+        /// the implementation can attribute and rate limit per module:
+        /// building a snapshot scans live game state, work the wasm fuel
+        /// budget never sees.
         /// </summary>
-        int WriteSenseSnapshot(Span<byte> buffer);
+        int WriteSenseSnapshot(string modId, Span<byte> buffer);
 
         /// <summary>
         /// Answers a text query ("cover x z tx tz", "path x z tx tz") with a

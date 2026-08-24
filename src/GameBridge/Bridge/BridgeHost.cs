@@ -179,6 +179,7 @@ namespace HordeForge.GameBridge.Bridge
                     AddDropped(lines, _gameApi.RateLimiter, "guest log lines");
                     AddDropped(lines, _gameApi.ChatLimiter, "chat messages");
                     AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
+                    AddDropped(lines, _gameApi.SenseLimiter, "sense snapshots");
                     AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
                 }
                 AddDropped(lines, DispatchFailureLimiter, "tick failure logs");

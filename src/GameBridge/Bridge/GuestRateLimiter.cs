@@ -28,6 +28,17 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public const int MaxCommandsPerSecond = 200;
 
+        /// <summary>
+        /// Cap for sense snapshot requests per module. Each request scans
+        /// the live world entity list, game-side work the wasm fuel budget
+        /// never sees; without the cap a guest could loop the sense import
+        /// within one call budget and multiply that scan far past the tick
+        /// budget. A brain polls sense once per tick (20/s), so 200/s leaves
+        /// wide headroom. Excess requests report "no world data" (0) and are
+        /// counted for "wasm status".
+        /// </summary>
+        public const int MaxSensePerSecond = 200;
+
         private const int WindowMs = 1000;
 
         private sealed class Window

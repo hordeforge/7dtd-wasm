@@ -8,6 +8,17 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Changed
 
+- Sense requests (`zdtd.sense`) are now rate capped per module
+  (200/second, same reasoning as the SimCommand cap): building a snapshot
+  scans the live world entity list on the host side, work the wasm fuel
+  budget never sees, so an unbounded import loop could multiply that scan
+  past the tick budget. Capped requests report "no world data" (0) and the
+  drops surface in `wasm status`. `IGameHostApi.WriteSenseSnapshot` now
+  receives the calling mod id so implementations can attribute and cap.
+- `WasmModHost.DispatchPlayerJoin` takes the entity id as `int` (the wire
+  type of `on_player_join`); the previous `long` parameter forced a silent
+  narrowing cast on every caller.
+
 - Dependency audit pass: test stack moved to the newest serviced pins
   (`Microsoft.NET.Test.Sdk` 17.14.1, `xunit` 2.9.3; runner stays 2.8.2,
   the correct pairing for xunit 2.x). `Wasmtime` stays at 44.0.0: that is
