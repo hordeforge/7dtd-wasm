@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Dumps a 7dtd dedicated server telnet console session to a transcript file.
 
-Usage: telnet_session.py <host> <port> <outfile> <cmd> [cmd...]
-Connects, answers the password prompt with an empty line, runs each command,
-waits briefly, and writes everything received to the transcript.
+Usage: telnet_session.py <host> <port> <password> <outfile> <cmd> [cmd...]
+Follows the workspace harness pattern (7dtd-server-container lib-env.sh):
+send the password line immediately, then each command, then read the reply.
+The server sends no banner, so the client must not wait for one. The game
+resets any session whose first line is not the configured password.
 """
 
 import socket
@@ -11,36 +13,35 @@ import sys
 import time
 
 
-def recv_until(sock, needle, timeout):
-    sock.settimeout(timeout)
+def drain(sock, window):
     data = b""
     try:
-        while needle not in data:
+        while True:
             chunk = sock.recv(4096)
             if not chunk:
                 break
             data += chunk
+            sock.settimeout(window)
     except socket.timeout:
         pass
     return data
 
 
 def main():
-    host, port, outfile = sys.argv[1], int(sys.argv[2]), sys.argv[3]
-    commands = sys.argv[4:]
+    host, port, password, outfile = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
+    commands = sys.argv[5:]
 
     transcript = []
-    sock = socket.create_connection((host, port), timeout=15)
-    banner = recv_until(sock, b"password", 10)
-    transcript.append(banner)
-    sock.sendall(b"\n")  # empty password
-    time.sleep(0.5)
+    sock = socket.create_connection((host, port), timeout=10)
+    sock.settimeout(1.0)
+
+    sock.sendall(password.encode() + b"\n")
+    time.sleep(0.3)
 
     for cmd in commands:
         sock.sendall(cmd.encode() + b"\n")
-        time.sleep(1.0)
-        resp = recv_until(sock, b"\n", 2.0)
-        transcript.append(resp)
+        time.sleep(0.5)
+        transcript.append(drain(sock, 1.5))
 
     sock.close()
     with open(outfile, "wb") as f:

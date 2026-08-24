@@ -18,11 +18,15 @@ namespace HordeForge.GameBridge.Bridge
         public GameHostApi(WasmSettingsFile settings)
         {
             _settings = settings;
-            RateLimiter = new GuestLogRateLimiter();
+            RateLimiter = new GuestRateLimiter();
+            ChatLimiter = new GuestRateLimiter();
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
-        public GuestLogRateLimiter RateLimiter { get; }
+        public GuestRateLimiter RateLimiter { get; }
+
+        /// <summary>Per-module chat rate limiter; exposed for "wasm status".</summary>
+        public GuestRateLimiter ChatLimiter { get; }
 
         public void Log(string source, int level, string message)
         {
@@ -33,7 +37,7 @@ namespace HordeForge.GameBridge.Bridge
                 if (dropped % 100 == 1)
                 {
                     global::Log.Out("[WasmHost] dropped " + dropped + " log line(s) from guest " + source +
-                                    " (rate cap " + GuestLogRateLimiter.MaxLinesPerSecond + "/s)");
+                                    " (rate cap " + GuestRateLimiter.MaxLinesPerSecond + "/s)");
                 }
                 return;
             }
@@ -80,6 +84,13 @@ namespace HordeForge.GameBridge.Bridge
             {
                 var game = GameManager.Instance;
                 if (game == null)
+                {
+                    return false;
+                }
+                // The game does not rate limit ChatMessageServer on its own,
+                // so the bridge does: a guest spamming chat must not flood
+                // the global channel (observed live in the acceptance run).
+                if (!ChatLimiter.TryWrite("chat", out _))
                 {
                     return false;
                 }

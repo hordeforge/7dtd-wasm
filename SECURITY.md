@@ -20,7 +20,7 @@ are not.
 | Reading host memory | Guests see only their own linear memory; no pointers into host space are ever exposed | Runtime (engine) |
 | Reaching game objects | No game types, Reflection, or file APIs reachable from wasm; only the ABI imports | Design |
 | Trap / crash | Traps return `ModRunResult` with a trap code; the host and other modules keep running | Every call |
-| Host-API abuse (spam chat) | `SendChat` is rate capped by the game itself; the bridge logs all guest chat | Bridge |
+| Host-API abuse (spam chat) | The game does NOT rate limit ChatMessageServer on its own (observed live); the bridge caps guest chat globally at 10 messages/second and counts drops | Bridge |
 | Log flooding | Per-module rate cap (default 10 lines/second); excess lines are dropped and counted, visible in `wasm status` | Bridge |
 | Stack exhaustion | Wasm caller stack bounded (`MaximumStackBytes`, default 1 MiB) | Engine |
 

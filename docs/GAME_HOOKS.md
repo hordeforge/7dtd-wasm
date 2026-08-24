@@ -15,9 +15,10 @@
 
 `GameTickHook.Postfix` runs after `GameManager.Update` on dedicated servers
 (once per game tick, 20 TPS) and calls `BridgeHost.Tick()`, which dispatches
-`tick` to every loaded guest with `GameTimer.Instance.ticks` as the tick
-number. The postfix is try/caught so a host failure never breaks the game
-loop.
+`tick` to every loaded guest with the bridge's own monotonic counter as the
+tick number. `GameTimer.Instance.ticks` reads 0 on the dedicated server
+(observed in the acceptance run), so the bridge does not use it. The postfix
+is try/caught so a host failure never breaks the game loop.
 
 ## Verified game API surface (V3.1.0, via tools/targetcheck)
 
@@ -56,9 +57,9 @@ do not put secrets in it.
 
 ## Known gaps
 
-- No live-server acceptance run yet: the dedicated server crashes at boot
-  on this machine before any mod loads (environment issue; see
-  `evidence/acceptance-1/README.md` and `docs/ACCEPTANCE.md`). The modlet
-  compiles against this install and all game API targets are verified.
-- Guest log rate capping is bridge code exercised in the acceptance run,
-  not by unit tests.
+- Live acceptance succeeded in a docker container (fresh steamcmd install);
+  the native install on this machine crashes at boot and was not used. See
+  `evidence/acceptance-1/` and `docs/ACCEPTANCE.md`.
+- Guest log and chat rate capping are bridge code; the log cap was
+  exercised in the acceptance run (drop counter in `wasm status`), not by
+  host unit tests.

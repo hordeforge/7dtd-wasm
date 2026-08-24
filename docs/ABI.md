@@ -18,7 +18,7 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 | Import | Signature | Meaning |
 |---|---|---|
 | `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Write a log line. Level: 0 debug, 1 info, 2 warn, 3 error |
-| `get_tick` | `() -> i64` | Current game tick (GameTimer.ticks on the dedicated server) |
+| `get_tick` | `() -> i64` | Current game tick. The bridge maintains a monotonic counter incremented once per game tick (20 TPS on the dedicated server); `GameTimer.ticks` reads 0 on the dedicated server, so it is not used |
 | `get_world_time` | `() -> i64` | World time in game minutes, 0 when no world is loaded |
 | `get_setting` | `(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Read a shared setting. Returns written byte count, -1 not found, -2 buffer too small |
 | `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected |

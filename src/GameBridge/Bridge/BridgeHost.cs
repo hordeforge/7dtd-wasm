@@ -18,6 +18,7 @@ namespace HordeForge.GameBridge.Bridge
         private static WasmModHost _host;
         private static WasmSettingsFile _settings;
         private static GameHostApi _gameApi;
+        private static long _tick;
 
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>
         public static string WasmRoot { get; private set; } = string.Empty;
@@ -27,7 +28,10 @@ namespace HordeForge.GameBridge.Bridge
 
         public static void Start()
         {
-            string modletDir = Path.GetDirectoryName(ModApi.ModPath) ?? string.Empty;
+            // ModApi.ModPath is the modlet folder itself (for example
+            // Mods/1_HordeForge_WasmHost); Native/ lives inside it and
+            // Mods/Wasm is its sibling.
+            string modletDir = ModApi.ModPath;
             NativeBootstrap.Prepare(modletDir);
 
             WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
@@ -50,8 +54,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            long gameTick = GameTimer.Instance != null ? (long)GameTimer.Instance.ticks : 0L;
-            foreach (var result in _host.DispatchTick(gameTick))
+            // GameTimer.Instance.ticks reads 0 on the dedicated server, so
+            // the bridge keeps its own monotonic counter: the hook runs once
+            // per game tick (20 TPS), which is the same rhythm.
+            _tick++;
+            foreach (var result in _host.DispatchTick(_tick))
             {
                 if (!result.Ok)
                 {
@@ -78,6 +85,11 @@ namespace HordeForge.GameBridge.Bridge
             if (dropped.Length > 0)
             {
                 lines.Add("  " + dropped);
+            }
+            string droppedChat = _gameApi != null ? _gameApi.ChatLimiter.DescribeDropped() : string.Empty;
+            if (droppedChat.Length > 0)
+            {
+                lines.Add("  chat " + droppedChat);
             }
             return lines;
         }

@@ -1,38 +1,43 @@
 # Acceptance status
 
-## Attempt 1 (2026-08-24): blocked by a machine-level server crash
+## Attempt 1 (2026-08-24): SUCCESS in a docker container
 
-The in-game acceptance run was attempted on this machine with the modlet
-staged into the installed dedicated server (`dist/Mods` copied into
-`Mods/`, other workspace mods quarantined for a clean run).
+The modlet ran inside a live dedicated server (fresh steamcmd install in a
+docker container, V 3.1.0 b14) and the guest module loaded, ticked at the
+game's 20 TPS, read world time and settings, and sent global chat. Full
+evidence and reproduction steps: `evidence/acceptance-1/README.md`
+(server log `acceptance-server.log`, telnet transcript `console.txt`).
 
-Outcome: the dedicated server crashes at startup with a Mono SIGSEGV in the
-game entrypoint coroutine, **before any mod loads**, with and without the
-modlet, and with a completely stock install (zero mods). The crash is
-environmental, not caused by the WasmHost code. Full evidence and
-diagnostics: `evidence/acceptance-1/README.md`.
+Environment facts:
 
-Environment facts captured from the boot log:
+- Game: 7 Days to Die dedicated server V 3.1.0 (b14), Unity 2022.3.62f2,
+  fresh steamcmd install (Steam app 294420)
+- Host: docker container, debian-based steamcmd image, game bind-mounted
+  mods, native library path via process-start `LD_LIBRARY_PATH`
+- Server config: Navezgane, telnet 8081, EAC off, fresh userdata
 
-- Game: 7 Days to Die dedicated server, V3.1.0 line (Henpocalypse), Unity
-  engine 2022.3.62f2
-- Crash signature: `Caught fatal signal - signo:11 code:1 errno:0 addr:0x8`
-  in `GameEntrypoint/<EntrypointCoroutine>d__8:MoveNext()`
-- Server config used: `evidence/acceptance-1/serverconfig.xml` (Navezgane,
-  telnet 8081, EAC off, fresh userdata)
+## Findings that changed code
 
-## What this means for the project
+1. `GameTimer.Instance.ticks` reads 0 on the dedicated server; the bridge
+   now keeps its own monotonic tick counter.
+2. The game does not rate limit `ChatMessageServer` on its own; the bridge
+   caps guest chat (10 messages/second global) with a visible drop counter.
+3. An empty telnet password makes the server reset every session; the
+   acceptance config uses a local throwaway password.
 
-The host library and all sandbox guarantees remain covered by the automated
-test suite (23 tests). The net48 bridge compiles against this exact install
-and `tools/targetcheck` verifies every game API target it uses. What is not
-yet proven is the bridge running inside a live server process, which needs a
-machine where the dedicated server boots (see the unblock paths in
-`evidence/acceptance-1/README.md`).
+## Native install status
 
-## Unblock paths
+The dedicated server installed on this machine still crashes at boot (Mono
+SIGSEGV in the game entrypoint, before any mod loads; see
+`evidence/acceptance-1/baseline.log` and `stock.log`). That crash is
+unrelated to the modlet: the same modlet runs correctly against a fresh
+install in the container. The native install should be repaired via Steam
+(`steamcmd +app_update 294420 validate`) before trusting it for further
+runs.
 
-1. Repair the install via Steam (`steamcmd +app_update 294420 validate`).
-2. Run the acceptance on the workspace's container LAN host
-   (`7dtd-server-container`), staging `dist/Mods` there.
-3. Reproduce the Mono crash with the vendor before trusting this install.
+## What remains unproven
+
+- Windows in-game native loading (documented, not exercised).
+- Long-soak behavior (days of uptime, world saves, restarts).
+- The remaining RFC candidates (event surface, boot payload, ABI
+  versioning) are design work, not acceptance gaps.

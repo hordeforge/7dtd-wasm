@@ -18,6 +18,11 @@ Workspace root guide: [`../MODDING_BEST_PRACTICES.md`](../MODDING_BEST_PRACTICES
 | `tools/targetcheck` game API gate, `tools/doccheck.py` docs gate | Engine RE narratives (use `7dtd-engine-research`) |
 | `dist/` modlet staging | Shipping game assemblies or bulk IL |
 
+Docs conventions follow the workspace pattern: start at `docs/INDEX.md`,
+then the document that owns the part being changed. Design decisions are
+recorded as ADRs (`docs/adrs/`), open questions as RFCs (`docs/rfcs/`),
+capability requirements as PRDs (`docs/prds/`); see the templates there.
+
 ## Critical rules
 
 1. **This is an experiment.** The ABI (`docs/ABI.md`) is a contract between
@@ -55,7 +60,8 @@ make dist           # assemble dist/Mods/1_HordeForge_WasmHost + sample guest
 make check          # doccheck + build + test + bridge + bridge-check (CI entry)
 ```
 
-Known gaps (stated honestly): the bridge has not been run inside a live
-dedicated server in this workspace; `make dist` stages the modlet, and the
-in-game acceptance is the next experiment step. The host library and all
-sandbox guarantees are covered by the test suite.
+Known gaps (stated honestly): the bridge was accepted inside a live
+dedicated server in a docker container (fresh steamcmd install, V 3.1.0
+b14); the native install on this machine crashes at boot, so it was not
+used. Evidence: `evidence/acceptance-1/` and `docs/ACCEPTANCE.md`. The
+host library and all sandbox guarantees are covered by the test suite.

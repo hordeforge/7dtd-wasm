@@ -1,70 +1,88 @@
-# Acceptance run 1: BLOCKED (dedicated server cannot boot on this machine)
+# Acceptance run 1: SUCCESS (docker container with a fresh steamcmd install)
 
-Goal: run `dist/Mods` inside a live dedicated server and capture the
-`[WasmHost] started`, `hello mod loaded`, per-tick log lines, and the chat
-greeting.
+Goal: run `dist/Mods` inside a live dedicated server and capture evidence
+that the host loads, ticks, and lets the guest reach the game.
 
-## Result
-
-The dedicated server crashes at startup on this machine, **before any mod
-code runs**. The acceptance run could not start.
+The native server install on this machine crashes at boot (see
+`baseline.log` / `stock.log` below), so the run used a docker container
+(`Dockerfile`) with a fresh steamcmd install of the dedicated server
+(Steam app 294420), following the workspace's `7dtd-server-container`
+pattern. The modlet and the `Wasm` module folder were bind-mounted into the
+container's `Mods/`; the native Wasmtime library path was provided as a
+process-start `LD_LIBRARY_PATH` (see `run_acceptance.sh`).
 
 ## Evidence
 
-- `server.log`     run with the HordeForge WasmHost modlet installed
-- `baseline.log`   same run with the modlet removed, other mods restored
-- `stock.log`      same run with ALL mods removed (completely stock game)
-- `stock_stdout.txt` / `stdout.txt`  process stdout for the stock run
+| File | What it shows |
+|---|---|
+| `acceptance-server.log` | Full server log of the acceptance run |
+| `console.txt` | Telnet transcript: `wasm status`, `wasm list`, `version` |
+| `serverconfig.container.xml` | Server config used (Navezgane, telnet 8081, EAC off) |
+| `Dockerfile`, `run_acceptance.sh`, `telnet_session.py` | Reproducible run tooling |
 
-All three logs end identically:
+Key log lines (from `acceptance-server.log`):
 
 ```
-The referenced script on this Behaviour (Game Object 'BlockProcessor') is missing!
-Caught fatal signal - signo:11 code:1 errno:0 addr:0x8
-#7 ... GameEntrypoint/<EntrypointCoroutine>d__8:MoveNext ()
+INF [MODS] Loaded Mod: 1_HordeForge_WasmHost (0.1.0)
+INF [wasm] hello mod loaded
+INF [WasmHost] started; loaded 1 module(s) from .../Mods/Wasm
+INF [WasmHost] patched GameManager.Update
+INF [wasm] hello mod alive at tick 57400 (world 7000)
+INF Chat (from '-non-player-', entity id '-1', to 'Global'): hello survivor from a wasm mod at tick 58000
 ```
 
-A SIGSEGV (null dereference, `addr:0x8`) inside Mono during the game's
-entrypoint coroutine, before mods are loaded (no `[MODS]` lines appear).
+Telnet transcript (after "Logon successful"):
 
-## Diagnostics performed
+```
+*** Server version: V 3.1.0 (b14) Compatibility Version: V 3.1.0
+wasm status:
+  host started, modules dir: .../Mods/Wasm
+    hello (init tick 0, calls 63244, traps 0, fuel exhausted 0)
+    guest log lines dropped: wasm=517
+    chat guest log lines dropped: chat=5
+version:
+  Game version: V 3.1.0 (b14)
+  Mod 1_HordeForge_WasmHost: 0.1.0
+```
 
-- Modlet presence: crash is identical with and without the modlet and with
-  zero mods installed, so the modlet is not the cause.
-- Binary integrity: `Assembly-CSharp.dll` is byte-identical to
-  `Assembly-CSharp.dll.re_stock_bak`; `boot.config` and
-  `ScriptingAssemblies.json` are stock. No tampering found.
-- Install consistency: the dedicated server and client installs show the
-  same Steam update pattern (data files newer than the exe); `BlockProcessor`
-  is not a class in any game assembly, and the missing-script warning is
-  stock noise.
-- History: no successful dedicated server boot logs exist anywhere on this
-  machine (no `server_prefab_*.txt` under `~/.cache/7dtd-loadgen`), and a
-  `mono_crash.mem.1807609.1.blob` from 2026-08-21 shows the same failure
-  class predates this session.
+## What was proven
 
-## Conclusion
+- The modlet loads and initializes inside a live dedicated server.
+- The guest module loads, its init runs, and it receives ticks at the
+  game's 20 TPS rhythm (100 ticks exactly every 5 seconds post-world-load).
+- `get_world_time` reaches the real world (world 7000 = 11:40 in-game).
+- `get_setting` reads the greeting from `wasm-settings.txt`.
+- `send_chat` reaches the game's global chat pipeline.
+- The log and chat rate limiters drop and count excess output (visible in
+  `wasm status`); the chat drop count proved the game does not rate limit
+  chat on its own.
+- Zero guest traps and zero fuel-exhausted calls across ~63k dispatched
+  ticks.
+- `tools/targetcheck` passes against the container's fresh game build
+  (V 3.1.0 b14), the same as this machine's install.
 
-The 7 Days to Die dedicated server binary cannot boot on this machine
-(environment or install-level Mono crash). This matches the workspace's
-stated gap ("the bridge has not been run inside a live dedicated server in
-this workspace"). The modlet itself is unaffected: the host library and
-sandbox behavior are covered by the 23-test suite, and the net48 bridge
-compiles against this exact install with all game API targets verified by
-`tools/targetcheck`.
+## Findings that changed code
 
-## Suggested unblock paths (for a future run)
+1. `GameTimer.Instance.ticks` reads 0 on the dedicated server, so the
+   bridge now maintains its own monotonic tick counter (one increment per
+   hook run, 20 TPS).
+2. The game does not rate limit `ChatMessageServer`; the bridge now caps
+   guest chat globally at 10 messages/second with a visible drop counter.
+3. An empty `TelnetPassword` makes the telnet server reset every session;
+   the acceptance config uses a local throwaway password (`wasmtest`).
 
-1. Repair or refresh the install via Steam (`steamcmd +app_update 294420
-   validate`), then repeat this run; steamcmd is not installed on this
-   machine yet.
-2. Boot the server on a machine where it is known to run (the workspace's
-   container LAN host per `7dtd-server-container`), stage `dist/Mods`, and
-   capture the same evidence there.
-3. Reproduce the Mono crash with the vendor before trusting the install.
+## Reproducing
 
-## Install state
+```bash
+docker build -t 7dtd-wasm-acceptance .   # downloads the game (~17 GB)
+bash run_acceptance.sh                    # starts the server with dist/Mods
+# wait for "StartGame done", then:
+python3 telnet_session.py 127.0.0.1 8081 wasmtest console.txt "wasm status" "wasm list" "version"
+```
 
-The dedicated server install was left exactly as found: all previously
-present mods restored, no WasmHost files left behind. No game files were
-modified or deleted.
+## Earlier failed attempts (native)
+
+`baseline.log`, `stock.log`, and `stock_stdout.txt` document the native
+crash on this machine: a Mono SIGSEGV in the game entrypoint before any mod
+loads, identical with zero mods installed. The container run proves the
+modlet itself is not the cause and works against a fresh install.
