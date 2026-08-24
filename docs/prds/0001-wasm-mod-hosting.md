@@ -5,8 +5,14 @@
 Implemented (2026-08-24). Source of truth: `src/HordeForge.WasmHost`
 (host library), `src/GameBridge` (in-game bridge), `tests/` (suite),
 `tools/targetcheck` (game target gate), `docs/ABI.md` (guest contract).
-The in-game acceptance box is not checked: the dedicated server on this
-machine crashes at boot (see [ACCEPTANCE.md](../ACCEPTANCE.md)).
+The in-game acceptance box stays unchecked: a containerized live-server
+run succeeded (see [ACCEPTANCE.md](../ACCEPTANCE.md)), but the native
+install on this machine crashes at boot and Windows/long-soak remain
+unproven.
+Since implementation the surface grew beyond this PRD's original scope
+(zdtd compatibility imports, the on_player_join hook, TOML config); those
+additions are owned by [docs/ABI.md](../ABI.md), [docs/CONFIG.md](../CONFIG.md),
+and [ADR 0007](../adrs/0007-toml-config-schema.md).
 
 ## Problem
 
@@ -36,8 +42,10 @@ are net8; any C# mod forces EAC off.
 
 ## Non-goals
 
-- Not a general-purpose mod runtime; no event surface yet (entity hooks
-  are a future RFC), no boot payload, no ABI versioning (see docs/ABI.md).
+- Not a general-purpose mod runtime. The v0 surface had no event hooks;
+  the optional `on_player_join` hook has since shipped (ADR 0007), and the
+  wider event surface, the init boot payload, and ABI versioning remain
+  future work (see docs/ABI.md).
 - Not a measurement, anti-cheat, or optimization product (workspace
   boundaries).
 - No pure-managed runtime; the engine is the native Wasmtime binding
@@ -58,10 +66,12 @@ are net8; any C# mod forces EAC off.
       (tests `GuestTrapIsReportedAndHostSurvives`, `LoadOrderIsDispatchOrder`).
 - [x] Goal 5: `tools/targetcheck` validates every bridge target against
       the installed server; `make bridge-check` gates.
-- [x] Goal 6: per-mod manifests (`wasm-mod.json`) with fuel and memory
-      ceilings (tests `ManifestMemoryCeilingIsEnforced`,
+- [x] Goal 6: per-mod manifests (`wasm-mod.json` at the time; the canonical
+      format is now `wasm-mod.toml`, JSON still accepted: ADR 0007) with
+      fuel and memory ceilings (tests `ManifestMemoryCeilingIsEnforced`,
       `MalformedManifestIsRejected`).
-- [ ] In-game acceptance on a live dedicated server: blocked by a
-      machine-level server boot crash (see `evidence/acceptance-1/` and
-      docs/ACCEPTANCE.md); the modlet compiles and every game target is
-      verified against the installed server.
+- [ ] In-game acceptance on a live dedicated server: a containerized live
+      server run succeeded (bot servant, on_player_join; see
+      `evidence/acceptance-1/` and docs/ACCEPTANCE.md). Still unproven: the
+      native install on this machine (crashes at boot, unrelated to the
+      modlet), Windows native loading, and long-soak behavior.

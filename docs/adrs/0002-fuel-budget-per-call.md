@@ -31,7 +31,8 @@ Every guest call (init, tick, shutdown) runs under a fresh fuel budget,
 default 1,000,000 instructions, set per call before invocation. Exhaustion
 returns `ModRunResult` with status `FuelExhausted`; the module stays loaded
 for the next call. Per-mod manifests may lower the budget but not raise it
-above the 50,000,000-instruction ceiling (ADR 0005).
+above the 50,000,000-instruction host ceiling (enforced by the manifest
+parser; see docs/ABI.md, per-mod manifests).
 
 ## Consequences
 

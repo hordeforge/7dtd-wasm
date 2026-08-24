@@ -17,7 +17,8 @@ auditable embed that enforces hard limits and exposes a narrow game API.
       └─ Native/libwasmtime.so              native engine (per platform)
 
  Mods/Wasm/<id>/module.wasm                 guest modules (untrusted)
- Mods/Wasm/wasm-settings.txt                shared guest settings
+ Mods/Wasm/<id>/wasm-mod.toml               that mod's limits and settings
+ Mods/Wasm/wasm.toml                        shared limits and settings
 ```
 
 ## Host library (HordeForge.WasmHost)
@@ -28,7 +29,7 @@ Single-threaded by design: call it only from the game main loop.
 - `WasmModHost` builds the engine with `WithFuelConsumption(true)`, a static
   memory ceiling, and a bounded wasm stack; wires WASI preview 1 (stdout and
   stderr inherited, no preopens, empty env); defines the `hordeforge` host
-  API; and registers modules by id.
+  API plus the `zdtd` compatibility module; and registers modules by id.
 - `LoadModule` validates the module size, the declared memory maximum, and
   the export signatures before instantiation. Any failure throws
   `WasmModLoadException` with a specific reason and leaves the host intact.
@@ -49,7 +50,7 @@ measurable.
 
 Guests are `wasm32-wasip1` cdylibs built from Rust (see
 [docs/GUEST_AUTHORS.md](GUEST_AUTHORS.md)). They export `on_enable`,
-`on_tick`, and optionally `on_shutdown`, and import
+`on_tick`, and optionally `on_shutdown` and `on_player_join`, and import
 the `hordeforge` host API. String arguments are (pointer, length) pairs into
 the guest's own memory; the host reads them only within the given range and
 never holds a reference across calls.
@@ -65,13 +66,17 @@ for every guest, which keeps modules inside the host caps by construction.
   native library, starts the host, patches `GameManager.Update`, and logs.
   Every step is fail soft.
 - `GameTickHook` is a Harmony postfix on `GameManager.Update` that calls
-  `BridgeHost.Tick()`, which dispatches with `GameTimer.Instance.ticks` as
-  the game tick.
+  `BridgeHost.Tick()`, which dispatches with the bridge's own monotonic
+  counter (`GameTimer.Instance.ticks` reads 0 on the dedicated server, and
+  the hook runs once per game tick at 20 TPS). A second Harmony postfix on
+  `GameManager.RequestToSpawnPlayer` (see Hooks/PlayerSpawnHook) forwards
+  player joins to guests that export `on_player_join`.
 - `GameHostApi` implements the ABI over live game services: log via the game
-  logger, world time via `GameManager.Instance.World.GetWorldTime()`, chat
-  via `ChatMessageServer(..., EChatType.Global, ..., EMessageSender.Server,
-  GeneratedTextManager.BbCodeSupportMode.NotSupported)`, settings from
-  `Mods/Wasm/wasm-settings.txt` (line format, re-read on change).
+  logger (rate capped per module), world time via `GameManager.Instance.World.GetWorldTime()`,
+  chat via `ChatMessageServer(..., EChatType.Global, ..., EMessageSender.Server,
+  GeneratedTextManager.BbCodeSupportMode.NotSupported)` (rate capped globally),
+  settings from `Mods/Wasm/wasm.toml` plus each mod's `wasm-mod.toml`
+  ([docs/CONFIG.md](CONFIG.md); shared settings re-read on change).
 - `CmdWasm` implements the V3 console command contract
   (`getCommands()`, `getDescription()`, `getHelp()`, `Execute(List<string>,
   CommandSenderInfo)`) with subcommands list, load, reload, unload, status.
@@ -87,7 +92,8 @@ signatures and enum members. It also reports the detected game version.
 
 ## Evolution path
 
-1. In-game acceptance on a live dedicated server (the current gap).
+1. In-game acceptance ran in a docker container (docs/ACCEPTANCE.md);
+   still unproven: Windows native loading and long-soak behavior.
    Per-mod manifests are already implemented (see docs/ABI.md).
 2. Boot payload for init, richer host API (entities, players, world events)
    with WIT-style ABI versioning.

@@ -69,10 +69,12 @@ should track state across calls.
 
 ## Settings
 
-Guest settings live in `<install>/Mods/Wasm/wasm-settings.txt`, one
-`key: value` per line, `#` comments. The bridge re-reads the file when its
-mtime changes, so edits apply without a restart. All guests share this file;
-do not put secrets in it.
+Guest settings are TOML: shared `<install>/Mods/Wasm/wasm.toml` plus each
+mod's `wasm-mod.toml`. The schema, defaults, and resolution order are owned
+by [docs/CONFIG.md](CONFIG.md). Operational notes: the bridge re-reads the
+shared file when its mtime changes, so edits apply without a restart; the
+settings files are read by the host and served to guests, so do not put
+secrets in them.
 
 ## Known gaps
 

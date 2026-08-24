@@ -62,8 +62,8 @@ Comments (`#`), top-level `key = value`, `[table]` and `[table.sub]`
 headers, basic `"..."` strings with escapes, literal `'...'` strings,
 integers, floats, booleans, and arrays of scalars. Multi-line strings and
 dotted keys are not supported. The parser is dependency-free (`MiniToml`,
-see ADR 0005) and rejects anything outside this subset with a specific
-error; the bridge skips the module and logs the reason.
+decided in ADR 0007) and rejects anything outside this subset with a
+specific error; the bridge skips the module and logs the reason.
 
 ## Settings resolution
 

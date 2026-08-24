@@ -25,7 +25,7 @@ throttling is visible without flooding the log, and the totals appear in
 ## Decision
 
 `GameHostApi.Log` routes every guest log line through
-`GuestLogRateLimiter` (in the net48 bridge), which drops lines past the
+`GuestRateLimiter` (in the net48 bridge), which drops lines past the
 per-module per-second cap, counts them, and reports the totals.
 
 ## Consequences
@@ -36,3 +36,13 @@ cap policy across all embeddings (each embedding decides). Honest downside:
 the limiter is wall-clock based and bridge code, so it is exercised in the
 acceptance run rather than by the host unit suite. Revisit if the host API
 gains a per-module quota mechanism that makes rate policy a host concern.
+
+## Amendment (2026-08-25)
+
+The acceptance run showed the game does not rate limit `ChatMessageServer`
+on its own, so the bridge now caps guest chat with the same limiter class:
+a second `GuestRateLimiter` instance keyed on the shared source "chat"
+(10 messages per wall-clock second, global, drops counted and surfaced in
+`wasm status`). The decision itself is unchanged: the cap lives in the
+bridge, not the host. Evidence: docs/ACCEPTANCE.md, finding 2; SECURITY.md
+documents both caps.
