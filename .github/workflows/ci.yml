@@ -30,10 +30,20 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: "8.0.x"
-      # The guests are wasm32-wasip1; the workspace [lints] in
-      # samples/Cargo.toml deny every default rustc warning, so this compile
-      # is the guest lint gate.
-      - run: rustup target add wasm32-wasip1
+      # The Makefile pins RUSTUP_HOME and CARGO_HOME inside the checkout, so a
+      # developer host installs no Rust system-wide, and those assignments win
+      # over the environment. Honour that layout rather than working around
+      # it: populate the in-project rustup home using the runner's own rustup,
+      # so make sees exactly what it expects. The guests are wasm32-wasip1,
+      # and the workspace [lints] in samples/Cargo.toml deny every default
+      # rustc warning, which is what makes this compile the guest lint gate.
+      - name: Install the guest toolchain into the in-project rustup home
+        env:
+          RUSTUP_HOME: ${{ github.workspace }}/.rustup
+          CARGO_HOME: ${{ github.workspace }}/.cargo
+        run: |
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1
+          rustup default stable
       # check-ci is the game-free half of check: doccheck, the tools unit
       # tests, the guest lint gate, the host build, and the host test suite.
       # bridge and bridge-check need a dedicated server install and cannot run
