@@ -16,11 +16,5 @@ namespace HordeForge.WasmHost.Core
 
         /// <summary>Guest call failed for another reason (host API threw, bad status code).</summary>
         Error = 3,
-
-        /// <summary>The mod is not loaded.</summary>
-        NotLoaded = 4,
-
-        /// <summary>The required export is missing or has the wrong signature.</summary>
-        MissingExport = 5,
     }
 }
