@@ -46,6 +46,14 @@ namespace HordeForge.WasmHost.Core
         // mutation protection as a copy (the wrapper rejects writes) while
         // always seeing current load order.
         private readonly ReadOnlyCollection<string> _modIdsView;
+        // One reusable result buffer for the Dispatch* methods: they run at
+        // tick rate on the game main loop, so steady-state dispatch must not
+        // allocate. The returned list is owned by the host and is cleared
+        // and refilled by the next Dispatch* call; callers consume it (or
+        // copy out) before dispatching again. Safe because the host is
+        // single-threaded by contract and no guest import re-enters a
+        // dispatch.
+        private readonly List<ModRunResult> _results = new List<ModRunResult>();
         private string _currentJoinName = string.Empty;
 
         /// <summary>
@@ -221,32 +229,43 @@ namespace HordeForge.WasmHost.Core
         /// <summary>
         /// Drives one game tick into every loaded mod and returns the per-mod
         /// results in load order. A misbehaving mod never stops the loop:
-        /// its failure is reported in its result.
+        /// its failure is reported in its result. The returned list is
+        /// host-owned and is replaced by the next Dispatch* call.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchTick(long tick)
         {
             ThrowIfDisposed();
             Tick = tick;
-            var results = new List<ModRunResult>(_mods.Count);
-            foreach (var mod in ModsInLoadOrder())
+            _results.Clear();
+            List<string> order = _modOrder;
+            Dictionary<string, WasmMod> mods = _mods;
+            for (int i = 0; i < order.Count; i++)
             {
-                _currentModId = mod.Id;
-                results.Add(mod.Tick());
+                if (mods.TryGetValue(order[i], out WasmMod? mod))
+                {
+                    _currentModId = mod.Id;
+                    _results.Add(mod.Tick());
+                }
             }
-            return results;
+            return _results;
         }
 
         /// <summary>Invokes init on every loaded mod, in load order.</summary>
         public IReadOnlyList<ModRunResult> DispatchInit()
         {
             ThrowIfDisposed();
-            var results = new List<ModRunResult>(_mods.Count);
-            foreach (var mod in ModsInLoadOrder())
+            _results.Clear();
+            List<string> order = _modOrder;
+            Dictionary<string, WasmMod> mods = _mods;
+            for (int i = 0; i < order.Count; i++)
             {
-                _currentModId = mod.Id;
-                results.Add(mod.Init());
+                if (mods.TryGetValue(order[i], out WasmMod? mod))
+                {
+                    _currentModId = mod.Id;
+                    _results.Add(mod.Init());
+                }
             }
-            return results;
+            return _results;
         }
 
         /// <summary>
@@ -256,7 +275,8 @@ namespace HordeForge.WasmHost.Core
         /// get_join_player_name host import. Fail soft like tick: one
         /// misbehaving handler never stops the others. The entity id is
         /// i32 on the wire (the on_player_join parameter), so it is taken
-        /// as int and never narrowed silently.
+        /// as int and never narrowed silently. The returned list is
+        /// host-owned and is replaced by the next Dispatch* call.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
         {
@@ -264,17 +284,23 @@ namespace HordeForge.WasmHost.Core
             _currentJoinName = playerName ?? string.Empty;
             try
             {
-                var results = new List<ModRunResult>(_mods.Count);
-                foreach (var mod in ModsInLoadOrder())
+                _results.Clear();
+                List<string> order = _modOrder;
+                Dictionary<string, WasmMod> mods = _mods;
+                for (int i = 0; i < order.Count; i++)
                 {
+                    if (!mods.TryGetValue(order[i], out WasmMod? mod))
+                    {
+                        continue;
+                    }
                     _currentModId = mod.Id;
                     ModRunResult? result = mod.OnPlayerJoin(entityId);
-                    if (result != null)
+                    if (result.HasValue)
                     {
-                        results.Add(result);
+                        _results.Add(result.GetValueOrDefault());
                     }
                 }
-                return results;
+                return _results;
             }
             finally
             {
@@ -282,17 +308,6 @@ namespace HordeForge.WasmHost.Core
                 // "no event" (-1) again, per docs/ABI.md, instead of serving
                 // the stale name from this join to later calls.
                 _currentJoinName = string.Empty;
-            }
-        }
-
-        private IEnumerable<WasmMod> ModsInLoadOrder()
-        {
-            foreach (string id in _modOrder)
-            {
-                if (_mods.TryGetValue(id, out WasmMod? mod))
-                {
-                    yield return mod;
-                }
             }
         }
 
@@ -549,10 +564,13 @@ namespace HordeForge.WasmHost.Core
             {
                 return;
             }
-            foreach (var mod in ModsInLoadOrder())
+            for (int i = 0; i < _modOrder.Count; i++)
             {
-                _currentModId = mod.Id;
-                mod.Shutdown();
+                if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
+                {
+                    _currentModId = mod.Id;
+                    mod.Shutdown();
+                }
             }
             _mods.Clear();
             _modOrder.Clear();

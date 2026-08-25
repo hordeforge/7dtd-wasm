@@ -3,9 +3,10 @@ namespace HordeForge.WasmHost.Core
     /// <summary>
     /// Structured result of a guest call. The host never lets a misbehaving
     /// guest crash the process: every call outcome is reported here and the
-    /// instance stays loaded for the next tick.
+    /// instance stays loaded for the next tick. A value type so dispatch at
+    /// tick rate does not allocate one object per mod per tick.
     /// </summary>
-    public sealed class ModRunResult
+    public readonly struct ModRunResult
     {
         /// <summary>Creates a structured call result.</summary>
         public ModRunResult(ModRunStatus status, string message, string details, ulong fuelConsumed)

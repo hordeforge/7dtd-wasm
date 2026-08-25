@@ -332,12 +332,16 @@ namespace HordeForge.GameBridge.Bridge
                     return false;
                 }
                 ModRunResult? oldShutdown = host.Unload(id);
-                if (oldShutdown != null && !oldShutdown.Ok)
+                if (oldShutdown.HasValue)
                 {
+                    ModRunResult shutdown = oldShutdown.GetValueOrDefault();
                     // The reload proceeds either way, but the failed goodbye of
                     // the old instance must reach the log like an unload's would.
-                    Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
-                                oldShutdown.Message + (oldShutdown.Details.Length > 0 ? " (" + oldShutdown.Details + ")" : ""));
+                    if (!shutdown.Ok)
+                    {
+                        Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
+                                    shutdown.Message + (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
+                    }
                 }
                 _settings?.RemoveMod(id);
                 if (!TryLoadFromDisk(host, id))
@@ -360,11 +364,12 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return false;
                 }
-                ModRunResult? shutdown = host.Unload(id);
-                if (shutdown == null)
+                ModRunResult? maybeShutdown = host.Unload(id);
+                if (!maybeShutdown.HasValue)
                 {
                     return false;
                 }
+                ModRunResult shutdown = maybeShutdown.GetValueOrDefault();
                 _settings?.RemoveMod(id);
                 if (!shutdown.Ok)
                 {

@@ -212,7 +212,7 @@ namespace HordeForge.WasmHost.Tests
 
                 ModRunResult? unloaded = host.Unload("trap");
                 Assert.NotNull(unloaded);
-                Assert.True(unloaded.Ok);
+                Assert.True(unloaded.GetValueOrDefault().Ok);
                 Assert.Null(host.Unload("trap"));
                 Assert.Single(host.ModIds);
             }
@@ -272,8 +272,8 @@ namespace HordeForge.WasmHost.Tests
                 ModRunResult? trapShutdown = host.Unload("trap");
                 Assert.NotNull(fuelShutdown);
                 Assert.NotNull(trapShutdown);
-                Assert.True(fuelShutdown.Ok);
-                Assert.True(trapShutdown.Ok);
+                Assert.True(fuelShutdown.GetValueOrDefault().Ok);
+                Assert.True(trapShutdown.GetValueOrDefault().Ok);
                 Assert.Empty(api.Logs);
             }
         }
