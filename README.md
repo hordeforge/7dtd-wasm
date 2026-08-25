@@ -137,8 +137,11 @@ make dist           # stage the modlet under dist/ (plus a CycloneDX SBOM)
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
 with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the
-server console. The `hello` sample module logs on load, reports every 100
-ticks, and sends a chat greeting every 1000 ticks.
+server console. The staged native engine (`Native/libwasmtime.so`,
+`.dylib`, or `.dll`) matches the OS and architecture of the machine that ran
+`make dist`, so build on the platform family your server runs on (Linux or
+Windows; macOS has no dedicated server). The `hello` sample module logs on
+load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
 ## Safety model
 

@@ -12,12 +12,13 @@ namespace HordeForge.GameBridge.Bridge
     /// Platform realities (verified against Mono and glibc):
     ///  - Windows: LoadLibrary consults PATH on every call, so prepending
     ///    the staged directory to PATH here is enough.
-    ///  - ELF platforms (Linux): the dynamic loader captures LD_LIBRARY_PATH
-    ///    at process start; changing it after start has no effect on later
-    ///    lookups. The engine must be resolvable when the server process
-    ///    starts, so Prepare probes resolution and tells the operator how
-    ///    to start the server when it is not. Acceptance runs used exactly
-    ///    that process-start LD_LIBRARY_PATH (docs/ACCEPTANCE.md).
+    ///  - ELF platforms (Linux) and macOS: the dynamic loader captures
+    ///    LD_LIBRARY_PATH (macOS: DYLD_LIBRARY_PATH) at process start;
+    ///    changing them after start has no effect on later lookups. The
+    ///    engine must be resolvable when the server process starts, so
+    ///    Prepare probes resolution and tells the operator how to start
+    ///    the server when it is not. Acceptance runs used exactly that
+    ///    process-start LD_LIBRARY_PATH (docs/ACCEPTANCE.md).
     ///
     /// Must run before any Wasmtime type is touched.
     /// </summary>
@@ -47,18 +48,29 @@ namespace HordeForge.GameBridge.Bridge
             // Probe the actual capability, not the OS name: dlopen by plain
             // name uses the same startup-captured search path a later
             // DllImport("wasmtime") will see, so this answers exactly the
-            // question "will the binding resolve libwasmtime.so?".
-            if (ProbeNativeResolvable())
+            // question "will the binding resolve the native engine?".
+            string libraryName = IsMacOsX ? OsxLibraryName : ElfLibraryName;
+            if (ProbeNativeResolvable(libraryName))
             {
                 Log.Out("[WasmHost] wasmtime native engine resolves on the loader path");
                 return;
             }
 
+            // The loader variable and library suffix differ per platform
+            // (DYLD_LIBRARY_PATH + .dylib on macOS, LD_LIBRARY_PATH + .so on
+            // ELF), so the guidance must name the pair this server needs.
+            string loaderVar = IsMacOsX ? "DYLD_LIBRARY_PATH" : "LD_LIBRARY_PATH";
             Log.Warning(
-                "[WasmHost] libwasmtime.so does not resolve yet; start the server with it on the loader path, " +
-                "for example LD_LIBRARY_PATH=\"" + nativeDir + ":$LD_LIBRARY_PATH\". Setting the variable after " +
+                "[WasmHost] " + libraryName + " does not resolve yet; start the server with it on the loader path, " +
+                "for example " + loaderVar + "=\"" + nativeDir + ":$" + loaderVar + "\". Setting the variable after " +
                 "process start has no effect.");
         }
+
+        /// <summary>Native engine file name on ELF platforms (Linux).</summary>
+        private const string ElfLibraryName = "libwasmtime.so";
+
+        /// <summary>Native engine file name on macOS.</summary>
+        private const string OsxLibraryName = "libwasmtime.dylib";
 
         private static bool IsWindows
         {
@@ -71,16 +83,24 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        private static bool IsMacOsX
+        {
+            get
+            {
+                return (int)Environment.OSVersion.Platform == (int)PlatformID.MacOSX;
+            }
+        }
+
         /// <summary>
-        /// Returns true when libwasmtime.so resolves through the loader's
-        /// startup search path. If the probe itself is unavailable on this
-        /// platform, returns true so the binding reports its own error.
+        /// Returns true when the named native engine resolves through the
+        /// loader's startup search path. If dlopen itself is unavailable on
+        /// this platform, returns true so the binding reports its own error.
         /// </summary>
-        private static bool ProbeNativeResolvable()
+        private static bool ProbeNativeResolvable(string libraryName)
         {
             try
             {
-                IntPtr handle = dlopen("libwasmtime.so", RtldNow);
+                IntPtr handle = dlopen(libraryName, RtldNow);
                 if (handle == IntPtr.Zero)
                 {
                     return false;
