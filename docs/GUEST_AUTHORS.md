@@ -141,7 +141,8 @@ Config-driven behavior works like the other languages: the guest reads
 Copy the built `.wasm` into `<install>/Mods/Wasm/<id>/module.wasm` (the id
 is the folder name) and run `wasm load` or `wasm reload <id>` on the server,
 or restart the server. The id must be a plain folder name: no path
-separators, no dot-only segments (`.` or `..`), no control characters.
+separators, no colons, no dot-only segments (`.` or `..`), no control
+characters.
 Folders with invalid names are skipped with a warning, and `wasm reload`
 refuses them. An optional `wasm-mod.toml` manifest next to the
 module tunes its limits and settings; see [docs/CONFIG.md](CONFIG.md). A

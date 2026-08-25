@@ -120,8 +120,13 @@ namespace HordeForge.GameBridge.Bridge
                     string source = "tick/" + (i < ids.Count ? ids[i] : "?");
                     if (DispatchFailureLimiter.TryWrite(source, out _))
                     {
-                        Log.Out("[WasmHost] tick: " + results[i].Message +
-                                (results[i].Details.Length > 0 ? " (" + results[i].Details + ")" : ""));
+                        // Trap messages and backtraces can embed guest-chosen
+                        // strings (module and function name sections); they
+                        // pass through the same control-character filter as
+                        // guest log text so a hostile module cannot forge
+                        // server log lines.
+                        Log.Out("[WasmHost] tick: " + TextSanitizer.Clean(results[i].Message) +
+                                (results[i].Details.Length > 0 ? " (" + TextSanitizer.Clean(results[i].Details) + ")" : ""));
                     }
                 }
             }
@@ -164,7 +169,8 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     if (!result.Ok)
                     {
-                        Log.Out("[WasmHost] on_player_join: " + result.Message + (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                        Log.Out("[WasmHost] on_player_join: " + TextSanitizer.Clean(result.Message) +
+                                (result.Details.Length > 0 ? " (" + TextSanitizer.Clean(result.Details) + ")" : ""));
                     }
                 }
             }
@@ -289,8 +295,10 @@ namespace HordeForge.GameBridge.Bridge
             catch (Exception ex)
             {
                 // An unreadable module file must not abort the scan or the
-                // bridge start; skip it like any other bad module.
-                Log.Warning("[WasmHost] cannot read " + modulePath + ": " + ex.Message + "; module skipped");
+                // bridge start; skip it like any other bad module. The IO
+                // message may embed the raw path, so it is cleaned like
+                // guest-derived text before it reaches the log.
+                Log.Warning("[WasmHost] cannot read " + modulePath + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 return false;
             }
             try
@@ -299,7 +307,10 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (WasmModLoadException ex)
             {
-                Log.Warning("[WasmHost] failed to load module " + id + ": " + ex.Message);
+                // Load rejections quote manifest and module diagnostics that
+                // come from mod files (third-party content); clean them so
+                // control characters cannot forge log lines.
+                Log.Warning("[WasmHost] failed to load module " + id + ": " + TextSanitizer.Clean(ex.Message));
                 return false;
             }
             _settings?.UpdateMod(id, manifest);
@@ -320,8 +331,8 @@ namespace HordeForge.GameBridge.Bridge
             ModRunResult result = mod.Init();
             if (!result.Ok)
             {
-                Log.Warning("[WasmHost] on_enable of " + id + ": " + result.Message +
-                            (result.Details.Length > 0 ? " (" + result.Details + ")" : ""));
+                Log.Warning("[WasmHost] on_enable of " + id + ": " + TextSanitizer.Clean(result.Message) +
+                            (result.Details.Length > 0 ? " (" + TextSanitizer.Clean(result.Details) + ")" : ""));
             }
         }
 
@@ -354,7 +365,7 @@ namespace HordeForge.GameBridge.Bridge
                     if (!shutdown.Ok)
                     {
                         Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
-                                    shutdown.Message + (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
+                                    TextSanitizer.Clean(shutdown.Message) + (shutdown.Details.Length > 0 ? " (" + TextSanitizer.Clean(shutdown.Details) + ")" : ""));
                     }
                 }
                 _settings?.RemoveMod(id);
@@ -390,8 +401,8 @@ namespace HordeForge.GameBridge.Bridge
                     // Fail soft: the mod is gone either way, but a trapped or
                     // failing shutdown must reach the operator instead of a
                     // bare "unloaded" from the console command.
-                    Log.Warning("[WasmHost] unload of " + id + ": " + shutdown.Message +
-                                (shutdown.Details.Length > 0 ? " (" + shutdown.Details + ")" : ""));
+                    Log.Warning("[WasmHost] unload of " + id + ": " + TextSanitizer.Clean(shutdown.Message) +
+                                (shutdown.Details.Length > 0 ? " (" + TextSanitizer.Clean(shutdown.Details) + ")" : ""));
                 }
                 return true;
             }
@@ -423,13 +434,15 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (WasmModLoadException ex)
             {
-                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + ex.Message + "; using code defaults");
+                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + TextSanitizer.Clean(ex.Message) + "; using code defaults");
             }
             catch (Exception ex)
             {
                 // Same degradation as a malformed file: the bridge starts
-                // with code defaults instead of failing to start.
-                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + ex.Message + "; using code defaults");
+                // with code defaults instead of failing to start. The parser
+                // message quotes raw file text, so clean it like guest log
+                // output.
+                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + TextSanitizer.Clean(ex.Message) + "; using code defaults");
             }
         }
 
@@ -462,7 +475,9 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (WasmModLoadException ex)
             {
-                Log.Warning("[WasmHost] invalid manifest for " + id + ": " + ex.Message + "; module skipped");
+                // Parser diagnostics quote raw manifest text (third-party
+                // mod content); clean them like guest log output.
+                Log.Warning("[WasmHost] invalid manifest for " + id + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 manifest = null;
                 return false;
             }
@@ -471,7 +486,7 @@ namespace HordeForge.GameBridge.Bridge
                 // An unreadable or oversized manifest file is treated like a
                 // malformed one: skip the module instead of running it with
                 // defaults.
-                Log.Warning("[WasmHost] cannot read manifest for " + id + ": " + ex.Message + "; module skipped");
+                Log.Warning("[WasmHost] cannot read manifest for " + id + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 manifest = null;
                 return false;
             }

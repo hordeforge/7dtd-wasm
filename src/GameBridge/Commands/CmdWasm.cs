@@ -51,7 +51,10 @@ namespace HordeForge.GameBridge.Commands
                         SingletonMonoBehaviour<SdtdConsole>.Instance.Output("usage: wasm reload <id>");
                         break;
                     }
-                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Reload(_params[1]) ? "reloaded " + _params[1] : "reload failed or module not found: " + _params[1]);
+                    // The id is echoed back to the console and telnet clients;
+                    // clean it like log text so control characters typed at
+                    // the console cannot drive terminals.
+                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Reload(_params[1]) ? "reloaded " + TextSanitizer.Clean(_params[1]) : "reload failed or module not found: " + TextSanitizer.Clean(_params[1]));
                     break;
 
                 case "unload":
@@ -60,7 +63,7 @@ namespace HordeForge.GameBridge.Commands
                         SingletonMonoBehaviour<SdtdConsole>.Instance.Output("usage: wasm unload <id>");
                         break;
                     }
-                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Unload(_params[1]) ? "unloaded " + _params[1] : "not loaded: " + _params[1]);
+                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Unload(_params[1]) ? "unloaded " + TextSanitizer.Clean(_params[1]) : "not loaded: " + TextSanitizer.Clean(_params[1]));
                     break;
 
                 default:

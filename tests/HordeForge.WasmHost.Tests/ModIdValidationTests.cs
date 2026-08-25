@@ -35,6 +35,10 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("../evil")]
         [InlineData("a/b")]
         [InlineData("a\\b")]
+        // Windows drive-relative ids are rooted for Path.Combine and would
+        // move the module path off Mods/Wasm.
+        [InlineData("C:temp")]
+        [InlineData("C:")]
         [InlineData("C:\\temp")]
         [InlineData("x\ny")]
         [InlineData("x\ty")]

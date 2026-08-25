@@ -110,7 +110,10 @@ namespace HordeForge.GameBridge.Bridge
                 // mtime stays unapplied, so a later fixed save re-reads.
                 if (!attempted || !_loggedFailureValid || attemptedMtime != _loggedFailureMtime)
                 {
-                    Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + ex.Message +
+                    // Parser diagnostics quote raw file text; clean them like
+                    // guest log output so control characters cannot forge log
+                    // lines.
+                    Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + TextSanitizer.Clean(ex.Message) +
                                 "; serving previous shared settings");
                     _loggedFailureMtime = attemptedMtime;
                     _loggedFailureValid = true;
