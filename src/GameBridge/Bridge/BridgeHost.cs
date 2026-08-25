@@ -212,7 +212,6 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0;
                 }
-                int loaded = 0;
                 if (!Directory.Exists(WasmRoot))
                 {
                     return 0;
@@ -239,13 +238,12 @@ namespace HordeForge.GameBridge.Bridge
                         continue;
                     }
                     loadedIds.Add(id);
-                    loaded++;
                 }
                 foreach (string id in loadedIds)
                 {
                     InitOne(id);
                 }
-                return loaded;
+                return loadedIds.Count;
             }
         }
 
@@ -305,7 +303,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            ModRunResult result = mod.Init(_host.Tick);
+            ModRunResult result = mod.Init();
             if (!result.Ok)
             {
                 Log.Warning("[WasmHost] on_enable of " + id + ": " + result.Message +

@@ -70,13 +70,13 @@ namespace HordeForge.WasmHost.Core
         /// Invokes the guest on_enable export. Guests read configuration
         /// through get_setting. See docs/ABI.md.
         /// </summary>
-        public ModRunResult Init(long tick)
+        public ModRunResult Init()
         {
             return Run("on_enable", () => _init());
         }
 
         /// <summary>Invokes the guest on_tick export; the tick number is read via the tick import.</summary>
-        public ModRunResult Tick(long tick)
+        public ModRunResult Tick()
         {
             return Run("on_tick", () => _tick());
         }

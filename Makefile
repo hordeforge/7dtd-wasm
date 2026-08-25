@@ -12,6 +12,12 @@ ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
 
+# NuGet restore mode for the dotnet targets below. Plain builds stay
+# unlocked so dependency bumps regenerate packages.lock.json; "make
+# check" flips this to true so a manifest that drifts from its
+# committed lock file fails loudly instead of re-resolving packages.
+export RESTORE_LOCKED ?= false
+
 # Wasmtime runtime id of THIS machine, used by "make dist" to stage the
 # matching native engine (same mapping as NativeAssets.RuntimeIdentifier).
 UNAME_S := $(shell uname -s 2>/dev/null || echo Windows_NT)
@@ -61,14 +67,15 @@ help:
 	@echo "  make bridge         build the net48 in-game mod against GAME_DIR"
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
-	@echo "  make check          docs gate + guest lint gate + build + test + bridge-check (CI entry point)"
+	@echo "                      (also writes dist/SBOM.json from the lock files)"
+	@echo "  make check          docs gate + sbom tests + guest lint gate + build + test + bridge-check (CI entry point)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 
 build:
-	$(DOTNET) build $(SLN) -c Release
+	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED)
 
 test:
-	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release
+	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED)
 
 # Compile guests from inside samples/ on purpose: cargo discovers
 # config by walking up from the current directory, and the workspace
@@ -115,10 +122,10 @@ fixtures: samples boss boss-zig
 	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
 
 bridge:
-	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)"
+	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED)
 
 bridge-check:
-	$(DOTNET) run -c Release --project tools/targetcheck -- "$(GAME_DIR)"
+	$(DOTNET) run -c Release --project tools/targetcheck -p:RestoreLockedMode=$(RESTORE_LOCKED) -- "$(GAME_DIR)"
 
 dist: build fixtures bridge
 	rm -rf dist && mkdir -p dist/Mods/1_HordeForge_WasmHost/Native dist/Mods/Wasm/hello
@@ -144,10 +151,15 @@ dist: build fixtures bridge
 	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
 	cp samples/zdtd-fps-bot/wasm-mod.toml dist/Mods/Wasm/fps-bot/
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
+	# SBOM: CycloneDX inventory built from the committed lock files, so
+	# consumers and vuln scanners know exactly what shipped.
+	python3 tools/sbom.py --root . -o dist/SBOM.json
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
+check: export RESTORE_LOCKED := true
 check:
 	python3 tools/doccheck.py
+	python3 -m unittest discover -s tools
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test

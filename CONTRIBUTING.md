@@ -33,7 +33,13 @@ make samples-check # guest lint gate: rustc warnings are build errors
 make test         # host suite must stay green
 make bridge       # net48 bridge against GAME_DIR
 make bridge-check # game targets must pass after any game update
-make check        # docs gate + guest lint gate + build + test + bridge-check
+make check        # docs gate + sbom tests + guest lint + build + test + bridge
+
+# Dependency changes: bump the PackageReference, then regenerate every
+# committed packages.lock.json with a plain (unlocked) restore; "make
+# check" restores locked and fails when a manifest drifts from its lock.
+dotnet build HordeForge.WasmHost.sln   # refresh all packages.lock.json
+python3 tools/sbom.py                  # preview the CycloneDX SBOM make dist ships
 ```
 
 Every change lands with its tests and its docs updated in the same commit.

@@ -179,7 +179,7 @@ namespace HordeForge.WasmHost.Tests
                     Assert.Empty(host.ModIds);
                 }
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"));
-                Assert.True(mod.Tick(1).Ok);
+                Assert.True(mod.Tick().Ok);
             }
         }
 
@@ -308,10 +308,10 @@ namespace HordeForge.WasmHost.Tests
             {
                 var manifest = ModManifest.Parse("{\"limits\": {\"fuelPerCall\": 500}}", "strings");
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"), manifest);
-                Assert.True(mod.Init(0).Ok);
+                Assert.True(mod.Init().Ok);
                 // The tick does real work (formatting, host API calls), far
                 // beyond a 500-instruction budget.
-                ModRunResult tick = mod.Tick(1);
+                ModRunResult tick = mod.Tick();
                 Assert.Equal(ModRunStatus.FuelExhausted, tick.Status);
                 Assert.True(mod.FuelExhaustedCalls >= 1);
             }
@@ -478,8 +478,8 @@ greeting = ""hello""
                 WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
                 Assert.True(bot.HasAdminCommandHandler);
                 Assert.False(bot.HasPlayerJoinHandler);
-                Assert.True(bot.Init(0).Ok);
-                Assert.True(bot.Tick(1).Ok);
+                Assert.True(bot.Init().Ok);
+                Assert.True(bot.Tick().Ok);
             }
         }
 
@@ -504,7 +504,7 @@ greeting = ""hello""
             using (WasmModHost host = NewHostForFpsBot(api))
             {
                 WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
-                Assert.True(bot.Init(0).Ok);
+                Assert.True(bot.Init().Ok);
                 // Reaction gate is ~0.38 s (~8 ticks) for skill 2; give it
                 // enough ticks for the reaction to expire and the shot to fire.
                 for (int t = 1; t <= 12; t++)
@@ -525,7 +525,7 @@ greeting = ""hello""
             using (WasmModHost host = NewHostForFpsBot(api))
             {
                 WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
-                Assert.True(bot.Init(0).Ok);
+                Assert.True(bot.Init().Ok);
                 for (int t = 1; t <= 5; t++)
                 {
                     Assert.True(host.DispatchTick(t).Single().Ok);
@@ -557,7 +557,7 @@ greeting = ""hello""
             using (WasmModHost host = NewHostForFpsBot(api))
             {
                 WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
-                Assert.True(bot.Init(0).Ok);
+                Assert.True(bot.Init().Ok);
                 ModRunResult tick = host.DispatchTick(1).Single();
                 Assert.True(tick.Ok, tick.Message + " " + tick.Details);
                 Assert.Contains(api.Logs, l =>
@@ -577,7 +577,7 @@ greeting = ""hello""
             using (WasmModHost host = NewHostForFpsBot(api))
             {
                 WasmMod bot = host.LoadModule("fps-bot", Fixture("fps-bot"));
-                Assert.True(bot.Init(0).Ok);
+                Assert.True(bot.Init().Ok);
                 ModRunResult tick = host.DispatchTick(1).Single();
                 Assert.True(tick.Ok, tick.Message + " " + tick.Details);
                 Assert.NotEmpty(api.SenseSources);
@@ -595,8 +595,8 @@ greeting = ""hello""
             {
                 var manifest = ModManifest.Parse("{\"name\": \"x\", \"limits\": {}, \"future\": true}", "strings");
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"), manifest);
-                Assert.True(mod.Init(0).Ok);
-                Assert.True(mod.Tick(1).Ok);
+                Assert.True(mod.Init().Ok);
+                Assert.True(mod.Tick().Ok);
             }
         }
 
@@ -732,7 +732,7 @@ greeting = ""hello""
             {
                 WasmMod boss = host.LoadModule("boss", Fixture("boss"));
                 Assert.True(boss.HasPlayerJoinHandler);
-                Assert.True(boss.Init(0).Ok);
+                Assert.True(boss.Init().Ok);
 
                 IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin(171, "maci");
                 ModRunResult result = Assert.Single(joins);
@@ -768,7 +768,7 @@ greeting = ""hello""
                 WasmMod strings = host.LoadModule("strings", Fixture("strings"));
                 Assert.False(strings.HasPlayerJoinHandler);
                 Assert.Empty(host.DispatchPlayerJoin(171, "maci"));
-                Assert.True(strings.Tick(1).Ok);
+                Assert.True(strings.Tick().Ok);
             }
         }
 
@@ -782,7 +782,7 @@ greeting = ""hello""
             {
                 WasmMod boss = host.LoadModule("boss-zig", Fixture("boss-zig"));
                 Assert.True(boss.HasPlayerJoinHandler);
-                Assert.True(boss.Init(0).Ok);
+                Assert.True(boss.Init().Ok);
 
                 // No setting: the guest falls back to "maci".
                 Assert.True(host.DispatchPlayerJoin(171, "maci").Single().Ok);

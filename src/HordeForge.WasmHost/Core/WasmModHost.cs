@@ -231,7 +231,7 @@ namespace HordeForge.WasmHost.Core
             foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
-                results.Add(mod.Tick(tick));
+                results.Add(mod.Tick());
             }
             return results;
         }
@@ -244,7 +244,7 @@ namespace HordeForge.WasmHost.Core
             foreach (var mod in ModsInLoadOrder())
             {
                 _currentModId = mod.Id;
-                results.Add(mod.Init(Tick));
+                results.Add(mod.Init());
             }
             return results;
         }

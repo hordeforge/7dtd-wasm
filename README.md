@@ -132,7 +132,7 @@ make build          # host + tests
 make fixtures       # compile guest fixtures
 make test           # run the sandbox test suite
 make bridge-check   # verify the game API targets on your server install
-make dist           # stage the modlet under dist/
+make dist           # stage the modlet under dist/ (plus a CycloneDX SBOM)
 ```
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
