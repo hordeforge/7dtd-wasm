@@ -47,3 +47,16 @@ a second `GuestRateLimiter` instance keyed on the shared source "chat"
 surfaced in `wasm status`). The decision itself is unchanged: the cap lives
 in the bridge, not the host. Evidence: docs/ACCEPTANCE.md, finding 2;
 SECURITY.md documents both caps.
+
+## Amendment (2026-08-25): game-side work imports are capped too
+
+The same limiter class now bounds every guest-triggered path whose cost
+the fuel budget cannot see because it happens outside the wasm call:
+SimCommands at 200 per second per module and sense snapshot fills at
+200 per second per module (excess rejected or reported as no data,
+counted, surfaced in `wasm status`; documented in docs/ABI.md, "Host-side
+bounds on the servant"), plus the failure-log paths (tick dispatch
+failures, get_world_time failures) so the diagnostics themselves cannot
+flood the log. Each cap is fixed at limiter construction
+(`GuestRateLimiter(maxPerSecond)`). The decision is unchanged: all rate
+policy lives in the bridge, not the host.
