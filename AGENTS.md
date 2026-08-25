@@ -5,7 +5,7 @@ Runs untrusted guest mods as `wasm32-wasip1` modules inside an embedded
 Wasmtime engine with hard limits (fuel, memory, module size). This is an
 **experiment**: the ABI and host API surface are expected to change.
 
-Workspace root guide: [`../MODDING_BEST_PRACTICES.md`](../MODDING_BEST_PRACTICES.md)
+Workspace root guide: [`hordeforge/.github` MODDING_BEST_PRACTICES.md](https://github.com/hordeforge/.github/blob/main/MODDING_BEST_PRACTICES.md)
 
 ## Scope
 
