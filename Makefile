@@ -103,12 +103,13 @@ boss:
 
 # Zig guest (zig 0.16): -rdynamic keeps the @export'ed symbols in the
 # -fno-entry module (without it everything is dead-code eliminated).
+# Like the C guest, the module is emitted straight into samples/target/
+# so no build artifact lands inside a guest source directory.
 boss-zig:
 	mkdir -p samples/target
 	cd samples/guest-boss-zig && $(ZIG) build-exe src/main.zig \
 	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \
-	  --max-memory=33554432 -femit-bin=guest-boss-zig.wasm
-	cp samples/guest-boss-zig/guest-boss-zig.wasm samples/target/
+	  --max-memory=33554432 -femit-bin=../target/guest-boss-zig.wasm
 
 fixtures: samples boss boss-zig
 	mkdir -p tests/fixtures

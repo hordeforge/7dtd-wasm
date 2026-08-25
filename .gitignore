@@ -12,6 +12,10 @@ __pycache__/
 *.lock
 !samples/Cargo.lock
 samples/target/
+# Guest build outputs never belong next to their sources; the build
+# pipeline stages them under samples/target/ (see Makefile boss targets).
+samples/guest-boss/*.wasm
+samples/guest-boss-zig/*.wasm
 .rustup/
 .cargo/
 tools/targetcheck/bin/
