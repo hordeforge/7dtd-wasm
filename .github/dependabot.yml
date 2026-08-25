@@ -1,0 +1,25 @@
+# Three dependency surfaces: the .NET host and tests (packages.lock.json,
+# hash-pinned), the Rust guests (samples/Cargo.lock), and the SHA-pinned CI
+# actions.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dotnet-packages:
+        patterns:
+          - "*"
+  - package-ecosystem: cargo
+    directory: /samples
+    schedule:
+      interval: weekly
+    groups:
+      rust-packages:
+        patterns:
+          - "*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

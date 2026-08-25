@@ -53,7 +53,7 @@ SLN = HordeForge.WasmHost.sln
 # of truth; bumping the PackageReference updates dist automatically).
 WASMTIME_VERSION := $(shell python3 -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
-.PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check clean
+.PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -68,7 +68,8 @@ help:
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
-	@echo "  make check          docs gate + sbom tests + guest lint gate + build + test + bridge-check (CI entry point)"
+	@echo "  make check          docs gate + sbom tests + guest lint gate + build + test + bridge-check"
+	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 
 build:
@@ -157,14 +158,21 @@ dist: build fixtures bridge
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
 check: export RESTORE_LOCKED := true
-check:
+check: check-ci
+	$(MAKE) bridge
+	$(MAKE) bridge-check
+
+# The game-free half of check, and the only entry point CI can use: a hosted
+# runner has no dedicated server install, so bridge and bridge-check (which
+# need GAME_DIR) stay out. Everything here fails loudly rather than skipping,
+# because a skipped gate reads like a passed one.
+check-ci: export RESTORE_LOCKED := true
+check-ci:
 	python3 tools/doccheck.py
 	python3 -m unittest discover -s tools
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test
-	$(MAKE) bridge
-	$(MAKE) bridge-check
 
 clean:
 	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj dist
