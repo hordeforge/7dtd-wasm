@@ -13,9 +13,9 @@ pub extern "C" fn on_enable() -> i32 {
 
 #[export_name = "on_tick"]
 pub extern "C" fn on_tick() -> i32 {
-    let tick = unsafe { abi::tick() };
+    let tick = abi::current_tick();
     if tick % 100 == 0 {
-        let world = unsafe { abi::get_world_time() };
+        let world = abi::world_time();
         abi::log_info(&format!("hello mod alive at tick {} (world {})", tick, world));
     }
     if tick % 1000 == 0 {

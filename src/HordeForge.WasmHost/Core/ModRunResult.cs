@@ -10,12 +10,29 @@ namespace HordeForge.WasmHost.Core
     {
         /// <summary>Creates a structured call result.</summary>
         public ModRunResult(ModRunStatus status, string message, string details, ulong fuelConsumed)
+            : this(string.Empty, status, message, details, fuelConsumed)
         {
+        }
+
+        /// <summary>Creates a structured call result attributed to a mod.</summary>
+        public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
+        {
+            ModId = modId ?? string.Empty;
             Status = status;
             Message = message ?? string.Empty;
             Details = details ?? string.Empty;
             FuelConsumed = fuelConsumed;
         }
+
+        /// <summary>
+        /// Registry id of the mod that produced this result, or empty when
+        /// the producer did not report one. Results from the Dispatch*
+        /// methods are not positionally aligned with <see cref="Core.WasmModHost.ModIds"/>
+        /// for event dispatches that call only a subset of mods
+        /// (DispatchPlayerJoin), so consumers should attribute through this
+        /// field instead of list index.
+        /// </summary>
+        public string ModId { get; }
 
         /// <summary>Outcome category of the call.</summary>
         public ModRunStatus Status { get; }

@@ -8,6 +8,17 @@
     <RootNamespace>HordeForge.WasmHost</RootNamespace>
     <AssemblyName>HordeForge.WasmHost</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Pack metadata: the library is the publishable artifact of this
+         repository; keep Version aligned with CHANGELOG.md. -->
+    <PackageId>HordeForge.WasmHost</PackageId>
+    <Version>0.1.5</Version>
+    <Authors>hordeforge</Authors>
+    <Description>Embeddable WebAssembly mod host for 7 Days to Die dedicated servers: untrusted wasm32-wasip1 guest mods under fuel, memory, and module size limits on an embedded Wasmtime engine.</Description>
+    <PackageTags>7dtd;wasm;wasmtime;sandbox;modding;mod-host</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/hordeforge/7dtd-wasm</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
 
   <ItemGroup>

@@ -42,7 +42,7 @@ pub extern "C" fn on_enable() -> i32 {
 
 #[export_name = "on_tick"]
 pub extern "C" fn on_tick() -> i32 {
-    let tick = unsafe { abi::tick() };
+    let tick = abi::current_tick();
     if tick % 100 == 0 {
         abi::log_info(&format!("my mod at tick {}", tick));
     }
@@ -75,10 +75,32 @@ pub extern "C" fn on_shutdown() -> i32 {
 
 | Helper | What it does |
 |---|---|
-| `abi::log_info(s)`, `abi::log_warn(s)`, `abi::log_error(s)` | Log through the game logger |
-| `abi::get_setting_str(key, &mut out)` | Read a shared setting, `Option<String>` |
+| `abi::log_debug(s)`, `abi::log_info(s)`, `abi::log_warn(s)`, `abi::log_error(s)` | Log through the game logger |
+| `abi::current_tick()` | Current game tick |
+| `abi::world_time()` | World time in game minutes, 0 when no world is loaded |
+| `abi::get_setting_str(key, &mut out)` | Read a setting, `Option<String>` |
 | `abi::send_chat_str(s)` | Send a global chat message, returns status |
-| `unsafe { abi::tick() }`, `unsafe { abi::get_world_time() }` | Read game time |
+| `abi::join_player_name(&mut out)` | Joining player's name, `Option<String>`; only valid inside `on_player_join` |
+
+The raw imports (`abi::tick`, `abi::get_world_time`, ...) stay available for
+guests that want them; the wrappers above are the safe path.
+
+## Player join events
+
+A Rust mod reacts to a player spawn by exporting `on_player_join` and
+reading the name through `join_player_name` (valid only during the
+callback):
+
+```rust
+#[export_name = "on_player_join"]
+pub extern "C" fn on_player_join(entity_id: i32) -> i32 {
+    let mut buf = [0u8; 128];
+    if let Some(name) = abi::join_player_name(&mut buf) {
+        abi::log_info(&format!("player {} joined (entity {})", name, entity_id));
+    }
+    abi::STATUS_OK
+}
+```
 
 ## Writing a guest in C (with zig)
 

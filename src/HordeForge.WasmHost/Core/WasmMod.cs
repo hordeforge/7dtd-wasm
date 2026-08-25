@@ -90,7 +90,7 @@ namespace HordeForge.WasmHost.Core
         {
             if (_shutdown == null)
             {
-                return new ModRunResult(ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
+                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
             }
             return Run("shutdown", () => _shutdown());
         }
@@ -175,12 +175,13 @@ namespace HordeForge.WasmHost.Core
                 {
                     ErrorCalls++;
                     return new ModRunResult(
+                        Id,
                         ModRunStatus.Error,
                         "export " + callName + " returned status " + status,
                         string.Empty,
                         consumed);
                 }
-                return new ModRunResult(ModRunStatus.Ok, string.Empty, string.Empty, consumed);
+                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, consumed);
             }
             catch (Exception ex)
             {
@@ -218,6 +219,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     FuelExhaustedCalls++;
                     return new ModRunResult(
+                        Id,
                         ModRunStatus.FuelExhausted,
                         "fuel exhausted during " + callName,
                         message,
@@ -225,13 +227,14 @@ namespace HordeForge.WasmHost.Core
                 }
                 TrapCalls++;
                 return new ModRunResult(
+                    Id,
                     ModRunStatus.Trap,
                     "guest trap during " + callName,
                     message + " [" + trap.Type + "]",
                     consumed);
             }
             ErrorCalls++;
-            return new ModRunResult(ModRunStatus.Error, "error during " + callName, message, consumed);
+            return new ModRunResult(Id, ModRunStatus.Error, "error during " + callName, message, consumed);
         }
     }
 }

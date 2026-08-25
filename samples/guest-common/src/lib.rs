@@ -33,7 +33,8 @@ pub const CHAT_REJECTED: i32 = -1;
 
 // Host imports. Strings are passed as (pointer, length) pairs into the
 // guest's own linear memory; the host reads them and never touches guest
-// memory outside the given range.
+// memory outside the given range. Prefer the safe wrappers below over
+// calling these directly.
 #[link(wasm_import_module = "hordeforge")]
 extern "C" {
     pub fn log(level: i32, ptr: i32, len: i32);
@@ -41,6 +42,7 @@ extern "C" {
     pub fn get_world_time() -> i64;
     pub fn get_setting(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32;
     pub fn send_chat(ptr: i32, len: i32) -> i32;
+    pub fn get_join_player_name(out_ptr: i32, out_cap: i32) -> i32;
 }
 
 /// Guest-side scratch buffer for strings passed to the host. Mods are
@@ -79,6 +81,13 @@ pub fn read_host_string(ptr: i32, len: i32) -> String {
     String::from_utf8_lossy(slice).into_owned()
 }
 
+/// Logs a debug line through the host logger.
+pub fn log_debug(msg: &str) {
+    let (p, l) = scratch(msg);
+    // SAFETY: scratch holds the full message for the duration of the call.
+    unsafe { log(LOG_DEBUG, p, l) }
+}
+
 /// Logs an info line through the host logger.
 pub fn log_info(msg: &str) {
     let (p, l) = scratch(msg);
@@ -112,6 +121,30 @@ pub fn send_chat_str(msg: &str) -> i32 {
 pub fn get_setting_str(key: &str, out: &mut [u8]) -> Option<String> {
     let (kp, kl) = scratch(key);
     let written = unsafe { get_setting(kp, kl, out.as_mut_ptr() as i32, out.len() as i32) };
+    if written < 0 {
+        return None;
+    }
+    Some(read_host_string(out.as_ptr() as i32, written))
+}
+
+/// Current game tick (safe wrapper over the raw `tick` import).
+pub fn current_tick() -> i64 {
+    // SAFETY: the import reads no guest memory and cannot violate safety.
+    unsafe { tick() }
+}
+
+/// World time in game minutes, or 0 when no world is loaded (safe wrapper
+/// over the raw `get_world_time` import).
+pub fn world_time() -> i64 {
+    // SAFETY: the import reads no guest memory and cannot violate safety.
+    unsafe { get_world_time() }
+}
+
+/// Name of the player that most recently spawned. Only valid inside an
+/// `on_player_join` call; outside one, the host reports "no event" and this
+/// returns None. The name is read into `out`; None also means it did not fit.
+pub fn join_player_name(out: &mut [u8]) -> Option<String> {
+    let written = unsafe { get_join_player_name(out.as_mut_ptr() as i32, out.len() as i32) };
     if written < 0 {
         return None;
     }

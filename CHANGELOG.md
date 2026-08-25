@@ -40,6 +40,26 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Added
 
+- `ModRunResult.ModId`: dispatch results now carry the registry id of the
+  mod that produced them, plus a matching constructor overload. Attribution
+  can no longer depend on list position, which was already impossible for
+  `DispatchPlayerJoin` (it calls only the mods exporting the handler); the
+  bridge's join failure logs name the module now.
+- `WasmHostConfig` is validated fail-fast when the host is constructed:
+  zero fuel per call, a sub-page memory ceiling, non-positive module size
+  or stack caps, and an empty log source prefix are rejected with the
+  offending value instead of surfacing later as instant fuel exhaustion or
+  blanket module rejection.
+- Guest SDK (`samples/guest-common`) covers the full hordeforge import
+  surface: added the missing `get_join_player_name` binding plus safe
+  wrappers `current_tick()`, `world_time()`, `join_player_name(&mut [u8])`,
+  and `log_debug()` so guest code needs no `unsafe` for plain host reads;
+  raw imports remain available. `guest-hello` and docs/GUEST_AUTHORS.md use
+  the safe path, and the guide gained an `on_player_join` example for Rust
+  guests.
+- NuGet pack metadata on the host library (package id, version tracking
+  CHANGELOG.md, license, repository): `dotnet pack` produces a complete
+  package instead of an anonymous default.
 - Committed NuGet lock files (`packages.lock.json` per project) with
   SHA512 content hashes for every direct and transitive package:
   restores now verify integrity and consumers get an exact inventory of

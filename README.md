@@ -143,6 +143,49 @@ server console. The staged native engine (`Native/libwasmtime.so`,
 Windows; macOS has no dedicated server). The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
+### Embedding the host library
+
+`HordeForge.WasmHost` is a plain .NET library (netstandard2.0 + net8.0);
+reference it and drive the host yourself:
+
+```csharp
+using HordeForge.WasmHost.Abi;
+using HordeForge.WasmHost.Config;
+using HordeForge.WasmHost.Core;
+
+var api = new MyGameApi();                    // implements IGameHostApi
+using var host = new WasmModHost(api, new WasmHostConfig());
+
+host.LoadModule("hello", File.ReadAllBytes("hello.wasm"));
+foreach (ModRunResult result in host.DispatchInit())
+{
+    Console.WriteLine($"{result.ModId}: init {result.Status}");
+}
+
+long gameTick = 0;
+while (running)                               // once per game tick; the host
+{                                             // is single-threaded by design:
+    foreach (ModRunResult result in host.DispatchTick(gameTick++))
+    {                                         // call it from your main loop only
+        if (!result.Ok)
+        {
+            Console.WriteLine($"{result.ModId}: {result.Message} {result.Details}");
+        }
+    }
+}
+
+ModRunResult? shutdown = host.Unload("hello");
+```
+
+A guest fault never throws: every call outcome is a `ModRunResult`
+(`Ok`, `Trap`, `FuelExhausted`, `Error`). Only load rejection throws,
+as `WasmModLoadException` with the offending mod id. The lists returned
+by the `Dispatch*` methods are owned by the host and are replaced by the
+next dispatch call, so consume or copy them before dispatching again.
+Limits live on `WasmHostConfig` (fuel per call, memory ceiling, module
+size cap) and are validated when the host is constructed. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ABI.md](docs/ABI.md).
+
 ## Safety model
 
 The threat model is "the guest is malicious." Guests cannot read or write

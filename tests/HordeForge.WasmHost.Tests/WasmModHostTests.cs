@@ -70,6 +70,9 @@ namespace HordeForge.WasmHost.Tests
 
                 ModRunResult tick = host.DispatchTick(100).Single();
                 Assert.True(tick.Ok, tick.Message + " " + tick.Details);
+                // Results carry the producing mod's id: event dispatches call
+                // only a subset of mods, so attribution cannot be positional.
+                Assert.Equal("strings", tick.ModId);
 
                 // tick and get_world_time round trip into the log line.
                 Assert.Contains(api.Logs, l => l.Message.Contains("strings tick=100 world=12345"));
@@ -94,6 +97,7 @@ namespace HordeForge.WasmHost.Tests
 
                 ModRunResult first = host.DispatchTick(1).Single();
                 Assert.Equal(ModRunStatus.Trap, first.Status);
+                Assert.Equal("trap", first.ModId);
                 Assert.Contains("trap", first.Message, StringComparison.OrdinalIgnoreCase);
 
                 // A second tick traps again; the host and instance are intact.
@@ -922,6 +926,7 @@ greeting = ""hello""
                 IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin(171, "maci");
                 ModRunResult result = Assert.Single(joins);
                 Assert.True(result.Ok, result.Message + " " + result.Details);
+                Assert.Equal("boss", result.ModId);
                 Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
             }
         }

@@ -72,6 +72,7 @@ namespace HordeForge.WasmHost.Core
         {
             _api = api ?? throw new ArgumentNullException(nameof(api));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            ValidateConfig(config);
 
             var engineConfig = new Wasmtime.Config()
                 .WithFuelConsumption(true)
@@ -82,6 +83,40 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineWasi();
             DefineHostApi();
             _modIdsView = new ReadOnlyCollection<string>(_modOrder);
+        }
+
+        /// <summary>
+        /// Fails fast on a configuration the host can never honor, at
+        /// construction time rather than as per-call fuel exhaustion or
+        /// blanket module rejection later.
+        /// </summary>
+        private static void ValidateConfig(WasmHostConfig config)
+        {
+            if (config.FuelPerCall == 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.FuelPerCall,
+                    "FuelPerCall must be at least 1 instruction; 0 would exhaust every call immediately.");
+            }
+            if (config.StaticMemoryMaximumBytes < (ulong)WasmPageBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.StaticMemoryMaximumBytes,
+                    "StaticMemoryMaximumBytes must be at least one wasm page (" + (ulong)WasmPageBytes + " bytes); " +
+                    "smaller ceilings reject every module.");
+            }
+            if (config.MaxModuleSizeBytes <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.MaxModuleSizeBytes,
+                    "MaxModuleSizeBytes must be positive; zero or negative rejects every module.");
+            }
+            if (config.MaximumStackBytes <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.MaximumStackBytes,
+                    "MaximumStackBytes must be positive.");
+            }
+            if (string.IsNullOrEmpty(config.LogSourcePrefix))
+            {
+                throw new ArgumentException("LogSourcePrefix must be a non-empty source tag for guest log lines.", nameof(config));
+            }
         }
 
         /// <summary>Ids of the currently loaded mods, in load order.</summary>

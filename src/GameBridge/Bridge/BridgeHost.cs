@@ -117,7 +117,9 @@ namespace HordeForge.GameBridge.Bridge
                     {
                         continue;
                     }
-                    string source = "tick/" + (i < ids.Count ? ids[i] : "?");
+                    string source = "tick/" + (results[i].ModId.Length > 0
+                        ? results[i].ModId
+                        : i < ids.Count ? ids[i] : "?");
                     if (DispatchFailureLimiter.TryWrite(source, out _))
                     {
                         // Trap messages and backtraces can embed guest-chosen
@@ -169,7 +171,11 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     if (!result.Ok)
                     {
-                        Log.Out("[WasmHost] on_player_join: " + TextSanitizer.Clean(result.Message) +
+                        // Results are attributed by ModId (join dispatch calls
+                        // only the mods that export the handler, so list index
+                        // does not identify the module).
+                        Log.Out("[WasmHost] on_player_join " + TextSanitizer.Clean(result.ModId) + ": " +
+                                TextSanitizer.Clean(result.Message) +
                                 (result.Details.Length > 0 ? " (" + TextSanitizer.Clean(result.Details) + ")" : ""));
                     }
                 }
