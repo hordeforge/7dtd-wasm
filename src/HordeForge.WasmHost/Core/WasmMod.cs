@@ -6,24 +6,28 @@ using Wasmtime;
 namespace HordeForge.WasmHost.Core
 {
     /// <summary>
-    /// A loaded and instantiated guest mod. One instance per mod id, bound to
-    /// the host's single store. Calls are budgeted with fuel; every call
-    /// returns a <see cref="ModRunResult"/> and never throws for a guest
-    /// fault.
+    /// A loaded and instantiated guest mod. One store, instance, and module
+    /// per mod id (the binding cannot release an instance individually, so
+    /// owning the store is what makes unload reclaim native memory).
+    /// Calls are budgeted with fuel; every call returns a
+    /// <see cref="ModRunResult"/> and never throws for a guest fault.
     /// </summary>
-    public sealed class WasmMod
+    public sealed class WasmMod : IDisposable
     {
         private readonly Store _store;
+        private readonly Module _module;
         private readonly ulong _fuelPerCall;
         private readonly Func<int> _init;
         private readonly Func<int> _tick;
         private readonly Func<int>? _shutdown;
         private readonly Func<int, int>? _onPlayerJoin;
         private readonly Func<int, int, int, int, int>? _onAdminCommand;
+        private bool _disposed;
 
-        internal WasmMod(string id, Store store, ulong fuelPerCall, Instance instance, long initTick)
+        internal WasmMod(string id, Module module, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
             Id = id;
+            _module = module;
             _store = store;
             _fuelPerCall = fuelPerCall;
             InitTick = initTick;
@@ -101,6 +105,22 @@ namespace HordeForge.WasmHost.Core
         public bool HasAdminCommandHandler
         {
             get { return _onAdminCommand != null; }
+        }
+
+        /// <summary>
+        /// Releases the mod's store (its instance and linear memory) and the
+        /// compiled module's native handle. Safe to call more than once;
+        /// callers must have removed the mod from dispatch first.
+        /// </summary>
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+            _store.Dispose();
+            _module.Dispose();
         }
 
         /// <summary>

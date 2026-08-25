@@ -232,6 +232,40 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void RepeatedUnloadReloadCyclesStayHealthy()
+        {
+            // `wasm reload <id>` is the operator iteration loop for guest
+            // authors; every cycle must release the previous generation's
+            // store and module instead of retaining them until host dispose,
+            // and each fresh generation must run init and tick cleanly.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                for (int i = 0; i < 25; i++)
+                {
+                    ModRunResult? unloaded = host.Unload("strings");
+                    if (i > 0)
+                    {
+                        Assert.NotNull(unloaded);
+                        Assert.True(unloaded.GetValueOrDefault().Ok);
+                        Assert.Empty(host.ModIds);
+                    }
+
+                    WasmMod mod = host.LoadModule("strings", Fixture("strings"));
+                    Assert.Single(host.ModIds);
+                    Assert.True(mod.Init().Ok);
+                    Assert.True(host.DispatchTick(i).Single().Ok);
+                }
+
+                // Exactly one shutdown per unloaded generation (the final
+                // generation says goodbye during host Dispose, covered by
+                // DisposeShutsDownAllMods): no cycle may skip or double it.
+                int goodbyes = api.Logs.Count(l => l.Message.Contains("strings fixture shutdown"));
+                Assert.Equal(24, goodbyes);
+            }
+        }
+
+        [Fact]
         public void DisposeShutsDownAllMods()
         {
             var api = new TestGameHostApi();

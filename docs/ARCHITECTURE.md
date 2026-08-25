@@ -23,8 +23,10 @@ auditable embed that enforces hard limits and exposes a narrow game API.
 
 ## Host library (HordeForge.WasmHost)
 
-Owns one Wasmtime engine, one store, and one linker per host instance.
-Single-threaded by design: call it only from the game main loop.
+Owns one Wasmtime engine and linker per host instance, and one store per
+loaded module (unload disposes that module's store, so reload cycles do not
+retain old instances). Single-threaded by design: call it only from the game
+main loop.
 
 - `WasmModHost` builds the engine with `WithFuelConsumption(true)`, a static
   memory ceiling, and a bounded wasm stack; wires WASI preview 1 (stdout and
@@ -86,8 +88,8 @@ for every guest, which keeps modules inside the host caps by construction.
   console commands execute on the telnet/console thread. Every
   `BridgeHost` entry point therefore serializes on one internal gate so
   the single-threaded host library is never touched from two threads at
-  once (a mid-dispatch unload would corrupt the load-order walk, and the
-  one store must not be instantiated into while a guest call runs). The
+  once (a mid-dispatch unload would corrupt the load-order walk, and no
+  store may be instantiated into while a guest call runs). The
   gate can pause a console command until the current dispatch returns;
   both sides are bounded by fuel and module size caps.
 

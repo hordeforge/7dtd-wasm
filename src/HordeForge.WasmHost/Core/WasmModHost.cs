@@ -12,12 +12,12 @@ namespace HordeForge.WasmHost.Core
     /// <summary>
     /// Embeddable WebAssembly mod host for the 7 Days to Die dedicated server.
     ///
-    /// Owns the Wasmtime engine, a single store, and the linker with the
-    /// "hordeforge" host API plus WASI preview1. Modules are loaded per id,
-    /// validated against the configured limits, and driven through the
-    /// documented export surface (on_enable, on_tick, on_player_join,
-    /// on_shutdown). The host is single-threaded by design: call it from
-    /// the game main loop only.
+    /// Owns the Wasmtime engine and the linker with the "hordeforge" host
+    /// API plus WASI preview1; each loaded module gets its own store. Modules
+    /// are loaded per id, validated against the configured limits, and driven
+    /// through the documented export surface (on_enable, on_tick,
+    /// on_player_join, on_shutdown). The host is single-threaded by design:
+    /// call it from the game main loop only.
     ///
     /// Sandbox guarantees: fuel budget per call, hard memory maximum enforced
     /// at load time from the module's declared memory maximum, module size
@@ -34,7 +34,6 @@ namespace HordeForge.WasmHost.Core
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
         private readonly Engine _engine;
-        private readonly Store _store;
         private readonly Linker _linker;
         private readonly Dictionary<string, WasmMod> _mods = new Dictionary<string, WasmMod>(StringComparer.Ordinal);
         // Dispatch happens in load order (documented); Dictionary enumeration
@@ -64,9 +63,10 @@ namespace HordeForge.WasmHost.Core
         private bool _disposed;
 
         /// <summary>
-        /// Creates a host with its own Wasmtime engine, store, and linker.
-        /// The api implementation is called on the caller thread for every
-        /// guest host-API call; see <see cref="Abi.IGameHostApi"/>.
+        /// Creates a host with its own Wasmtime engine and linker; each
+        /// loaded mod gets its own store. The api implementation is called
+        /// on the caller thread for every guest host-API call; see
+        /// <see cref="Abi.IGameHostApi"/>.
         /// </summary>
         public WasmModHost(IGameHostApi api, WasmHostConfig config)
         {
@@ -78,13 +78,6 @@ namespace HordeForge.WasmHost.Core
                 .WithStaticMemoryMaximumSize(config.StaticMemoryMaximumBytes)
                 .WithMaximumStackSize(config.MaximumStackBytes);
             _engine = new Engine(engineConfig);
-            _store = new Store(_engine);
-            if (config.InheritGuestStandardStreams)
-            {
-                _store.SetWasiConfiguration(new WasiConfiguration()
-                    .WithInheritedStandardOutput()
-                    .WithInheritedStandardError());
-            }
             _linker = new Linker(_engine);
             _linker.DefineWasi();
             DefineHostApi();
@@ -183,20 +176,42 @@ namespace HordeForge.WasmHost.Core
 
             ulong fuelPerCall = manifest != null && manifest.FuelPerCall.HasValue ? manifest.FuelPerCall.Value : _config.FuelPerCall;
 
-            Instance instance;
+            // One store per mod: the binding has no per-instance release, so
+            // owning the store is what lets Unload reclaim the instance and
+            // its linear memory instead of retaining every reloaded
+            // generation until the host is disposed.
+            var store = new Store(_engine);
             try
             {
-                instance = _linker.Instantiate(_store, module);
-            }
-            catch (Exception ex)
-            {
-                throw new WasmModLoadException(id, "instantiation failed: " + ex.Message, ex);
-            }
+                if (_config.InheritGuestStandardStreams)
+                {
+                    store.SetWasiConfiguration(new WasiConfiguration()
+                        .WithInheritedStandardOutput()
+                        .WithInheritedStandardError());
+                }
+                Instance instance;
+                try
+                {
+                    instance = _linker.Instantiate(store, module);
+                }
+                catch (Exception ex)
+                {
+                    throw new WasmModLoadException(id, "instantiation failed: " + ex.Message, ex);
+                }
 
-            var mod = new WasmMod(id, _store, fuelPerCall, instance, Tick);
-            _mods.Add(id, mod);
-            _modOrder.Add(id);
-            return mod;
+                var mod = new WasmMod(id, module, store, fuelPerCall, instance, Tick);
+                _mods.Add(id, mod);
+                _modOrder.Add(id);
+                return mod;
+            }
+            catch
+            {
+                // Nothing may outlive a rejected load: the caller's catch
+                // disposes the module; this disposes the freshly created
+                // store so no failed attempt leaves state in the engine.
+                store.Dispose();
+                throw;
+            }
         }
 
         /// <summary>Looks up a loaded mod by id.</summary>
@@ -207,10 +222,11 @@ namespace HordeForge.WasmHost.Core
 
         /// <summary>
         /// Removes a mod, invoking its shutdown export first (fail soft: a
-        /// trapped shutdown still removes the mod). Returns null when the id
-        /// was not loaded; otherwise the shutdown call result (Ok when the
-        /// mod exports no shutdown handler) so callers can surface a failed
-        /// goodbye instead of reporting a clean unload.
+        /// trapped shutdown still removes the mod), then releases its store
+        /// and compiled module. Returns null when the id was not loaded;
+        /// otherwise the shutdown call result (Ok when the mod exports no
+        /// shutdown handler) so callers can surface a failed goodbye instead
+        /// of reporting a clean unload.
         /// </summary>
         public ModRunResult? Unload(string id)
         {
@@ -221,6 +237,7 @@ namespace HordeForge.WasmHost.Core
                 ModRunResult shutdown = mod.Shutdown();
                 _mods.Remove(id);
                 _modOrder.Remove(id);
+                mod.Dispose();
                 return shutdown;
             }
             return null;
@@ -555,8 +572,9 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
-        /// Shuts down every loaded mod (best effort) and releases the engine,
-        /// store, and linker. Safe to call more than once.
+        /// Shuts down every loaded mod (best effort), releases each mod's
+        /// store and compiled module, and releases the engine and linker.
+        /// Safe to call more than once.
         /// </summary>
         public void Dispose()
         {
@@ -570,12 +588,12 @@ namespace HordeForge.WasmHost.Core
                 {
                     _currentModId = mod.Id;
                     mod.Shutdown();
+                    mod.Dispose();
                 }
             }
             _mods.Clear();
             _modOrder.Clear();
             _linker.Dispose();
-            _store.Dispose();
             _engine.Dispose();
             _disposed = true;
         }

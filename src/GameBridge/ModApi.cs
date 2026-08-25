@@ -18,6 +18,11 @@ namespace HordeForge.GameBridge
         /// <summary>True once the host is fully started.</summary>
         public static bool HostStarted { get; private set; }
 
+        // Harmony patches must be applied at most once per process: a second
+        // InitMod would stack duplicate postfixes and dispatch every game
+        // event to guests twice.
+        private static bool _patched;
+
         public void InitMod(Mod _modInstance)
         {
             ModPath = _modInstance?.Path ?? string.Empty;
@@ -48,6 +53,11 @@ namespace HordeForge.GameBridge
         /// </summary>
         private static void ApplyHarmonyPatches()
         {
+            if (_patched)
+            {
+                return;
+            }
+            _patched = true;
             try
             {
                 var harmony = new Harmony("hordeforge.7dtd.wasmhost");

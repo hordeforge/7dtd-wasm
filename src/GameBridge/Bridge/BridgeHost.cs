@@ -18,7 +18,7 @@ namespace HordeForge.GameBridge.Bridge
     /// loop, while "wasm" console commands execute on the telnet/console
     /// thread of the dedicated server. Every entry point therefore takes
     /// <see cref="Gate"/>; the host library itself stays single-threaded per
-    /// its contract (one store must never be touched from two threads, and
+    /// its contract (a store must never be touched from two threads, and
     /// a mid-dispatch unload would throw out of the load-order walk). The
     /// gate can stall a console command until the current dispatch ends;
     /// both sides are bounded (fuel per guest call, module size cap on
@@ -57,6 +57,20 @@ namespace HordeForge.GameBridge.Bridge
         {
             lock (Gate)
             {
+                if (Started)
+                {
+                    Log.Warning("[WasmHost] start ignored: host is already running");
+                    return;
+                }
+                // A previous Start that failed partway leaves a live engine
+                // behind; rebuilding over it without disposal would leak
+                // every module loaded in that attempt.
+                if (_host != null)
+                {
+                    _host.Dispose();
+                    _host = null;
+                }
+
                 // ModApi.ModPath is the modlet folder itself (for example
                 // Mods/1_HordeForge_WasmHost); Native/ lives inside it and
                 // Mods/Wasm is its sibling.
