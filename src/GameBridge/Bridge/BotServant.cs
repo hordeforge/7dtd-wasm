@@ -285,7 +285,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            foreach (int id in new List<int>(_bots))
+            // Removal during enumeration is safe for HashSet<T>: the
+            // enumerator visits the untouched slots, so no defensive copy
+            // is needed (this runs on spawn attempts and warm-up sense
+            // requests, so steady-state allocation-free matters).
+            foreach (int id in _bots)
             {
                 Entity e = game.World.GetEntity(id);
                 if (e == null || !(e is EntityAlive alive) || alive.IsDead())
@@ -313,7 +317,9 @@ namespace HordeForge.GameBridge.Bridge
         {
             if (parts.Length > 2 && parts[2] == "all")
             {
-                foreach (int id in new List<int>(_bots))
+                // Despawn removes from _bots; HashSet tolerates removal
+                // during enumeration (see PruneDeadBots).
+                foreach (int id in _bots)
                 {
                     Despawn(id);
                 }
