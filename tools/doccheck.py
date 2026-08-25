@@ -40,7 +40,10 @@ def walk():
     for path in ROOT.rglob("*"):
         if not path.is_file():
             continue
-        if any(part in SKIP_DIRS or part.startswith(".") and part != ".gitignore" for part in path.relative_to(ROOT).parts):
+        if any(
+            part in SKIP_DIRS or (part.startswith(".") and part != ".gitignore")
+            for part in path.relative_to(ROOT).parts
+        ):
             continue
         # "makefile" sits in the name check, not the suffix set: a file
         # named Makefile has no dot suffix, so it would never match.

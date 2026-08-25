@@ -1,0 +1,32 @@
+# Ruff gate for the Python tooling under tools/. Run via
+# "make check-ci" (which fails loudly when a rule fires); CI installs
+# the same pinned version, so local and remote never disagree.
+#
+# Rule groups are enabled only where the tree already passes them:
+# PL (pylint) still has findings (module-global counters in
+# doccheck.py) and PT assumes pytest conventions while these tests run
+# under unittest, so both stay off until their findings are fixed.
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["tools"]
+
+[tool.ruff.lint]
+select = [
+    "E4",   # pycodestyle errors (imports)
+    "E501", # hard line-length cap at 100 columns
+    "E7",   # pycodestyle: statement-level issues
+    "E9",   # pycodestyle: runtime/syntax errors
+    "F",    # pyflakes: real defects
+    "B",    # flake8-bugbear: bug-prone patterns
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade: keep to the declared floor (3.11)
+    "I",    # import sorting
+    "W",    # pycodestyle warnings
+    "C4",   # flake8-comprehensions
+    "RET",  # flake8-return
+    "ARG",  # unused arguments
+    "ERA",  # commented-out code
+    "PTH",  # use pathlib over os functions
+    "RUF",  # ruff-specific rules
+]

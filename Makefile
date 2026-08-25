@@ -60,7 +60,7 @@ help:
 	@echo "  make build          build the host library and test suite (net8)"
 	@echo "  make test           run the host test suite"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
-	@echo "  make samples-check  guest lint gate (rustc warnings denied)"
+	@echo "  make samples-check  guest lint gate (rustc + clippy denied)"
 	@echo "  make boss           compile the C guest (samples/guest-boss) with zig"
 	@echo "  make boss-zig       compile the Zig guest (samples/guest-boss-zig)"
 	@echo "  make fixtures       rebuild fixtures and copy them into tests/fixtures"
@@ -68,7 +68,7 @@ help:
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
-	@echo "  make check          docs gate + sbom tests + guest lint gate + build + test + bridge-check"
+	@echo "  make check          docs gate + sbom tests + tools lint + guest lint gate + build + test + bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 
@@ -85,10 +85,12 @@ samples:
 	cd samples && $(CARGO) build --release --target wasm32-wasip1
 
 # Guest lint gate: a plain build already fails on any default rustc
-# warning (workspace [lints]); this keeps that gate in make check so
-# guest code cannot regress silently between fixture rebuilds.
+# warning (workspace [lints]); clippy then runs its default set at deny
+# (workspace [lints] clippy all = "deny"). This keeps both gates in make
+# check so guest code cannot regress silently between fixture rebuilds.
 samples-check:
 	cd samples && $(CARGO) build --release --target wasm32-wasip1
+	cd samples && $(CARGO) clippy --release --target wasm32-wasip1
 
 # The C guest (samples/guest-boss) is compiled with zig to wasm32-wasi
 # (preview 1). -nostdlib keeps it free of WASI libc imports; --max-memory
@@ -170,6 +172,7 @@ check-ci: export RESTORE_LOCKED := true
 check-ci:
 	python3 tools/doccheck.py
 	python3 -m unittest discover -s tools
+	ruff check tools
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test

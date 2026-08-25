@@ -29,7 +29,7 @@ welcome; contributions that weaken it are not.
 
 ```bash
 make fixtures     # if you touched samples/ or guests
-make samples-check # guest lint gate: rustc warnings are build errors
+make samples-check # guest lint gate: rustc + clippy warnings are build errors
 make test         # host suite must stay green
 make bridge       # net48 bridge against GAME_DIR
 make bridge-check # game targets must pass after any game update

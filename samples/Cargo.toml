@@ -16,5 +16,13 @@ members = [
 # instead of scrolling by as ignorable noise.
 warnings = "deny"
 
+[workspace.lints.clippy]
+# Same posture for clippy's default set (correctness, suspicious,
+# style, complexity, perf): the tree passes it clean today, so any
+# new clippy diagnostic fails samples-check. Pedantic stays off for
+# now; it still reports ~14 findings (cast truncation, missing
+# backticks, must_use) and enabling it unpassed would break the gate.
+all = "deny"
+
 [profile.release]
 panic = "abort"

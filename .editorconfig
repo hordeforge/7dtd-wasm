@@ -8,6 +8,9 @@ charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+# Two copies of the code fit side by side. Enforced for Python by the
+# ruff gate (E501); rustfmt's default max_width matches for guests.
+max_line_length = 100
 
 [*.cs]
 indent_style = space

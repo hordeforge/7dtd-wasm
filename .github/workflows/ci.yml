@@ -36,16 +36,22 @@ jobs:
       # it: populate the in-project rustup home using the runner's own rustup,
       # so make sees exactly what it expects. The guests are wasm32-wasip1,
       # and the workspace [lints] in samples/Cargo.toml deny every default
-      # rustc warning, which is what makes this compile the guest lint gate.
+      # rustc warning plus clippy's default set, which is what makes this
+      # compile+clippy run the guest lint gate (samples-check).
       - name: Install the guest toolchain into the in-project rustup home
         env:
           RUSTUP_HOME: ${{ github.workspace }}/.rustup
           CARGO_HOME: ${{ github.workspace }}/.cargo
         run: |
-          rustup toolchain install stable --profile minimal --target wasm32-wasip1
+          rustup toolchain install stable --profile minimal --target wasm32-wasip1 --component clippy
           rustup default stable
+      # Pinned to the same ruff version developers run locally via
+      # "ruff check tools" so local and CI never disagree on rule sets.
+      - name: Install ruff (pinned)
+        run: python3 -m pip install --quiet ruff==0.16.4
       # check-ci is the game-free half of check: doccheck, the tools unit
-      # tests, the guest lint gate, the host build, and the host test suite.
+      # tests, the tools lint gate, the guest lint gate, the host build,
+      # and the host test suite.
       # bridge and bridge-check need a dedicated server install and cannot run
       # on a hosted runner; that half is proven on a developer host.
       - run: make check-ci
