@@ -182,6 +182,11 @@ namespace HordeForge.WasmHost.Registry
                 }
                 _pos++;
                 var sb = new StringBuilder();
+                // Tracks an escaped high surrogate waiting for its low half:
+                // JSON strings must be valid Unicode, and a lone surrogate
+                // has no UTF-8 form, so it could never round-trip the guest
+                // string ABI without silent corruption.
+                bool pendingHigh = false;
                 while (true)
                 {
                     if (_pos >= _text.Length)
@@ -191,6 +196,7 @@ namespace HordeForge.WasmHost.Registry
                     char c = _text[_pos++];
                     if (c == '"')
                     {
+                        EndPendingHighOrThrow(ref pendingHigh);
                         return sb.ToString();
                     }
                     if (c == '\\')
@@ -202,14 +208,14 @@ namespace HordeForge.WasmHost.Registry
                         char e = _text[_pos++];
                         switch (e)
                         {
-                            case '"': sb.Append('"'); break;
-                            case '\\': sb.Append('\\'); break;
-                            case '/': sb.Append('/'); break;
-                            case 'b': sb.Append('\b'); break;
-                            case 'f': sb.Append('\f'); break;
-                            case 'n': sb.Append('\n'); break;
-                            case 'r': sb.Append('\r'); break;
-                            case 't': sb.Append('\t'); break;
+                            case '"': AppendPlainUnit(sb, '"', ref pendingHigh); break;
+                            case '\\': AppendPlainUnit(sb, '\\', ref pendingHigh); break;
+                            case '/': AppendPlainUnit(sb, '/', ref pendingHigh); break;
+                            case 'b': AppendPlainUnit(sb, '\b', ref pendingHigh); break;
+                            case 'f': AppendPlainUnit(sb, '\f', ref pendingHigh); break;
+                            case 'n': AppendPlainUnit(sb, '\n', ref pendingHigh); break;
+                            case 'r': AppendPlainUnit(sb, '\r', ref pendingHigh); break;
+                            case 't': AppendPlainUnit(sb, '\t', ref pendingHigh); break;
                             case 'u':
                                 if (_pos + 4 > _text.Length)
                                 {
@@ -224,7 +230,7 @@ namespace HordeForge.WasmHost.Registry
                                     throw new FormatException("bad unicode escape \\u" + hex + " at " + (_pos - 2));
                                 }
                                 _pos += 4;
-                                sb.Append((char)code);
+                                AppendEscapedCodeUnit(sb, (char)code, hex, ref pendingHigh);
                                 break;
                             default:
                                 throw new FormatException("unknown escape \\" + e);
@@ -232,9 +238,50 @@ namespace HordeForge.WasmHost.Registry
                     }
                     else
                     {
-                        sb.Append(c);
+                        AppendPlainUnit(sb, c, ref pendingHigh);
                     }
                 }
+            }
+
+            /// <summary>
+            /// Appends one escaped \uXXXX code unit, enforcing surrogate-pair
+            /// validity through <paramref name="pendingHigh"/>.
+            /// </summary>
+            private static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
+            {
+                if (pendingHigh)
+                {
+                    if (!char.IsLowSurrogate(unit))
+                    {
+                        throw new FormatException("high surrogate escape not followed by a low surrogate escape (got \\u" + hex + ")");
+                    }
+                    pendingHigh = false;
+                }
+                else if (char.IsLowSurrogate(unit))
+                {
+                    throw new FormatException("low surrogate escape \\u" + hex + " without a preceding high surrogate escape");
+                }
+                else
+                {
+                    pendingHigh = char.IsHighSurrogate(unit);
+                }
+                sb.Append(unit);
+            }
+
+            /// <summary>Appends a non-escape code unit; one may not interrupt a pending surrogate pair.</summary>
+            private static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
+            {
+                EndPendingHighOrThrow(ref pendingHigh);
+                sb.Append(unit);
+            }
+
+            private static void EndPendingHighOrThrow(ref bool pendingHigh)
+            {
+                if (pendingHigh)
+                {
+                    throw new FormatException("high surrogate escape not followed by a low surrogate escape");
+                }
+                pendingHigh = false;
             }
 
             private JsonNumber ParseNumber()

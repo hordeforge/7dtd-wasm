@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 
 namespace HordeForge.GameBridge.Bridge
 {
@@ -8,11 +9,19 @@ namespace HordeForge.GameBridge.Bridge
     /// wasm.toml) behind a hard size bound. These are tiny config files by
     /// nature; anything at or beyond the bound is rejected instead of being
     /// slurped into memory wholesale.
+    ///
+    /// Decoding is explicitly UTF-8 with an invalid-byte fallback that
+    /// throws (TOML and JSON both mandate UTF-8): a file in any other
+    /// encoding fails its load with a clear reason instead of silently
+    /// corrupting setting values into U+FFFD before they are served to
+    /// guests.
     /// </summary>
     internal static class ManifestFiles
     {
         /// <summary>Maximum accepted manifest file size (1 MiB).</summary>
         public const long MaxBytes = 1024 * 1024;
+
+        private static readonly Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
         /// <summary>
         /// Reads the whole file when it exists, is readable, and fits the
@@ -38,7 +47,7 @@ namespace HordeForge.GameBridge.Bridge
                     failureReason = "the file is larger than " + MaxBytes + " bytes";
                     return false;
                 }
-                content = File.ReadAllText(path);
+                content = File.ReadAllText(path, StrictUtf8);
                 return true;
             }
             catch (Exception ex)

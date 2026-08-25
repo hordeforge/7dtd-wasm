@@ -32,7 +32,7 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 | `tick` | `() -> i64` | Current game tick. The bridge maintains a monotonic counter incremented once per game tick (20 TPS on the dedicated server); `GameTimer.ticks` reads 0 on the dedicated server, so it is not used. Same name as zdtd's `tick()` |
 | `get_world_time` | `() -> i64` | World time in game minutes, 0 when no world is loaded |
 | `get_setting` | `(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Read a setting (per-mod settings win over shared; see docs/CONFIG.md). Returns written byte count, -1 not found, -2 buffer too small |
-| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 characters are rejected |
+| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 Unicode code points are rejected (an emoji counts as one) |
 | `get_join_player_name` | `(out_ptr: i32, out_cap: i32) -> i32` | During an `on_player_join` call: the joining player's name written into the guest buffer. Returns byte count, -1 no event, -2 buffer too small |
 
 Strings are passed as `(pointer, length)` pairs into the **guest's own

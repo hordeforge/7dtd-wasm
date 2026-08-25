@@ -47,7 +47,11 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Rate limiter for get_world_time failure logs; exposed for "wasm status".</summary>
         public GuestRateLimiter WorldTimeErrorLimiter { get; }
 
-        /// <summary>Longest chat message accepted from a guest, in characters.</summary>
+        /// <summary>
+        /// Longest chat message accepted from a guest, counted in Unicode
+        /// code points so an astral-plane character (emoji and friends,
+        /// two UTF-16 units each) costs one like any other character.
+        /// </summary>
         public const int MaxChatMessageLength = 256;
 
         public void Log(string source, int level, string message)
@@ -173,7 +177,9 @@ namespace HordeForge.GameBridge.Bridge
                 // A guest must not push arbitrarily large strings into the
                 // chat broadcast; oversized messages are rejected outright
                 // (visible to the guest author) instead of silently cut.
-                if (message == null || message.Length > MaxChatMessageLength)
+                // Counted in code points, not string.Length (UTF-16 units):
+                // a 130-emoji message is 130 characters and 260 units.
+                if (message == null || CountCodePoints(message) > MaxChatMessageLength)
                 {
                     return false;
                 }
@@ -196,6 +202,20 @@ namespace HordeForge.GameBridge.Bridge
                 global::Log.Warning("[WasmHost] send_chat failed: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>Number of Unicode code points in <paramref name="text"/> (surrogate pairs count once).</summary>
+        private static int CountCodePoints(string text)
+        {
+            int count = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (!char.IsLowSurrogate(text[i]))
+                {
+                    count++;
+                }
+            }
+            return count;
         }
     }
 }

@@ -83,11 +83,19 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("line " + (i + 1) + ": invalid key '" + key + "'");
                 }
-                if (current.HasKey(key))
+                // Quoted keys are TOML strings: unwrap them so "boss_name"
+                // and boss_name define the same key instead of one carrying
+                // its quote characters into every lookup.
+                string keyName = key[0] == '"' || key[0] == '\'' ? ParseString(key, i + 1) : key;
+                if (keyName.Length == 0)
                 {
-                    throw new FormatException("line " + (i + 1) + ": duplicate key '" + key + "' in this table");
+                    throw new FormatException("line " + (i + 1) + ": invalid key '" + key + "'");
                 }
-                current.Add(key, ParseValue(valueText, i + 1));
+                if (current.HasKey(keyName))
+                {
+                    throw new FormatException("line " + (i + 1) + ": duplicate key '" + keyName + "' in this table");
+                }
+                current.Add(keyName, ParseValue(valueText, i + 1));
             }
             return root;
         }
@@ -165,6 +173,19 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("line " + lineNumber + ": empty table header part");
                 }
+                // Quoted header parts are TOML strings: unwrap them so
+                // ["settings"] and [settings] name the same table. A part
+                // that starts a quote must close it (dotted keys inside a
+                // quoted name stay unsupported, matching this parser's
+                // documented subset).
+                if (name[0] == '"' || name[0] == '\'')
+                {
+                    name = ParseString(name, lineNumber);
+                    if (name.Length == 0)
+                    {
+                        throw new FormatException("line " + lineNumber + ": empty table header part");
+                    }
+                }
                 parts.Add(name);
             }
             return parts.ToArray();
@@ -233,11 +254,17 @@ namespace HordeForge.WasmHost.Registry
                 return body; // literal string, no escapes
             }
             var sb = new StringBuilder();
+            // Tracks an escaped high surrogate waiting for its low half:
+            // TOML strings must be valid Unicode, and a lone surrogate has
+            // no UTF-8 form, so it could never round-trip the guest string
+            // ABI without silent corruption.
+            bool pendingHigh = false;
             for (int i = 0; i < body.Length; i++)
             {
                 char c = body[i];
                 if (c != '\\')
                 {
+                    EndPendingHighOrThrow(ref pendingHigh);
                     sb.Append(c);
                     continue;
                 }
@@ -247,11 +274,11 @@ namespace HordeForge.WasmHost.Registry
                 }
                 switch (body[i])
                 {
-                    case '"': sb.Append('"'); break;
-                    case '\\': sb.Append('\\'); break;
-                    case 'n': sb.Append('\n'); break;
-                    case 'r': sb.Append('\r'); break;
-                    case 't': sb.Append('\t'); break;
+                    case '"': AppendPlainUnit(sb, '"', ref pendingHigh); break;
+                    case '\\': AppendPlainUnit(sb, '\\', ref pendingHigh); break;
+                    case 'n': AppendPlainUnit(sb, '\n', ref pendingHigh); break;
+                    case 'r': AppendPlainUnit(sb, '\r', ref pendingHigh); break;
+                    case 't': AppendPlainUnit(sb, '\t', ref pendingHigh); break;
                     case 'u':
                         if (i + 4 >= body.Length)
                         {
@@ -265,14 +292,56 @@ namespace HordeForge.WasmHost.Registry
                         {
                             throw new FormatException("line " + lineNumber + ": bad unicode escape \\u" + hex);
                         }
-                        sb.Append((char)code);
+                        AppendEscapedCodeUnit(sb, (char)code, hex, ref pendingHigh);
                         i += 4;
                         break;
                     default:
                         throw new FormatException("line " + lineNumber + ": unknown escape \\" + body[i]);
                 }
             }
+            EndPendingHighOrThrow(ref pendingHigh);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Appends one escaped \uXXXX code unit, enforcing surrogate-pair
+        /// validity through <paramref name="pendingHigh"/>.
+        /// </summary>
+        private static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
+        {
+            if (pendingHigh)
+            {
+                if (!char.IsLowSurrogate(unit))
+                {
+                    throw new FormatException("high surrogate escape not followed by a low surrogate escape (got \\u" + hex + ")");
+                }
+                pendingHigh = false;
+            }
+            else if (char.IsLowSurrogate(unit))
+            {
+                throw new FormatException("low surrogate escape \\u" + hex + " without a preceding high surrogate escape");
+            }
+            else
+            {
+                pendingHigh = char.IsHighSurrogate(unit);
+            }
+            sb.Append(unit);
+        }
+
+        /// <summary>Appends a non-escape code unit; one may not interrupt a pending surrogate pair.</summary>
+        private static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
+        {
+            EndPendingHighOrThrow(ref pendingHigh);
+            sb.Append(unit);
+        }
+
+        private static void EndPendingHighOrThrow(ref bool pendingHigh)
+        {
+            if (pendingHigh)
+            {
+                throw new FormatException("high surrogate escape not followed by a low surrogate escape");
+            }
+            pendingHigh = false;
         }
 
         private static TomlArray ParseArray(string text, int lineNumber, int depth)
