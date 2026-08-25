@@ -27,6 +27,15 @@ namespace HordeForge.WasmHost.Tests
         /// <summary>When true, WriteSenseSnapshot throws like a broken game-side service.</summary>
         public bool SenseThrows { get; set; }
 
+        /// <summary>When true, SendChat refuses the message like a chat filter hit.</summary>
+        public bool RejectChats { get; set; }
+
+        /// <summary>When true, Log throws like a broken logging backend.</summary>
+        public bool LogThrows { get; set; }
+
+        /// <summary>Mod ids that reached TryQueueCommand, in call order.</summary>
+        public List<string> QueueSources { get; } = new List<string>();
+
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
@@ -36,6 +45,10 @@ namespace HordeForge.WasmHost.Tests
 
         public void Log(string source, int level, string message)
         {
+            if (LogThrows)
+            {
+                throw new InvalidOperationException("log backend exploded");
+            }
             Logs.Add((source, level, message));
         }
 
@@ -58,12 +71,17 @@ namespace HordeForge.WasmHost.Tests
 
         public bool SendChat(string message)
         {
+            if (RejectChats)
+            {
+                return false;
+            }
             Chats.Add(message);
             return true;
         }
 
         public bool TryQueueCommand(string modId, string command)
         {
+            QueueSources.Add(modId);
             QueuedCommands.Add(command);
             return true;
         }

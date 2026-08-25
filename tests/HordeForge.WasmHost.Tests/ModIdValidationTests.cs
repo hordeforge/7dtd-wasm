@@ -19,6 +19,9 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("fps_bot")]
         [InlineData("Mod.Name")]
         [InlineData("a b")]
+        // First non-control code point after DEL and the C1 block.
+        [InlineData("\u00a0nbsp")]
+        [InlineData("café")]
         public void PlainFolderNamesAreValid(string id)
         {
             Assert.True(ModId.IsValid(id));
@@ -37,7 +40,10 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("x\ty")]
         [InlineData("x\ry")]
         [InlineData("\u001b[31mred")]
+        // C1 range boundaries: lowest and highest control code both rejected.
+        [InlineData("\u0080")]
         [InlineData("\u009b31mcsi")]
+        [InlineData("trailing\u009f")]
         [InlineData("trailing\u007f")]
         public void UnsafeIdsAreRejected(string? id)
         {

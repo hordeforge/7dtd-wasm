@@ -244,6 +244,86 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void DisposeIsIdempotentAndRejectsFurtherUse()
+        {
+            // Dispose is documented as safe to call more than once; every
+            // other entry point must refuse a disposed host instead of
+            // touching the released engine.
+            var (host, _) = NewHost();
+            host.LoadModule("strings", Fixture("strings"));
+            host.Dispose();
+            host.Dispose(); // second call is a no-op
+
+            Assert.Throws<ObjectDisposedException>(() => host.LoadModule("again", Fixture("strings")));
+            Assert.Throws<ObjectDisposedException>(() => host.DispatchInit());
+            Assert.Throws<ObjectDisposedException>(() => host.DispatchTick(1));
+            Assert.Throws<ObjectDisposedException>(() => host.DispatchPlayerJoin(1, "maci"));
+            Assert.Throws<ObjectDisposedException>(() => host.Unload("strings"));
+        }
+
+        [Fact]
+        public void HostApiFailureDuringCallIsReportedNotThrown()
+        {
+            // A host-side fault inside an import (here: the logging backend)
+            // must come back as a per-mod Error result. It must never escape
+            // DispatchTick and stop the game loop, and the mod stays usable
+            // once the backend recovers.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("strings", Fixture("strings"));
+                host.DispatchInit();
+
+                api.LogThrows = true;
+                ModRunResult failed = host.DispatchTick(1).Single();
+                Assert.Equal(ModRunStatus.Error, failed.Status);
+                Assert.Contains("on_tick", failed.Message);
+                api.LogThrows = false;
+
+                ModRunResult recovered = host.DispatchTick(2).Single();
+                Assert.True(recovered.Ok, recovered.Message + " " + recovered.Details);
+                Assert.Contains(api.Logs, l => l.Message.Contains("strings tick=2 world="));
+            }
+        }
+
+        [Fact]
+        public void ChatRejectionReachesGuestAsChatRejected()
+        {
+            // send_chat must forward the host's refusal (ChatRejected) so
+            // the guest can react; the strings fixture logs a warning.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.RejectChats = true;
+                host.LoadModule("strings", Fixture("strings"));
+                host.DispatchInit();
+                Assert.True(host.DispatchTick(1).Single().Ok);
+                Assert.Empty(api.Chats);
+                Assert.Contains(api.Logs, l =>
+                    l.Level == AbiConstants.LogWarn &&
+                    l.Message.Contains("strings chat rejected"));
+            }
+        }
+
+        [Fact]
+        public void SettingLargerThanGuestBufferReportsTooSmall()
+        {
+            // A setting longer than the guest's output buffer must come back
+            // as SettingBufferTooSmall (guest sees "no value"), not truncate
+            // silently or overflow guest memory.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.Settings["welcome"] = new string('x', 300);
+                host.LoadModule("strings", Fixture("strings")); // guest buffer: 256 bytes
+                host.DispatchInit();
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.True(tick.Ok, tick.Message + " " + tick.Details);
+                Assert.Contains(api.Logs, l => l.Message.Contains("setting=''"));
+            }
+        }
+
+        [Fact]
         public void LoadOrderIsDispatchOrder()
         {
             var (host, _) = NewHost();
@@ -392,6 +472,18 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void TomlScalarSettingsRenderAsStrings()
+        {
+            // Numbers and booleans in [settings] are served to guests as
+            // their invariant string form through get_setting.
+            ModManifest m = ModManifest.ParseToml(
+                "[settings]\ncount = 3\nratio = 1.5\nflag = true\n", "x");
+            Assert.Equal("3", m.Settings["count"]);
+            Assert.Equal("1.5", m.Settings["ratio"]);
+            Assert.Equal("true", m.Settings["flag"]);
+        }
+
+        [Fact]
         public void TomlManifestDefaultsAndUnknownKeys()
         {
             ModManifest m = ModManifest.ParseToml("name = \"x\"\n[future]\nflag = true\n", "x");
@@ -513,6 +605,10 @@ greeting = ""hello""
                 }
                 Assert.Contains(api.QueuedCommands, c => c.StartsWith("bot look 900"));
                 Assert.Contains(api.QueuedCommands, c => c.StartsWith("bot shoot 900 42"));
+                // The queue import must carry the calling mod id: bridge-side
+                // rate caps and attribution key on it.
+                Assert.NotEmpty(api.QueueSources);
+                Assert.All(api.QueueSources, id => Assert.Equal("fps-bot", id));
             }
         }
 
