@@ -3,7 +3,11 @@ name: release
 # Tag-driven releases (hordeforge/.github REPOSITORY_STANDARDS.md, §8): a
 # vX.Y.Z tag must agree with the version this repository actually ships, so a
 # mistyped or forgotten bump is rejected instead of becoming a release nobody
-# can reproduce.
+# can reproduce. The version lives in three places (the game modlet manifest,
+# the publishable library manifest, and the newest released changelog
+# section); all three are checked here, and tools/versioncheck.py enforces
+# the same agreement on every "make check" so drift cannot accumulate
+# between tags.
 #
 # The mod archive is deliberately NOT built here. `make package` compiles
 # against the dedicated server's own assemblies, which a hosted runner does
@@ -26,20 +30,51 @@ jobs:
       # Actions pinned by full commit SHA (tag in comment) so a moved tag or a
       # compromised major-version release cannot inject code into the pipeline.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - name: Check the tag matches src/GameBridge/ModInfo.xml
+      - name: Check the tag matches every shipped version declaration
         shell: bash
         run: |
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
-          MANIFEST="src/GameBridge/ModInfo.xml"
           case "$TAG" in v*) ;; *) echo "ERROR: tag '$TAG' does not start with 'v'" >&2; exit 1;; esac
-          SHIPPED="$(sed -n 's/.*<Version[^>]*value="\([^"]*\)".*/\1/p' "$MANIFEST" | head -1)"
+          WANT="${TAG#v}"
+          MODINFO="src/GameBridge/ModInfo.xml"
+          CSPROJ="src/HordeForge.WasmHost/HordeForge.WasmHost.csproj"
+          CHANGELOG="CHANGELOG.md"
+
+          SHIPPED="$(sed -n 's/.*<Version[^>]*value="\([^"]*\)".*/\1/p' "$MODINFO" | head -1)"
           if [ -z "$SHIPPED" ]; then
-            echo "ERROR: no <Version value=\"...\"> found in $MANIFEST" >&2
+            echo "ERROR: no <Version value=\"...\"> found in $MODINFO" >&2
             exit 1
           fi
-          if [ "$SHIPPED" != "${TAG#v}" ]; then
-            echo "ERROR: tag $TAG but $MANIFEST ships $SHIPPED; make them match before tagging" >&2
+          if [ "$SHIPPED" != "$WANT" ]; then
+            echo "ERROR: tag $TAG but $MODINFO ships $SHIPPED; make them match before tagging" >&2
             exit 1
           fi
-          echo "ok: tag $TAG matches $MANIFEST ($SHIPPED)"
+
+          # The literal <Version> element only; <PackageReference Version=...>
+          # and <LangVersion> cannot match this pattern.
+          PACKAGE="$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' "$CSPROJ" | head -1)"
+          if [ -z "$PACKAGE" ]; then
+            echo "ERROR: no <Version>...</Version> found in $CSPROJ" >&2
+            exit 1
+          fi
+          if [ "$PACKAGE" != "$WANT" ]; then
+            echo "ERROR: tag $TAG but $CSPROJ ships $PACKAGE; make them match before tagging" >&2
+            exit 1
+          fi
+
+          # Newest released section ("## Unreleased" has no bracket, so it is
+          # skipped); a tag without its changelog section is not a release.
+          # [^]] is the POSIX way to write "any character but ]": inside a
+          # bracket expression a backslash is never special, so [^\]] would
+          # parse as "not backslash" plus a literal ']'.
+          NOTES="$(grep -m1 -E '^## \[' "$CHANGELOG" | sed -E 's/^## \[([^]]+)\].*/\1/')"
+          if [ -z "$NOTES" ]; then
+            echo "ERROR: no '## [X.Y.Z]' release section found in $CHANGELOG" >&2
+            exit 1
+          fi
+          if [ "$NOTES" != "$WANT" ]; then
+            echo "ERROR: tag $TAG but the newest released section in $CHANGELOG is [$NOTES]; cut the changelog section before tagging" >&2
+            exit 1
+          fi
+          echo "ok: tag $TAG matches $MODINFO, $CSPROJ, and the newest released $CHANGELOG section ($WANT)"

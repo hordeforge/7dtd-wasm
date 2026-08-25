@@ -172,6 +172,7 @@ check: check-ci
 check-ci: export RESTORE_LOCKED := true
 check-ci:
 	python3 tools/doccheck.py
+	python3 tools/versioncheck.py
 	python3 -m unittest discover -s tools
 	ruff check tools
 	$(MAKE) samples-check

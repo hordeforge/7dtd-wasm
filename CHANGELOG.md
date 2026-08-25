@@ -6,30 +6,38 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
-### Changed
+Next release ships as 0.2.0: this cycle changes the public C# surface of
+the host library and the bridge (marked below). In this project's 0.x
+scheme the minor digit carries breaking changes and the patch digit never
+does, so any 0.1.x remains safe to take without reading further.
+
+### Changed (breaking)
 
 - Guest rate limiters bind their cap at construction
   (`new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond)`) and
   `TryWrite` lost its per-call override parameter, so a limiter's cap can
   no longer drift from its call sites. The generic `GameHostApi.RateLimiter`
   property is renamed `LogLimiter`, matching its siblings.
-- `NativeAssets.StageNativeLibrary` stages from the newest installed
-  Wasmtime NuGet package instead of a hard-coded version string, matching
-  what `make dist` already does from the lock file.
-- Named the zdtd queue/query result codes in `AbiConstants`
-  (`QueueAccepted`, `QueueRejected`, `QueryNoAnswer`,
-  `QueryBufferTooSmall`); no wire change (docs/ABI.md unchanged).
 - Sense requests (`zdtd.sense`) are now rate capped per module
   (200/second, same reasoning as the SimCommand cap): building a snapshot
   scans the live world entity list on the host side, work the wasm fuel
   budget never sees, so an unbounded import loop could multiply that scan
   past the tick budget. Capped requests report "no world data" (0) and the
   drops surface in `wasm status`. `IGameHostApi.WriteSenseSnapshot` now
-  receives the calling mod id so implementations can attribute and cap.
+  receives the calling mod id so implementations can attribute and cap;
+  implementers of the interface must add the parameter.
 - `WasmModHost.DispatchPlayerJoin` takes the entity id as `int` (the wire
   type of `on_player_join`); the previous `long` parameter forced a silent
   narrowing cast on every caller.
 
+### Changed
+
+- `NativeAssets.StageNativeLibrary` stages from the newest installed
+  Wasmtime NuGet package instead of a hard-coded version string, matching
+  what `make dist` already does from the lock file.
+- Named the zdtd queue/query result codes in `AbiConstants`
+  (`QueueAccepted`, `QueueRejected`, `QueryNoAnswer`,
+  `QueryBufferTooSmall`); no wire change (docs/ABI.md unchanged).
 - Dependency audit pass: test stack moved to the newest serviced pins
   (`Microsoft.NET.Test.Sdk` 17.14.1, `xunit` 2.9.3; runner stays 2.8.2,
   the correct pairing for xunit 2.x). `Wasmtime` stays at 44.0.0: that is
@@ -40,6 +48,13 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Added
 
+- Release consistency gate (`tools/versioncheck.py`, part of `make check`
+  and the tools unit tests): the three shipped-version declarations
+  (`src/GameBridge/ModInfo.xml`, `<Version>` in the host library csproj,
+  and the newest released `## [X.Y.Z]` changelog section) must agree, and
+  the release workflow now checks all three against the tag instead of
+  only ModInfo.xml. Also fixed the first real drift this gate exists for:
+  ModInfo.xml still said 0.1.0 while the repository ships 0.1.5.
 - `ModRunResult.ModId`: dispatch results now carry the registry id of the
   mod that produced them, plus a matching constructor overload. Attribution
   can no longer depend on list position, which was already impossible for
