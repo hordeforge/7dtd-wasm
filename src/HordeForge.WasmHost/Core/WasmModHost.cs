@@ -173,6 +173,19 @@ namespace HordeForge.WasmHost.Core
             {
                 RequireExportSignature(module, id, AbiConstants.ExportPlayerJoin, new[] { ValueKind.Int32 }, new[] { ValueKind.Int32 });
             }
+            // Optional exports must be validated too: resolution later is a
+            // typed lookup that returns null on any mismatch, so a
+            // wrong-signature handler would otherwise be dropped silently and
+            // the guest would run without its shutdown or admin hook.
+            if (HasExport(module, AbiConstants.ExportShutdown))
+            {
+                RequireExportSignature(module, id, AbiConstants.ExportShutdown, Array.Empty<ValueKind>(), new[] { ValueKind.Int32 }, allowVoidResult: true);
+            }
+            if (HasExport(module, AbiConstants.ExportAdminCommand))
+            {
+                RequireExportSignature(module, id, AbiConstants.ExportAdminCommand,
+                    new[] { ValueKind.Int32, ValueKind.Int32, ValueKind.Int32, ValueKind.Int32 }, new[] { ValueKind.Int32 });
+            }
 
             ulong fuelPerCall = manifest != null && manifest.FuelPerCall.HasValue ? manifest.FuelPerCall.Value : _config.FuelPerCall;
 

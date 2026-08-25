@@ -47,7 +47,13 @@ namespace HordeForge.GameBridge.Bridge
         private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
         private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
         private int _countFloor = DefaultBotCount;
-        private bool _spawned;
+
+        // Minimum interval between floor top-up passes. EnsureSpawned runs
+        // from every sense request; without the throttle a world where
+        // spawning persistently fails (entity cap reached, shutdown in
+        // progress) would retry and warn at sense rate.
+        private const int TopUpIntervalMs = 1000;
+        private int _lastTopUpMs = int.MinValue;
 
         /// <summary>
         /// Creates the servant. <paramref name="tickProvider"/> supplies the
@@ -207,29 +213,33 @@ namespace HordeForge.GameBridge.Bridge
 
         private void EnsureSpawned()
         {
-            if (_spawned)
-            {
-                return;
-            }
             var game = GameManager.Instance;
             if (game == null || game.World == null)
             {
                 return; // world not loaded yet; retry on the next call
             }
-            // Spawn defensively and retry: the world is not ready to host
-            // entities during world creation (the game's own EAIManager can
-            // NRE). Top up to the configured floor instead of re-running the
-            // full batch, so a partially failed round cannot stack another
-            // batch on top of the bots that already spawned; _spawned latches
-            // only once the floor is met.
+            // Top up to the configured floor on every pass, not only once:
+            // bots die in the world and a raised "bot count N" must take
+            // effect without an explicit spawn command. Throttled (see
+            // TopUpIntervalMs) and idempotent, so calling it per sense
+            // request costs nothing in steady state. Unchecked int
+            // subtraction stays correct across TickCount wraparound (same
+            // reasoning as GuestRateLimiter).
+            int nowMs = Environment.TickCount;
+            if (_lastTopUpMs != int.MinValue && nowMs - _lastTopUpMs < TopUpIntervalMs)
+            {
+                return;
+            }
+            _lastTopUpMs = nowMs;
+            // Spawn defensively: the world is not ready to host entities
+            // during world creation (the game's own EAIManager can NRE), so
+            // every attempt is guarded inside SpawnOne and a partially failed
+            // round is repaired by the next pass instead of stacking another
+            // batch on top of the bots that already spawned.
             int target = Math.Min(_countFloor, MaxBotCount);
             PruneDeadBots();
             while (_bots.Count < target && SpawnOne())
             {
-            }
-            if (_bots.Count >= target)
-            {
-                _spawned = true;
             }
         }
 

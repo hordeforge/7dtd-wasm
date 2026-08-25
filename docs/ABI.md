@@ -50,6 +50,10 @@ it. No host pointer is ever handed to a guest.
 | `on_shutdown` | `() -> i32` | no | Called on unload and host dispose |
 | `on_player_join` | `(entity_id: i32) -> i32` | no | Called when a player spawns into the world; fetch the name via the `get_join_player_name` import |
 
+An optional export that is present must have exactly this signature
+(`on_shutdown` may return void for zdtd-style plugins); any other shape is
+rejected at load time rather than silently dropping the handler.
+
 Export status codes: 0 ok, 1 not implemented, 2 internal error. When
 verdict-style hooks are added (deny/adjust events), they will follow the
 zdtd convention: <0 deny, 0 keep, >0 percent-adjust.

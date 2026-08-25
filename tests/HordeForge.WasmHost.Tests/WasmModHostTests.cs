@@ -195,6 +195,61 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void WrongSignatureOptionalExportIsRejected()
+        {
+            // An optional export that is present must match its documented
+            // signature: the typed lookup would otherwise drop the handler
+            // silently and the guest would run without it.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                    "(func (export \"on_shutdown\") (param f32) (result i32) i32.const 0)");
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("badshutdown", wasm));
+                Assert.Contains("unexpected signature", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void WrongSignatureAdminCommandIsRejected()
+        {
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                    "(func (export \"on_admin_command\") (result i32) i32.const 0)");
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("badadmin", wasm));
+                Assert.Contains("unexpected signature", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void VoidOptionalShutdownLoadsLikeZdtdPlugins()
+        {
+            // zdtd plugins export void hooks; a conforming optional export
+            // must keep loading (the fps_bot fixture covers the same path).
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                    "(func (export \"on_shutdown\"))");
+                host.LoadModule("voidshutdown", wasm);
+            }
+        }
+
+        /// <summary>Compiles inline WAT to module bytes for load-validation tests.</summary>
+        private static byte[] WatModule(string funcs)
+        {
+            return Wasmtime.Module.ConvertText("(module " + funcs + ")");
+        }
+
+        [Fact]
         public void RegistryTracksLoadUnloadAndDuplicates()
         {
             var (host, api) = NewHost();
