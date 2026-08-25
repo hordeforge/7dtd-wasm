@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: the pipeline only needs to read the code.
+permissions:
+  contents: read
+
+# One run per ref: a fresh push cancels the superseded in-progress run
+# instead of queueing duplicate parallel jobs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The Makefile defaults CARGO to the in-project rustup toolchain, which
+      # is gitignored and absent here; the runner's own cargo is used instead.
+      CARGO: cargo
+    steps:
+      # Actions pinned by full commit SHA (tag in comment) so a moved tag or a
+      # compromised major-version release cannot inject code into the pipeline.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: "8.0.x"
+      # The guests are wasm32-wasip1; the workspace [lints] in
+      # samples/Cargo.toml deny every default rustc warning, so this compile
+      # is the guest lint gate.
+      - run: rustup target add wasm32-wasip1
+      # check-ci is the game-free half of check: doccheck, the tools unit
+      # tests, the guest lint gate, the host build, and the host test suite.
+      # bridge and bridge-check need a dedicated server install and cannot run
+      # on a hosted runner; that half is proven on a developer host.
+      - run: make check-ci
