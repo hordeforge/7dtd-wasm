@@ -334,6 +334,28 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
+        /// Runs one module's on_enable with the caller identity set to that
+        /// module. Callers that initialize a single freshly loaded mod (the
+        /// start scan, "wasm load", "wasm reload") run outside a dispatch
+        /// walk, and every host import (get_setting, log source tags)
+        /// resolves against the calling mod's id, so it must be set here and
+        /// not inherited from whichever mod the last dispatch touched.
+        /// Returns false when no module with this id is loaded.
+        /// </summary>
+        public bool TryInit(string id, out ModRunResult result)
+        {
+            ThrowIfDisposed();
+            if (!_mods.TryGetValue(id, out WasmMod? mod))
+            {
+                result = default;
+                return false;
+            }
+            _currentModId = mod.Id;
+            result = mod.Init();
+            return true;
+        }
+
+        /// <summary>
         /// Notifies every loaded mod that a player spawned into the world.
         /// Only mods that export the optional on_player_join handler are
         /// called; the player name is available to them through the
