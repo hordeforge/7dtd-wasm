@@ -1,0 +1,26 @@
+[playtest-orch] config: server=stock suite=parachute port=26900 admin_port=8081 timeout_sec=500 world=Navezgane game_name=PlaytestNav logdir=/home/maci/Desktop/hordeforge/7dtd-wasm/evidence/playtest-1 fresh_save=True no_server=True fixtures=True telnet_password=legacy-attach-default
+[playtest-orch] client install /home/maci/.local/share/Steam/steamapps/common/7 Days To Die
+[playtest-orch] client log /home/maci/.local/share/Steam/steamapps/compatdata/251570/pfx/drive_c/users/steamuser/AppData/Roaming/7DaysToDie/logs/output_log_client_7dtd_connect.txt
+[playtest-orch] playtest lock acquired session=playtest-20260829-193101-21359eff0850 file=/home/maci/.cache/7dtd-playtest/playtest_running (exclusive client+server runtime)
+[playtest-orch] cleaning prior dedicated / client / zdtd
+[playtest-orch] start client role=scenario suite=parachute connect=127.0.0.1:26900
+[playtest-orch] client mute: on (opt-out CLIENT_MUTE=0); polling up to 60s
+[playtest-orch] progress: 2026-08-30T03:31:27 16.776 INF [7dtd-fastconnect] boot hb ticks=15588 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:31:37 26.776 INF [7dtd-fastconnect] boot hb ticks=31316 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:31:47 36.777 INF [7dtd-fastconnect] boot hb ticks=47814 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:31:57 46.778 INF [7dtd-fastconnect] boot hb ticks=64192 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:32:07 56.779 INF [7dtd-fastconnect] boot hb ticks=81643 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:32:17 66.779 INF [7dtd-fastconnect] boot hb ticks=102955 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:32:27 76.780 INF [7dtd-fastconnect] boot hb ticks=125000 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] progress: 2026-08-30T03:32:37 86.780 INF [7dtd-fastconnect] boot hb ticks=146686 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+[playtest-orch] client exited before DONE; failing instead of waiting out the timeout
+[playtest-orch] report → /home/maci/Desktop/hordeforge/7dtd-wasm/evidence/playtest-1/report-1788031861.json
+[playtest-orch] junit → /home/maci/Desktop/hordeforge/7dtd-wasm/evidence/playtest-1/junit-1788031987.xml
+[playtest-orch] FAIL harness: no DONE from primary playtest mod
+[playtest-orch] client log '7dtd-playtest' (13): ['2026-08-30T03:31:12 2.194 INF [7dtd-playtest] queue cases=2', '2026-08-30T03:31:12 2.194 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"queue cases=2"}', "d code in mod '7dtd-playtest' in assembly 7dtd-playtest (in Z:\\home\\maci\\.local\\share\\Steam\\steamapps\\common\\7 Days To Die\\Mods\\7dtd-playtest\\7dtd-playtest.dll)"]
+[playtest-orch] client log '7dtd-fastconnect' (35): ['2026-08-30T03:32:32 81.780 INF [7dtd-fastconnect] boot hb ticks=135883 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done', '2026-08-30T03:32:37 86.780 INF [7dtd-fastconnect] boot hb ticks=146686 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done', '2026-08-30T03:32:42 91.781 INF [7dtd-fastconnect] boot hb ticks=157020 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done']
+[playtest-orch] client log 'InitMod' (2): ['0T03:31:12 2.031 INF [7dtd-fastconnect] InitMod v0.11.0 (connect/join only; playtest is 7dtd-playtest); diag OFF (`diag on/off/status`, or 7DTD_CONNECT_DEBUG=1)', '2026-08-30T03:31:12 2.137 INF [7dtd-playtest] InitMod v0.8.0']
+[playtest-orch] client log 'Connect' (3): ['2026-08-30T03:31:17 7.358 INF [7dtd-fastconnect] Connect by IP 127.0.0.1:26900 ver=V.3.20.9 level=Navezgane (requested host=127.0.0.1)', '2026-08-30T03:31:17 7.361 INF Connecting to server zdtd...', '2026-08-30T03:31:17 7.397 INF NET: LiteNetLib: Connected to server']
+[playtest-orch] client log 'ERROR' (17): ["  ERROR: SymGetSymFromAddr64, GetLastError: 'Success.' (Address: 00006FFFFB2493AB)", "  ERROR: SymGetSymFromAddr64, GetLastError: 'Path not found.' (Address: 00006FFFFFEC1649)", "  ERROR: SymGetSymFromAddr64, GetLastError: 'Path not found.' (Address: 00006FFFFFF40E0F)"]
+[playtest-orch] exit=2
+[playtest-orch] playtest lock released session=playtest-20260829-193101-21359eff0850

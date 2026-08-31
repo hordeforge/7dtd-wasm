@@ -24,6 +24,14 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
 |---|---|---|
 | `Mods/Wasm/wasm.toml` | Shared `[limits]` (host defaults) and `[settings]` (cross-mod) | settings yes, limits at host start |
 | `Mods/Wasm/<id>/wasm-mod.toml` | That mod's `[limits]` and `[settings]` | on `wasm reload <id>` |
+| `Mods/Wasm/<id>/config.toml` | That mod's own config, served to the guest verbatim through the `zdtd.config` import | on `wasm reload <id>` |
+
+The per-mod `config.toml` is the zdtd self-contained-config convention
+(docs/PLUGIN_API.md in the sibling repo): the host never parses it, each
+guest owns its format, and a missing file means the guest keeps its
+built-in defaults. The unmodified zdtd parachute mod reads its deploy
+tuning (`deploy_vy_threshold`, `deploy_delay_ticks`, ...) from this file
+at `on_enable`.
 
 ## wasm-mod.toml (per mod)
 

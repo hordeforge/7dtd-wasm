@@ -247,10 +247,16 @@ namespace HordeForge.WasmHost.Tests
             }
         }
 
-        /// <summary>Compiles inline WAT to module bytes for load-validation tests.</summary>
+        /// <summary>
+        /// Compiles inline WAT to module bytes for load-validation tests.
+        /// Declares a bounded 1-page memory so the module is not treated as
+        /// declaring the wasm32 ceiling (a module with no declared maximum
+        /// only loads when the operator raised the cap; these tests target
+        /// signature validation, not the memory-cap path).
+        /// </summary>
         private static byte[] WatModule(string funcs)
         {
-            return Wasmtime.Module.ConvertText("(module " + funcs + ")");
+            return Wasmtime.Module.ConvertText("(module (memory (export \"memory\") 1 1) " + funcs + ")");
         }
 
         [Fact]
@@ -734,6 +740,80 @@ greeting = ""hello""
                 WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("fps-bot", Fixture("fps-bot")));
                 Assert.Contains("raise wasm.toml limits.max_memory_bytes", ex.Message);
             }
+        }
+
+        private static WasmModHost NewHostForParachute(TestGameHostApi api)
+        {
+            // Same memory story as fps-bot: the parachute module declares no
+            // memory maximum, so it is treated as the wasm32 ceiling and the
+            // cap must be raised to run it unmodified (ADR 0004 amendment).
+            var config = new WasmHostConfig { StaticMemoryMaximumBytes = 4294967296UL };
+            return new WasmModHost(api, config);
+        }
+
+        [Fact]
+        public void ParachuteLoadsUnmodifiedAndReadsItsConfig()
+        {
+            // The actual zdtd-server parachute mod (mods/parachute/parachute.wasm)
+            // loads as-is: the zdtd.config import serves its own config.toml
+            // verbatim, and on_enable parses it (the mod logs the parsed
+            // tuning at enable).
+            var api = new TestGameHostApi();
+            api.RawConfigs["parachute"] = File.ReadAllText(
+                Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));
+            using (WasmModHost host = NewHostForParachute(api))
+            {
+                WasmMod mod = host.LoadModule("parachute", Fixture("parachute"));
+                Assert.True(mod.Init().Ok);
+                Assert.True(mod.Tick().Ok);
+                // on_enable logged "parachute: config deploy_vy=-6 delay_ticks=10"
+                // from the config.toml served through the zdtd.config import.
+                Assert.Contains(api.Logs, l => l.Message.Contains("config deploy_vy=-6") && l.Message.Contains("delay_ticks=10"));
+            }
+        }
+
+        [Fact]
+        public void ParachuteDeploysGlideOnFallingWornPlayerAndClearsOnLanding()
+        {
+            // Feed the unmodified mod a v4 sense snapshot of a worn player
+            // falling fast: after the config's debounce it must arm the
+            // glide exemption and announce; when the fall ends it must clear
+            // the glide. This is ADR 0037 end to end through the real module.
+            var api = new TestGameHostApi();
+            api.RawConfigs["parachute"] = File.ReadAllText(
+                Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));
+            using (WasmModHost host = NewHostForParachute(api))
+            {
+                WasmMod mod = host.LoadModule("parachute", Fixture("parachute"));
+                Assert.True(mod.Init().Ok);
+
+                SenseSnapshotWriter.EntityRecord falling = PlayerRecord(2000, -9.0f, wearing: 1);
+                api.Sense = new SenseSnapshotWriter.Snapshot { Tick = 1, WorldTime = 0, Records = { falling } };
+                for (int t = 1; t <= 12; t++)
+                {
+                    Assert.True(host.DispatchTick(t).Single().Ok);
+                }
+                Assert.Contains(api.QueuedCommands, c => c == "glide 2000 1");
+                Assert.Contains(api.QueuedCommands, c => c.Contains("deployed their parachute"));
+
+                // Landed (vy near zero): the state machine clears the glide.
+                SenseSnapshotWriter.EntityRecord landed = PlayerRecord(2000, -0.5f, wearing: 1);
+                api.Sense = new SenseSnapshotWriter.Snapshot { Tick = 13, WorldTime = 0, Records = { landed } };
+                Assert.True(host.DispatchTick(13).Single().Ok);
+                Assert.Contains(api.QueuedCommands, c => c == "glide 2000 0");
+            }
+        }
+
+        private static SenseSnapshotWriter.EntityRecord PlayerRecord(int netId, float vy, byte wearing)
+        {
+            return new SenseSnapshotWriter.EntityRecord
+            {
+                NetId = netId,
+                Kind = SenseSnapshotWriter.KindPlayer,
+                Alive = true,
+                Vy = vy,
+                Wearing = wearing,
+            };
         }
 
         [Fact]

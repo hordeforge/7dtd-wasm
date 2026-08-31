@@ -1,0 +1,23 @@
+<configs>
+  <!-- Playtest-side glide buff (ADR 0037 safe landing on the stock server).
+       The bridge applies buffParachuteGlide to a player while the parachute
+       mod's glide flag is armed; the stock client computes its own fall
+       damage, so the buff must exist and sync to the client for the landing
+       to be safe. While the buff is held, buffPlayerFallingDamage's impact
+       speed is zeroed before the leg-break/sprain/damage steps, so a
+       gliding landing causes no damage, no broken leg, no sprain. Installed
+       server and client. The canonical parachute mod files stay unmodified. -->
+  <append xpath="/buffs">
+    <buff name="buffParachuteGlide" hidden="true">
+      <stack_type value="ignore"/>
+    </buff>
+  </append>
+
+  <insertBefore xpath="/buffs/buff[@name='buffPlayerFallingDamage']/effect_group[triggered_effect[@action='ModifyCVar' and @cvar='.breakLeg']]">
+    <effect_group>
+      <triggered_effect trigger="onSelfBuffStart" action="ModifyCVar" cvar=".impactSpeed" operation="set" value="0">
+        <requirement name="HasBuff" buff="buffParachuteGlide"/>
+      </triggered_effect>
+    </effect_group>
+  </insertBefore>
+</configs>

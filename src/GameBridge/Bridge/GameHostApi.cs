@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using HordeForge.WasmHost.Abi;
 
 namespace HordeForge.GameBridge.Bridge
@@ -13,11 +15,19 @@ namespace HordeForge.GameBridge.Bridge
     {
         private readonly WasmSettingsProvider _settings;
         private readonly BotServant _servant;
+        // Folder that holds guest modules (Mods/Wasm): per-mod config.toml
+        // files are served to guests through the zdtd config import.
+        private readonly string _wasmRoot;
+        // Per-mod raw config (config.toml) cache, registered at module load
+        // and invalidated on reload; a guest looping on the config import
+        // must not stat the disk at call rate.
+        private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        public GameHostApi(WasmSettingsProvider settings, BotServant servant)
+        public GameHostApi(WasmSettingsProvider settings, BotServant servant, string wasmRoot)
         {
             _settings = settings;
             _servant = servant;
+            _wasmRoot = wasmRoot;
             // Each limiter carries its own cap from construction; the
             // per-purpose constants cannot drift from their call sites.
             LogLimiter = new GuestRateLimiter();
@@ -118,6 +128,51 @@ namespace HordeForge.GameBridge.Bridge
             return _settings.TryGetSetting(modId, key, out value);
         }
 
+        /// <summary>
+        /// Registers a module's raw config (its config.toml, verbatim) so the
+        /// zdtd config import can serve it. Called by BridgeHost as modules
+        /// load; reload replaces the entry, unload removes it.
+        /// </summary>
+        public void RegisterConfig(string modId, string content)
+        {
+            _rawConfigs[modId] = content;
+        }
+
+        /// <summary>Drops a module's cached config; called on unload and before reload.</summary>
+        public void UnregisterConfig(string modId)
+        {
+            _rawConfigs.Remove(modId);
+        }
+
+        /// <summary>
+        /// Serves the calling mod's config.toml verbatim (the zdtd config
+        /// import). The host never parses it: each guest owns its format.
+        /// Returns false when the mod has no config file, so the guest keeps
+        /// its built-in defaults (zdtd: 0 = none).
+        /// </summary>
+        public bool TryGetRawConfig(string modId, out string content)
+        {
+            if (_rawConfigs.TryGetValue(modId, out content))
+            {
+                return content.Length > 0;
+            }
+            // Not registered (for example a module loaded outside the normal
+            // scan): read the file once and remember the outcome so a guest
+            // loop on the config import does not hit the disk per call.
+            content = string.Empty;
+            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(_wasmRoot))
+            {
+                return false;
+            }
+            string path = Path.Combine(_wasmRoot, modId, "config.toml");
+            if (ManifestFiles.TryRead(path, out string raw, out _))
+            {
+                content = raw;
+            }
+            _rawConfigs[modId] = content;
+            return content.Length > 0;
+        }
+
         public bool TryQueueCommand(string modId, string command)
         {
             // SimCommands execute game-side work (entity spawn, damage) that
@@ -128,19 +183,26 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
             command = TextSanitizer.Clean(command);
-            // The bot servant dispatches the brain's SimCommands; non-bot
-            // commands are logged and accepted.
+            // The bot servant dispatches the brain's SimCommands and the
+            // parachute mod's glide verb; non-servant queue text is a chat
+            // announce (the parachute deploy message reaches the stock chat
+            // broadcast this way, matching the mod's config: "announce via
+            // the stock chat broadcast"). A rejected chat falls back to a
+            // log line and still counts as accepted (the bytes were read).
             if (_servant.TryQueue(command, out bool handled))
             {
                 return true;
             }
             if (handled)
             {
-                // A bot command that failed mid-execution must reach the
+                // A servant command that failed mid-execution must reach the
                 // guest as rejected (queue -> -1), not as accepted.
                 return false;
             }
-            global::Log.Out("[WasmHost] cmd: " + command);
+            if (!SendChat(command))
+            {
+                global::Log.Out("[WasmHost] cmd (chat rejected): " + command);
+            }
             return true;
         }
 

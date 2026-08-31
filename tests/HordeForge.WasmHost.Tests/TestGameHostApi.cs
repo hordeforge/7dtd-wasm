@@ -41,6 +41,9 @@ namespace HordeForge.WasmHost.Tests
         /// <summary>Per-mod settings keyed by mod id; resolved before the shared Settings.</summary>
         public Dictionary<string, Dictionary<string, string>> ModSettings { get; } = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
 
+        /// <summary>Raw config (config.toml) served per mod through the zdtd config import.</summary>
+        public Dictionary<string, string> RawConfigs { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
         public long WorldTime { get; set; } = 600;
 
         public void Log(string source, int level, string message)
@@ -55,6 +58,17 @@ namespace HordeForge.WasmHost.Tests
         public long GetWorldTime()
         {
             return WorldTime;
+        }
+
+        public bool TryGetRawConfig(string modId, out string content)
+        {
+            if (modId.Length > 0 && RawConfigs.TryGetValue(modId, out string? raw))
+            {
+                content = raw ?? string.Empty;
+                return content.Length > 0;
+            }
+            content = string.Empty;
+            return false;
         }
 
         public bool TryGetSetting(string modId, string key, out string value)

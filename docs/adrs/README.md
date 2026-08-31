@@ -13,3 +13,4 @@ one, mark the file Superseded and link forward instead of rewriting history.
 | [0005](0005-dependency-free-manifest-parser.md) | Parse wasm-mod.json with an internal parser, not a JSON library |
 | [0006](0006-guest-log-rate-capping-in-bridge.md) | Rate cap guest log output in the bridge, not the host |
 | [0007](0007-toml-config-schema.md) | Mod config is TOML, following the zdtd-server conventions |
+| [0008](0008-zdtd-sense-v4-and-config-import.md) | Adopt the zdtd sense v4 snapshot and the self-contained config import |

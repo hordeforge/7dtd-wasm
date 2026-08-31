@@ -28,6 +28,14 @@ namespace HordeForge.WasmHost.Abi
         /// </summary>
         bool TryGetSetting(string modId, string key, out string value);
 
+        /// <summary>
+        /// Returns the calling mod's own config file (config.toml) verbatim,
+        /// as served through the zdtd `config` import. The host never parses
+        /// it: each guest owns its format. Returns false when the mod has no
+        /// config file (the guest then keeps its built-in defaults).
+        /// </summary>
+        bool TryGetRawConfig(string modId, out string content);
+
         // zdtd-server compatibility surface: the sibling fps_bot plugin and
         // its kin drive bots through these. Implemented by the bridge over
         // game services; a host that lacks a servant can still load the
@@ -43,7 +51,7 @@ namespace HordeForge.WasmHost.Abi
         bool TryQueueCommand(string modId, string command);
 
         /// <summary>
-        /// Builds the binary world snapshot ('ZBS3', see docs/ABI.md) into
+        /// Builds the binary world snapshot ('ZBS4', see docs/ABI.md) into
         /// the given buffer (the guest's own linear memory). Returns the
         /// number of bytes written, or 0 when there is no world data to
         /// report. The mod id is the registry id of the calling module, so

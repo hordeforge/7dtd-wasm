@@ -1,0 +1,7 @@
+<xml>
+  <Name value="parachute-items"/>
+  <DisplayName value="Parachute item (glider clothing)"/>
+  <Description value="Adds the parachute clothing item (zdtd-server/mods/parachute/Config/items.xml), the worn item the parachute wasm mod watches for."/>
+  <Author value="hordeforge"/>
+  <Version value="0.1.0"/>
+</xml>

@@ -84,7 +84,7 @@ namespace HordeForge.GameBridge.Bridge
                 var config = new WasmHostConfig();
                 ApplySharedLimits(config, sharedTomlPath);
                 _servant = new BotServant(() => _tick);
-                _gameApi = new GameHostApi(_settings, _servant);
+                _gameApi = new GameHostApi(_settings, _servant, WasmRoot);
                 _host = new WasmModHost(_gameApi, config);
 
                 // LoadAllModules runs each newly loaded module's on_enable (see
@@ -208,6 +208,10 @@ namespace HordeForge.GameBridge.Bridge
                     AddDropped(lines, _gameApi.SenseLimiter, "sense snapshots");
                     AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
                 }
+                if (_servant != null && _servant.Glide.Count > 0)
+                {
+                    lines.Add("  glide armed (net ids): " + string.Join(", ", _servant.Glide.Keys));
+                }
                 AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
                 return lines;
             }
@@ -320,7 +324,19 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
             _settings?.UpdateMod(id, manifest);
+            _gameApi?.RegisterConfig(id, ReadRawConfig(id));
             return true;
+        }
+
+        /// <summary>
+        /// Reads a module's raw config.toml (served to the guest verbatim via
+        /// the zdtd config import; the host never parses it). Missing or
+        /// unreadable files register as empty so the guest keeps its defaults.
+        /// </summary>
+        private static string ReadRawConfig(string id)
+        {
+            string path = Path.Combine(WasmRoot, id, "config.toml");
+            return ManifestFiles.TryRead(path, out string content, out _) ? content : string.Empty;
         }
 
         /// <summary>
@@ -375,6 +391,7 @@ namespace HordeForge.GameBridge.Bridge
                     }
                 }
                 _settings?.RemoveMod(id);
+                _gameApi?.UnregisterConfig(id);
                 if (!TryLoadFromDisk(host, id))
                 {
                     return false;
@@ -402,6 +419,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 ModRunResult shutdown = maybeShutdown.GetValueOrDefault();
                 _settings?.RemoveMod(id);
+                _gameApi?.UnregisterConfig(id);
                 if (!shutdown.Ok)
                 {
                     // Fail soft: the mod is gone either way, but a trapped or

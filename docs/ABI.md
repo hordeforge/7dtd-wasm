@@ -80,9 +80,10 @@ surface so those plugins run unmodified:
 |---|---|---|
 | `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Same as the hordeforge log |
 | `tick` | `() -> i64` | Same as the hordeforge tick |
-| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand for the bot servant (`bot spawn`, `bot move`, `bot look`, `bot shoot`, ...). 0 accepted, -1 rejected |
-| `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS3', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
+| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected |
+| `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS4', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
 | `query` | `(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Text request/response (`cover bx bz tx tz`, `path bx bz tx tz`). Returns response bytes, -1 no answer, -2 buffer too small |
+| `config` | `(out_ptr: i32, out_cap: i32) -> i32` | Copy the calling mod's config.toml verbatim, min(out_cap, len) bytes; 0 = no config (module has none, or the buffer is too small). The host never parses it; each guest owns its format (zdtd contract, so the parachute mod's on_enable reads it unchanged) |
 
 Guest hooks are accepted with either an `i32` result (our ABI) or `void`
 (zdtd contract) for `on_enable`, `on_tick`, and `on_shutdown`. The optional
@@ -91,9 +92,13 @@ resolved when present.
 
 The bot servant (Bridge/BotServant.cs) implements `queue` and `sense` over
 the live game: bots spawn as zombieSoldier bodies, `bot move` / `bot look` /
-`bot shoot` drive them, and `sense` reports players, zombies, and our bots
-in the ZBS3 layout. `query` (cover/path) and `on_admin_command` console
-wiring are stage 3.
+`bot shoot` drive them, `glide <net_id> <0|1>` tracks the parachute mod's
+glide flags and applies the glide effect (a fall-damage immunity buff synced
+to the client, plus a server-side clamp of the descent to the sink rate),
+and `sense` reports players, zombies, and our bots in the ZBS4 layout (v4:
+40-byte records with server-derived `vy` from the per-tick position history
+and the `wearing_glider` bit, ADR 0037). `query` (cover/path) and
+`on_admin_command` console wiring are stage 3.
 
 Host-side bounds on the servant, enforced per calling module (the wasm fuel
 budget does not cover game-side work):

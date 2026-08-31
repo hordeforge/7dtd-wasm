@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <None Include="../fixtures/*.wasm" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
+    <None Include="../fixtures/*.toml" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
