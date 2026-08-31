@@ -29,6 +29,12 @@ does, so any 0.1.x remains safe to take without reading further.
 - `WasmModHost.DispatchPlayerJoin` takes the entity id as `int` (the wire
   type of `on_player_join`); the previous `long` parameter forced a silent
   narrowing cast on every caller.
+- The zdtd sense snapshot is bumped to v4 (magic `ZBS4`, 40-byte records
+  with server `vy` and the `wearing_glider` bit, ADR 0037), byte-identical
+  to the sibling zdtd wire format; v3 guests fail loudly on the magic check
+  instead of misreading records. `IGameHostApi` gains
+  `TryGetRawConfig(modId, out content)` for the new `zdtd.config` import;
+  implementers of the interface must add it.
 
 ### Changed
 
@@ -38,6 +44,16 @@ does, so any 0.1.x remains safe to take without reading further.
 - Named the zdtd queue/query result codes in `AbiConstants`
   (`QueueAccepted`, `QueueRejected`, `QueryNoAnswer`,
   `QueryBufferTooSmall`); no wire change (docs/ABI.md unchanged).
+- The `zdtd` compatibility module serves the calling mod's own `config.toml`
+  verbatim through `zdtd.config` (0 = none; the host never parses it, each
+  guest owns its format). The bridge registers `Mods/Wasm/<id>/config.toml`
+  at module load (invalidated on reload) and the bridge queue surface now
+  handles the parachute mod's `glide <net_id> <0|1>` verb (tracked per
+  player, surfaced in `wasm status`) and forwards non-verb queue text to the
+  chat broadcast (the parachute deploy announce). Sense records report `vy`
+  (from `Entity.motion`) and the `wearing_glider` bit (a worn item whose
+  ItemClass carries the parachute tag); the new game API surface is pinned
+  in `tools/targetcheck`.
 - Dependency audit pass: test stack moved to the newest serviced pins
   (`Microsoft.NET.Test.Sdk` 17.14.1, `xunit` 2.9.3; runner stays 2.8.2,
   the correct pairing for xunit 2.x). `Wasmtime` stays at 44.0.0: that is
@@ -72,6 +88,13 @@ does, so any 0.1.x remains safe to take without reading further.
   raw imports remain available. `guest-hello` and docs/GUEST_AUTHORS.md use
   the safe path, and the guide gained an `on_player_join` example for Rust
   guests.
+- The unmodified zdtd parachute module (workspace sibling, sense v4 +
+  `zdtd.config` + `glide`) is staged by `make dist` and `make fixtures`
+  (module + its config.toml) and covered by host tests: it loads as-is,
+  parses its own config.toml through `zdtd.config`, and arms/clears the
+  glide exemption for a falling worn player. A live-server run through the
+  `7dtd-playtest` orchestrator (parachute suite) is documented under
+  `evidence/playtest-1/`.
 - NuGet pack metadata on the host library (package id, version tracking
   CHANGELOG.md, license, repository): `dotnet pack` produces a complete
   package instead of an anonymous default.

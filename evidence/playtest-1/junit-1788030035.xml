@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="7dtd-playtest.parachute" tests="2" failures="0" skipped="0">
+  <testcase classname="playtest" name="parachute/parachute_equip">
+  </testcase>
+  <testcase classname="playtest" name="parachute/parachute_fall_announce">
+  </testcase>
+</testsuite>

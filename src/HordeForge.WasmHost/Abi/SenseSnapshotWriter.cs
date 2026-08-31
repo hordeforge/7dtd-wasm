@@ -7,16 +7,19 @@ namespace HordeForge.WasmHost.Abi
     /// <summary>
     /// Builds the binary world snapshot the zdtd `sense` import fills into a
     /// guest buffer. The format is the sibling zdtd-server contract
-    /// (BOTS_SPEC sense layout, kept byte-identical so plugins written
-    /// against it, like the unmodified fps_bot, parse it unchanged):
+    /// (BOTS_SPEC sense layout v4, ADR 0037, kept byte-identical so plugins
+    /// written against it, like the unmodified fps_bot and the parachute
+    /// mod, parse it unchanged):
     ///
-    ///   header 24 bytes:  magic u32 'ZBS3' @0, count u32 @4, tick u32 @8,
+    ///   header 24 bytes:  magic u32 'ZBS4' @0, count u32 @4, tick u32 @8,
     ///                      self_net_id i32 @12, world_time u32 @16,
     ///                      blood_moon u32 @20
-    ///   records 32 bytes each: net_id i32 @0, kind u8 @4, is_self u8 @5,
+    ///   records 40 bytes each: net_id i32 @0, kind u8 @4, is_self u8 @5,
     ///                      alive u8 @6, pad @7, x f32 @8, y f32 @12,
     ///                      z f32 @16, hp f32 @20, yaw f32 @24,
-    ///                      target_id i32 @28
+    ///                      vy f32 @28 (blocks/s, negative = falling),
+    ///                      target_id i32 @32, wearing u8 @36 (glider item
+    ///                      worn), pad @37..39
     ///   events 16 bytes each: kind u8 @0 (3 damage, 4 bot-info). Damage:
     ///                      attacker i32 @4, victim i32 @8, amount f32 @12.
     ///                      Bot info: weapon id u8 @1, bot net id i32 @4,
@@ -24,20 +27,25 @@ namespace HordeForge.WasmHost.Abi
     ///
     /// Kinds: 0 player, 1 zombie, 2 bot, 3 damage event, 4 bot-info event.
     /// All integers little-endian, floats IEEE-754 binary32.
+    ///
+    /// vy is written as the f32 bit pattern the guests read (both the
+    /// parachute mod and the zdtd sense tests bitcast vy as f32); the
+    /// sibling server currently stores an i32 there, which its own guests
+    /// cannot parse - the f32 bits are the value that works.
     /// </summary>
     public static class SenseSnapshotWriter
     {
         /// <summary>Snapshot header size in bytes (24).</summary>
         public const int HeaderSize = 24;
 
-        /// <summary>Per-entity record size in bytes (32).</summary>
-        public const int RecordSize = 32;
+        /// <summary>Per-entity record size in bytes (40, v4).</summary>
+        public const int RecordSize = 40;
 
         /// <summary>Per-event record size in bytes (16).</summary>
         public const int EventSize = 16;
 
-        /// <summary>Snapshot magic 'ZBS3'.</summary>
-        public const uint Magic = 0x3353425a; // 'ZBS3'
+        /// <summary>Snapshot magic 'ZBS4'.</summary>
+        public const uint Magic = 0x3453425a; // 'ZBS4'
 
         /// <summary>Entity kind: human player.</summary>
         public const byte KindPlayer = 0;
@@ -75,8 +83,12 @@ namespace HordeForge.WasmHost.Abi
             public float Hp;
             /// <summary>Facing in radians (yaw zero faces +X).</summary>
             public float Yaw;
+            /// <summary>Vertical velocity in blocks/s (negative = falling).</summary>
+            public float Vy;
             /// <summary>Current target net id, or 0.</summary>
             public int TargetId;
+            /// <summary>True when the entity wears the glider item (v4, ADR 0037).</summary>
+            public byte Wearing;
         }
 
         /// <summary>Damage event trailer record.</summary>
@@ -164,7 +176,12 @@ namespace HordeForge.WasmHost.Abi
                 WriteF32(buffer, ref pos, r.Z);
                 WriteF32(buffer, ref pos, r.Hp);
                 WriteF32(buffer, ref pos, r.Yaw);
+                WriteF32(buffer, ref pos, r.Vy);
                 WriteI32(buffer, ref pos, r.TargetId);
+                buffer[pos++] = r.Wearing;
+                buffer[pos++] = 0; // pad
+                buffer[pos++] = 0; // pad
+                buffer[pos++] = 0; // pad
             }
 
             foreach (var e in snapshot.Damage)

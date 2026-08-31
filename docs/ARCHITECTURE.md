@@ -18,6 +18,8 @@ auditable embed that enforces hard limits and exposes a narrow game API.
 
  Mods/Wasm/<id>/module.wasm                 guest modules (untrusted)
  Mods/Wasm/<id>/wasm-mod.toml               that mod's limits and settings
+ Mods/Wasm/<id>/config.toml                 that mod's own config, served to
+                                             the guest verbatim (zdtd.config)
  Mods/Wasm/wasm.toml                        shared limits and settings
 ```
 

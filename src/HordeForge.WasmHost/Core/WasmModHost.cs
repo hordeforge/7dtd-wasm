@@ -541,6 +541,41 @@ namespace HordeForge.WasmHost.Core
                 return Tick;
             });
 
+            _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportConfig, (caller, outPtr, outCap) =>
+            {
+                // zdtd contract: copy the calling module's config.toml
+                // verbatim, min(out_cap, len) bytes; 0 = no config (module
+                // has none, or the buffer is too small - the guest checks
+                // the returned length). The host never parses it; each guest
+                // owns its format. Mirrors zdtd's config import exactly so
+                // the parachute mod's on_enable reads it unchanged.
+                if (outCap <= 0)
+                {
+                    return 0;
+                }
+                if (!_api.TryGetRawConfig(_currentModId, out string content) || content.Length == 0)
+                {
+                    return 0;
+                }
+                byte[] bytes = Encoding.UTF8.GetBytes(content);
+                int copy = Math.Min(bytes.Length, outCap);
+                Memory? memory = caller.GetMemory("memory");
+                if (memory == null)
+                {
+                    return 0;
+                }
+                try
+                {
+                    bytes.AsSpan(0, copy).CopyTo(memory.GetSpan(outPtr, copy));
+                }
+                catch (Exception ex)
+                {
+                    _api.Log(LogSource(), AbiConstants.LogError, "config failed: " + ex.Message);
+                    return 0;
+                }
+                return copy;
+            });
+
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQueue, (caller, ptr, len) =>
             {
                 string command = ReadGuestString(caller, ptr, len);

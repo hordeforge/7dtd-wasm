@@ -1,0 +1,9 @@
+# wasm-mod.toml for the unmodified zdtd parachute mod (workspace sibling).
+# The module declares no memory maximum, so the shared wasm.toml must raise
+# limits.max_memory_bytes to 4294967296 (the wasm32 ceiling) for it to load;
+# see docs/ABI.md zdtd compatibility section. The mod's own config.toml is
+# staged next to module.wasm and served to the guest verbatim through the
+# zdtd.config import (the host never parses it).
+name = "parachute"
+description = "Unmodified zdtd parachute mod (mods/parachute/parachute.wasm): watches sense v4 and arms the glide exemption for falling worn players"
+version = "0.1.0"

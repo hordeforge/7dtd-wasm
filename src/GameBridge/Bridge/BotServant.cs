@@ -8,9 +8,9 @@ namespace HordeForge.GameBridge.Bridge
     /// The bot servant: the game side of the zdtd fps_bot contract
     /// (docs/ABI.md zdtd compatibility section). It spawns bot entities,
     /// applies the SimCommands the guest brain queues (bot move / look /
-    /// shoot / spawn / remove / count / skill / cfg), and builds the 'ZBS3'
-    /// world snapshot the sense import fills. The brain owns targeting and
-    /// aim; the servant owns the bodies.
+    /// shoot / spawn / remove / count / skill / cfg, plus glide for the
+    /// parachute mod), and builds the 'ZBS4' world snapshot the sense import
+    /// fills. The brain owns targeting and aim; the servant owns the bodies.
     ///
     /// Stage 2 status: spawn, move, look, shoot, and sense are implemented;
     /// cover/path queries still return no answer and on_admin_command is
@@ -34,18 +34,37 @@ namespace HordeForge.GameBridge.Bridge
         // pistol 0, shotgun 1, ak 2, sniper 3, auto 4, smg 5).
         private static readonly int[] WeaponDamage = { 12, 18, 14, 45, 12, 10 };
 
-        // Entity records per sense snapshot; 60 records fit under the
-        // guest's 2048-byte sense cap (24 + 60 * 32 = 1944 bytes).
-        private const int MaxSenseRecords = 60;
+        // Glider item tag (matches the parachute mod's items.xml patch and
+        // preset.toml [rules.glide] item_tag). A worn item whose ItemClass
+        // carries this tag sets the sense v4 wearing_glider bit.
+        private const string GliderItemTag = "parachute";
+
+        // Buff applied to a player while the parachute mod's glide flag is
+        // armed. Defined by the playtest parachute-items modlet (buffs.xml);
+        // its effect is skipping fall damage in buffPlayerFallingDamage, the
+        // safe landing on the stock server.
+        private const string GlideBuffName = "buffParachuteGlide";
+
+        // Entity records per sense snapshot. With the v4 40-byte records a
+        // 2048-byte guest sense cap holds 41 records after reserving the
+        // 384-byte event trailer (24 + 41 * 40 + 24 * 16 = 2048), the same
+        // sizing zdtd uses for that cap.
+        private const int MaxSenseRecords = 41;
 
         private readonly Func<long> _tickProvider;
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
-        // Sense runs once per tick per calling brain; the snapshot and its
-        // entity records are pooled and refilled per call instead of being
-        // reallocated every time (single main-loop thread by contract).
+        // Sense runs once per
+        // tick per calling brain; the snapshot and its entity records are
+        // pooled and refilled per call instead of being reallocated every
+        // time (single main-loop thread by contract).
         private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
         private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
+        // Armed gliders (ADR 0037 `glide <net_id> <0|1>`): net id -> armed.
+        // The real game has no C2S movement envelope to exempt, so this is
+        // tracked as the mod's authority state and surfaced in "wasm status";
+        // the parachute deploy/land state machine still runs correctly.
+        private readonly Dictionary<int, bool> _glide = new Dictionary<int, bool>();
         private int _countFloor = DefaultBotCount;
 
         // Minimum interval between floor top-up passes. EnsureSpawned runs
@@ -78,17 +97,114 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>
         /// Handles one queued SimCommand. Returns true when the command was
         /// accepted. <paramref name="handled"/> reports whether the command
-        /// belonged to the bot surface at all, so the caller can tell a
-        /// rejected bot command from a command that was never ours.
+        /// belonged to the servant surface (bot or glide verbs) at all, so
+        /// the caller can tell a rejected servant command from text that was
+        /// never ours (chat announce).
         /// </summary>
         public bool TryQueue(string command, out bool handled)
         {
             handled = false;
-            if (command == null || !command.StartsWith("bot ", StringComparison.Ordinal))
+            if (command == null)
             {
                 return false;
             }
-            handled = true;
+            if (command.StartsWith("bot ", StringComparison.Ordinal))
+            {
+                handled = true;
+                return TryQueueBot(command);
+            }
+            if (command.StartsWith("glide ", StringComparison.Ordinal))
+            {
+                handled = true;
+                return TryQueueGlide(command);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Handles `glide &lt;net_id&gt; &lt;0|1|on|true|off|false&gt;` (ADR 0037,
+        /// the parachute mod's queue verb): tracks the player's glide flag.
+        /// The parse mirrors zdtd exactly (arm values "1"/"on"/"true", clear
+        /// values "0"/"off"/"false", anything else is malformed and dropped).
+        /// </summary>
+        private bool TryQueueGlide(string command)
+        {
+            string[] parts = command.Split(' ');
+            if (parts.Length != 3)
+            {
+                Log.Out("[WasmHost] glide (malformed): " + command);
+                return true;
+            }
+            if (!TryParseId(parts[1], out int netId))
+            {
+                Log.Out("[WasmHost] glide (bad id): " + command);
+                return true;
+            }
+            string on = parts[2];
+            if (on == "1" || on == "on" || on == "true")
+            {
+                _glide[netId] = true;
+            }
+            else if (on == "0" || on == "off" || on == "false")
+            {
+                _glide[netId] = false;
+            }
+            else
+            {
+                Log.Out("[WasmHost] glide (bad flag): " + command);
+                return true;
+            }
+            ApplyGlideBuff(netId, _glide[netId]);
+            Log.Out("[WasmHost] glide " + netId + " " + (_glide[netId] ? "armed" : "cleared"));
+            return true;
+        }
+
+        /// <summary>
+        /// Applies or removes the glide buff on the player while the parachute
+        /// mod's glide flag is armed. The buff (with the playtest buffs.xml
+        /// patch) makes the stock client skip fall damage, which is the
+        /// parachute's safe landing on the real server (the mod itself only
+        /// arms/clears the flag). Best effort: a player that left the world
+        /// is skipped, never an error.
+        /// </summary>
+        private void ApplyGlideBuff(int netId, bool armed)
+        {
+            try
+            {
+                var game = GameManager.Instance;
+                if (game == null || game.World == null)
+                {
+                    return;
+                }
+                if (!(game.World.GetEntity(netId) is EntityAlive alive))
+                {
+                    return;
+                }
+                if (alive.Buffs == null)
+                {
+                    return;
+                }
+                if (armed)
+                {
+                    // netSync true so the client applies the fall-damage gate.
+                    alive.Buffs.AddBuff(GlideBuffName, 0, true, false, -1f);
+                    Log.Out("[WasmHost] glide buff applied " + GlideBuffName + " to " + netId +
+                            " has=" + alive.Buffs.HasBuff(GlideBuffName));
+                }
+                else
+                {
+                    alive.Buffs.RemoveBuff(GlideBuffName, 0, true);
+                    Log.Out("[WasmHost] glide buff removed " + GlideBuffName + " from " + netId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("[WasmHost] glide buff " + netId + " failed: " + ex.Message);
+            }
+        }
+
+        private bool TryQueueBot(string command)
+        {
             string[] parts = command.Split(' ');
             string verb = parts.Length > 1 ? parts[1] : string.Empty;
             try
@@ -138,6 +254,19 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>Armed glide flags by net id (ADR 0037); exposed for "wasm status".</summary>
+        public IReadOnlyDictionary<int, bool> Glide => _glide;
+
+        /// <summary>
+        /// Clears every armed glide flag. Called when a module that armed
+        /// them is reloaded or disabled (zdtd: withdrawn modules have their
+        /// applied glide cleared; fail closed).
+        /// </summary>
+        public void ClearGlide()
+        {
+            _glide.Clear();
+        }
+
         public int WriteSense(Span<byte> buffer)
         {
             EnsureSpawned();
@@ -180,8 +309,11 @@ namespace HordeForge.GameBridge.Bridge
                     record.Z = e.position.z;
                     record.Hp = alive.Health;
                     record.Yaw = _botYaw.TryGetValue(e.entityId, out float yaw) ? yaw : 0f;
+                    record.Vy = VerticalVelocity(e.entityId, e.position, _tickProvider(), out UnityEngine.Vector3 prevPos);
+                    record.Wearing = WearsGlider(alive);
                     record.TargetId = 0;
                     snapshot.Records.Add(record);
+                    ClampGlideDescent(alive, record.Vy, e.position, prevPos);
                 }
             }
             catch (Exception ex)
@@ -190,6 +322,121 @@ namespace HordeForge.GameBridge.Bridge
                 return 0;
             }
             return SenseSnapshotWriter.Write(snapshot, buffer);
+        }
+
+        /// <summary>
+        /// Current vertical velocity in blocks/s (negative = falling), derived
+        /// from the server-side position history. The stock dedicated server
+        /// does not populate `Entity.motion` for remote players (the client
+        /// owns its own local physics, ADR 0037), so the sense v4 `vy` field
+        /// is computed here from the per-tick position delta - the same
+        /// approach zdtd uses. The stored position only advances when the
+        /// game tick changes, so every module reading sense within one tick
+        /// sees the same vy. A teleport-scale jump is reported once (bounded
+        /// by the 10-tick delta cap) and never reads as a sustained fall.
+        /// </summary>
+        private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
+            new Dictionary<int, (long, UnityEngine.Vector3)>();
+
+        private float VerticalVelocity(int netId, UnityEngine.Vector3 position, long tick, out UnityEngine.Vector3 prevPos)
+        {
+            prevPos = position;
+            float vy = 0f;
+            if (_lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) last))
+            {
+                prevPos = last.Pos;
+                long dtTicks = tick - last.Tick;
+                if (dtTicks > 0 && dtTicks <= 10)
+                {
+                    // 20 TPS bridge tick; blocks per second.
+                    vy = (position.y - last.Pos.y) / (dtTicks * 0.05f);
+                }
+            }
+            if (!_lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) current) || current.Tick != tick)
+            {
+                _lastPos[netId] = (tick, position);
+            }
+            return vy;
+        }
+
+        /// <summary>
+        /// The glide fall sink (blocks/s, negative = down): while a player's
+        /// glide flag is armed the descent is capped at this rate, the
+        /// real-server equivalent of the zdtd [rules.glide] sink_vy_mps clamp
+        /// (the stock server has no C2S movement envelope to exempt, so the
+        /// bridge clamps the server entity position and the client follows
+        /// the corrections). Matches the parachute preset's sink_vy_mps.
+        /// </summary>
+        private const float SinkVyMps = 2.5f;
+
+        /// <summary>
+        /// Caps a gliding player's descent at the sink rate by nudging the
+        /// entity up when it dropped too far since the previous tick. The
+        /// sense record keeps the real vy (the parachute mod arms on it);
+        /// the correction applies for the next tick, so the glide falls
+        /// slowly and lands safely. Best effort: only while the glide flag
+        /// is armed, never for anyone else.
+        /// </summary>
+        private void ClampGlideDescent(EntityAlive alive, float vy, UnityEngine.Vector3 position, UnityEngine.Vector3 prevPos)
+        {
+            if (!_glide.TryGetValue(alive.entityId, out bool armed) || !armed)
+            {
+                return;
+            }
+            if (vy >= -SinkVyMps)
+            {
+                return;
+            }
+            float maxDrop = SinkVyMps * 0.05f; // blocks per 20 TPS tick
+            float floorY = prevPos.y - maxDrop;
+            if (position.y < floorY)
+            {
+                alive.SetPosition(new UnityEngine.Vector3(position.x, floorY, position.z), true);
+            }
+        }
+
+        /// <summary>
+        /// True when the entity wears an item whose ItemClass carries the
+        /// glider tag (sense v4 wearing_glider, ADR 0037). Mirrors zdtd's
+        /// armor-slot tag scan; the tag name matches the parachute mod's
+        /// items.xml patch. Defensive: an equipment read failure reports 0
+        /// rather than killing the snapshot.
+        /// </summary>
+        private static byte WearsGlider(EntityAlive alive)
+        {
+            if (!(alive is EntityPlayer player))
+            {
+                return 0;
+            }
+            try
+            {
+                if (player.equipment == null)
+                {
+                    return 0;
+                }
+                ItemValue[] items = player.equipment.GetItems();
+                if (items == null)
+                {
+                    return 0;
+                }
+                foreach (ItemValue item in items)
+                {
+                    if (item == null || item.IsEmpty())
+                    {
+                        continue;
+                    }
+                    ItemClass itemClass = item.ItemClass;
+                    if (itemClass != null && itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse(GliderItemTag)))
+                    {
+                        return 1;
+                    }
+                }
+            }
+            catch
+            {
+                // Worn-state reads are best effort; never break the snapshot.
+            }
+            return 0;
         }
 
         private byte Classify(Entity e)
