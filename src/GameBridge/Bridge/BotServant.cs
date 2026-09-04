@@ -291,6 +291,8 @@ namespace HordeForge.GameBridge.Bridge
                 snapshot.WorldTime = (long)game.World.GetWorldTime();
                 snapshot.BloodMoon = false;
                 var records = _senseRecords;
+                var seen = _seenIds;
+                seen.Clear();
                 foreach (Entity e in entities.list)
                 {
                     if (!(e is EntityAlive alive) || alive.IsDead())
@@ -315,8 +317,10 @@ namespace HordeForge.GameBridge.Bridge
                     record.Wearing = WearsGlider(alive);
                     record.TargetId = 0;
                     snapshot.Records.Add(record);
+                    seen.Add(e.entityId);
                     ClampGlideDescent(alive, record.Vy, e.position, prevPos);
                 }
+                PrunePositionHistory(seen);
             }
             catch (Exception ex)
             {
@@ -339,6 +343,39 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
             new Dictionary<int, (long, UnityEngine.Vector3)>();
+
+        // Ids seen in the current sense scan, pooled like the snapshot
+        // records: pruning the position history must not allocate per tick.
+        private readonly HashSet<int> _seenIds = new HashSet<int>();
+
+        /// <summary>
+        /// Drops position history for entities no longer in the world
+        /// (disconnected players, removed bots), so the history stays
+        /// proportional to the live entity list instead of every id ever
+        /// seen. Runs inside the sense scan, which already visits them all.
+        /// </summary>
+        private void PrunePositionHistory(HashSet<int> seen)
+        {
+            if (_lastPos.Count <= seen.Count)
+            {
+                return;
+            }
+            var stale = _staleIds;
+            stale.Clear();
+            foreach (int id in _lastPos.Keys)
+            {
+                if (!seen.Contains(id))
+                {
+                    stale.Add(id);
+                }
+            }
+            foreach (int id in stale)
+            {
+                _lastPos.Remove(id);
+            }
+        }
+
+        private readonly List<int> _staleIds = new List<int>();
 
         private float VerticalVelocity(int netId, UnityEngine.Vector3 position, long tick, out UnityEngine.Vector3 prevPos)
         {
