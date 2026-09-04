@@ -41,7 +41,8 @@ namespace HordeForge.GameBridge.Bridge
 
         // Buff applied to a player while the parachute mod's glide flag is
         // armed. Defined by the playtest parachute-items modlet (buffs.xml);
-        // its effect is skipping fall damage in buffPlayerFallingDamage, the
+        // the client slow-fall patch keys on it: while held, the fall is
+        // clamped to the sink rate and the vp fall impact is skipped, the
         // safe landing on the stock server.
         private const string GlideBuffName = "buffParachuteGlide";
 
@@ -161,8 +162,8 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Applies or removes the glide buff on the player while the parachute
-        /// mod's glide flag is armed. The buff (with the playtest buffs.xml
-        /// patch) makes the stock client skip fall damage, which is the
+        /// mod's glide flag is armed. The client slow-fall patch keys on this
+        /// buff (clamped sink rate, skipped fall impact), which is the
         /// parachute's safe landing on the real server (the mod itself only
         /// arms/clears the flag). Best effort: a player that left the world
         /// is skipped, never an error.
@@ -186,7 +187,8 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 if (armed)
                 {
-                    // netSync true so the client applies the fall-damage gate.
+                    // netSync true so the client sees the buff the
+                    // slow-fall patch keys on.
                     alive.Buffs.AddBuff(GlideBuffName, 0, true, false, -1f);
                     Log.Out("[WasmHost] glide buff applied " + GlideBuffName + " to " + netId +
                             " has=" + alive.Buffs.HasBuff(GlideBuffName));
