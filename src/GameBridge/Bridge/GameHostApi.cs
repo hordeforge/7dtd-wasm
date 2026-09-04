@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Registry;
 
@@ -16,19 +15,15 @@ namespace HordeForge.GameBridge.Bridge
     {
         private readonly WasmSettingsProvider _settings;
         private readonly BotServant _servant;
-        // Folder that holds guest modules (Mods/Wasm): per-mod config.toml
-        // files are served to guests through the zdtd config import.
-        private readonly string _wasmRoot;
         // Per-mod raw config (config.toml) cache, registered at module load
         // and invalidated on reload; a guest looping on the config import
         // must not stat the disk at call rate.
         private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        public GameHostApi(WasmSettingsProvider settings, BotServant servant, string wasmRoot)
+        public GameHostApi(WasmSettingsProvider settings, BotServant servant)
         {
             _settings = settings;
             _servant = servant;
-            _wasmRoot = wasmRoot;
             // Each limiter carries its own cap from construction; the
             // per-purpose constants cannot drift from their call sites.
             LogLimiter = new GuestRateLimiter();
@@ -160,12 +155,23 @@ namespace HordeForge.GameBridge.Bridge
             // Not registered (for example a module loaded outside the normal
             // scan): read the file once and remember the outcome so a guest
             // loop on the config import does not hit the disk per call.
+            // Resolved through the same multi-root trees as the loader, so
+            // a modlet-carried module finds its config too.
             content = string.Empty;
-            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(_wasmRoot))
+            if (string.IsNullOrEmpty(modId))
             {
                 return false;
             }
-            string path = Path.Combine(_wasmRoot, modId, "config.toml");
+            if (!ModId.IsValid(modId))
+            {
+                return false;
+            }
+            string path = BridgeHost.ResolveModuleFile(modId, "config.toml");
+            if (path.Length == 0)
+            {
+                _rawConfigs[modId] = content;
+                return false;
+            }
             if (ManifestFiles.TryRead(path, out string raw, out _))
             {
                 content = raw;

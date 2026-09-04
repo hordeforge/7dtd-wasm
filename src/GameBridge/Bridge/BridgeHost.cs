@@ -109,7 +109,7 @@ namespace HordeForge.GameBridge.Bridge
                 var config = new WasmHostConfig();
                 ApplySharedLimits(config, sharedTomlPath);
                 _servant = new BotServant(() => _tick);
-                _gameApi = new GameHostApi(_settings, _servant, WasmRoot);
+                _gameApi = new GameHostApi(_settings, _servant);
                 _host = new WasmModHost(_gameApi, config);
 
                 // LoadAllModules runs each newly loaded module's on_enable (see
@@ -574,7 +574,7 @@ namespace HordeForge.GameBridge.Bridge
         /// First tree holding the module's directory, or empty when none
         /// does. Mods/Wasm wins over modlet-carried trees.
         /// </summary>
-        private static string ResolveModuleDir(string id)
+        internal static string ResolveModuleDir(string id)
         {
             return ModuleRoots.ResolveDir(ModuleTreeRoots, id);
         }
@@ -582,8 +582,10 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>
         /// First tree holding the module's named file, or empty when none
         /// does. A directory without the file does not claim the module.
+        /// Exposed for GameHostApi's config fallback, which must resolve
+        /// the same trees as the loader (not just the primary root).
         /// </summary>
-        private static string ResolveModuleFile(string id, string fileName)
+        internal static string ResolveModuleFile(string id, string fileName)
         {
             return ModuleRoots.ResolveFile(ModuleTreeRoots, id, fileName);
         }
