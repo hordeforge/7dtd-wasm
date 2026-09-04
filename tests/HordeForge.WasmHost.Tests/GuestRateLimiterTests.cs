@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using HordeForge.GameBridge.Bridge;
 using Xunit;
 
@@ -57,12 +56,26 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void WindowResetsAfterOneSecond()
         {
-            var limiter = new GuestRateLimiter(1);
+            int nowMs = 1000;
+            var limiter = new GuestRateLimiter(1, () => nowMs);
             Assert.True(limiter.TryWrite("mod", out _));
             Assert.False(limiter.TryWrite("mod", out _));
-            Thread.Sleep(1100);
+            nowMs += 999;
+            Assert.False(limiter.TryWrite("mod", out _));
+            nowMs += 1;
             Assert.True(limiter.TryWrite("mod", out long dropped));
-            Assert.Equal(1, dropped);
+            Assert.Equal(2, dropped);
+        }
+
+        [Fact]
+        public void WindowResetSurvivesClockWraparound()
+        {
+            int nowMs = int.MaxValue - 500;
+            var limiter = new GuestRateLimiter(1, () => nowMs);
+            Assert.True(limiter.TryWrite("mod", out _));
+            Assert.False(limiter.TryWrite("mod", out _));
+            nowMs += 1000;
+            Assert.True(limiter.TryWrite("mod", out _));
         }
     }
 }
