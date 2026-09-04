@@ -23,4 +23,11 @@
     <None Include="../fixtures/*.toml" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- GuestRateLimiter is bridge code with no game references; link the one
+       file so the caps are covered on net8. The net48 bridge itself builds
+       against the dedicated install (make bridge), not here. -->
+  <ItemGroup>
+    <Compile Include="../../src/GameBridge/Bridge/GuestRateLimiter.cs" Link="GuestRateLimiter.cs" />
+  </ItemGroup>
+
 </Project>
