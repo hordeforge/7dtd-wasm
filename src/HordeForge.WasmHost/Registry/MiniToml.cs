@@ -264,7 +264,7 @@ namespace HordeForge.WasmHost.Registry
                 char c = body[i];
                 if (c != '\\')
                 {
-                    EndPendingHighOrThrow(ref pendingHigh);
+                    UnicodeEscapes.EndPendingHighOrThrow(ref pendingHigh);
                     sb.Append(c);
                     continue;
                 }
@@ -274,11 +274,11 @@ namespace HordeForge.WasmHost.Registry
                 }
                 switch (body[i])
                 {
-                    case '"': AppendPlainUnit(sb, '"', ref pendingHigh); break;
-                    case '\\': AppendPlainUnit(sb, '\\', ref pendingHigh); break;
-                    case 'n': AppendPlainUnit(sb, '\n', ref pendingHigh); break;
-                    case 'r': AppendPlainUnit(sb, '\r', ref pendingHigh); break;
-                    case 't': AppendPlainUnit(sb, '\t', ref pendingHigh); break;
+                    case '"': UnicodeEscapes.AppendPlainUnit(sb, '"', ref pendingHigh); break;
+                    case '\\': UnicodeEscapes.AppendPlainUnit(sb, '\\', ref pendingHigh); break;
+                    case 'n': UnicodeEscapes.AppendPlainUnit(sb, '\n', ref pendingHigh); break;
+                    case 'r': UnicodeEscapes.AppendPlainUnit(sb, '\r', ref pendingHigh); break;
+                    case 't': UnicodeEscapes.AppendPlainUnit(sb, '\t', ref pendingHigh); break;
                     case 'u':
                         if (i + 4 >= body.Length)
                         {
@@ -292,56 +292,15 @@ namespace HordeForge.WasmHost.Registry
                         {
                             throw new FormatException("line " + lineNumber + ": bad unicode escape \\u" + hex);
                         }
-                        AppendEscapedCodeUnit(sb, (char)code, hex, ref pendingHigh);
+                        UnicodeEscapes.AppendEscapedCodeUnit(sb, (char)code, hex, ref pendingHigh);
                         i += 4;
                         break;
                     default:
                         throw new FormatException("line " + lineNumber + ": unknown escape \\" + body[i]);
                 }
             }
-            EndPendingHighOrThrow(ref pendingHigh);
+            UnicodeEscapes.EndPendingHighOrThrow(ref pendingHigh);
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// Appends one escaped \uXXXX code unit, enforcing surrogate-pair
-        /// validity through <paramref name="pendingHigh"/>.
-        /// </summary>
-        private static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
-        {
-            if (pendingHigh)
-            {
-                if (!char.IsLowSurrogate(unit))
-                {
-                    throw new FormatException("high surrogate escape not followed by a low surrogate escape (got \\u" + hex + ")");
-                }
-                pendingHigh = false;
-            }
-            else if (char.IsLowSurrogate(unit))
-            {
-                throw new FormatException("low surrogate escape \\u" + hex + " without a preceding high surrogate escape");
-            }
-            else
-            {
-                pendingHigh = char.IsHighSurrogate(unit);
-            }
-            sb.Append(unit);
-        }
-
-        /// <summary>Appends a non-escape code unit; one may not interrupt a pending surrogate pair.</summary>
-        private static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
-        {
-            EndPendingHighOrThrow(ref pendingHigh);
-            sb.Append(unit);
-        }
-
-        private static void EndPendingHighOrThrow(ref bool pendingHigh)
-        {
-            if (pendingHigh)
-            {
-                throw new FormatException("high surrogate escape not followed by a low surrogate escape");
-            }
-            pendingHigh = false;
         }
 
         private static TomlArray ParseArray(string text, int lineNumber, int depth)
