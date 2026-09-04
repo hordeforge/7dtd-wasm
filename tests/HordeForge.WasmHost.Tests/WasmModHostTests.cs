@@ -335,7 +335,7 @@ namespace HordeForge.WasmHost.Tests
         {
             var api = new TestGameHostApi();
             var config = new WasmHostConfig();
-            var host = new WasmModHost(api, config);
+            using var host = new WasmModHost(api, config);
             host.LoadModule("strings", Fixture("strings"));
             host.DispatchInit();
             host.Dispose();
@@ -349,15 +349,18 @@ namespace HordeForge.WasmHost.Tests
             // other entry point must refuse a disposed host instead of
             // touching the released engine.
             var (host, _) = NewHost();
-            host.LoadModule("strings", Fixture("strings"));
-            host.Dispose();
-            host.Dispose(); // second call is a no-op
+            using (host)
+            {
+                host.LoadModule("strings", Fixture("strings"));
+                host.Dispose();
+                host.Dispose(); // second call is a no-op
 
-            Assert.Throws<ObjectDisposedException>(() => host.LoadModule("again", Fixture("strings")));
-            Assert.Throws<ObjectDisposedException>(() => host.DispatchInit());
-            Assert.Throws<ObjectDisposedException>(() => host.DispatchTick(1));
-            Assert.Throws<ObjectDisposedException>(() => host.DispatchPlayerJoin(1, "maci"));
-            Assert.Throws<ObjectDisposedException>(() => host.Unload("strings"));
+                Assert.Throws<ObjectDisposedException>(() => host.LoadModule("again", Fixture("strings")));
+                Assert.Throws<ObjectDisposedException>(() => host.DispatchInit());
+                Assert.Throws<ObjectDisposedException>(() => host.DispatchTick(1));
+                Assert.Throws<ObjectDisposedException>(() => host.DispatchPlayerJoin(1, "maci"));
+                Assert.Throws<ObjectDisposedException>(() => host.Unload("strings"));
+            }
         }
 
         [Fact]
