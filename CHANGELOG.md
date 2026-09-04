@@ -105,6 +105,18 @@ does, so any 0.1.x remains safe to take without reading further.
   Directory.Build.props.
 - `make dist` derives the staged native Wasmtime version from the lock
   file instead of a hardcoded copy of the package version.
+- Guest output caps covered by unit tests (`GuestRateLimiterTests`): the
+  limiter file links into the net8 test project and a second constructor
+  takes the millisecond clock, so window resets and TickCount wraparound
+  are covered deterministically (ADR 0006 amended).
+- Pure bridge helpers moved into the host library with tests:
+  `ModuleRoots` (multi-tree module resolution), `SettingsTable`
+  (get_setting precedence), `TextSanitizer` (log-forgery guard),
+  `ManifestFiles` (bounded manifest reads), plus unit tests for the
+  `doccheck` gate rules.
+- `bridge-check` pins the glide buff surface (`EntityAlive.Buffs`,
+  `EntityBuffs.AddBuff/RemoveBuff/HasBuff`) so a game update renaming
+  them fails the gate instead of breaking glides at runtime.
 
 ## [0.1.5] - 2026-08-24
 
