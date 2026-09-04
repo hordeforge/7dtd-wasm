@@ -26,6 +26,12 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
 | `Mods/Wasm/<id>/wasm-mod.toml` | That mod's `[limits]` and `[settings]` | on `wasm reload <id>` |
 | `Mods/Wasm/<id>/config.toml` | That mod's own config, served to the guest verbatim through the `zdtd.config` import | on `wasm reload <id>` |
 
+A staged modlet may carry its own `Wasm/` tree (for example
+`Mods/wasm-bridge/Wasm/parachute`); the bridge scans those after the
+top-level `Mods/Wasm`, first tree wins per id. A managed test instance can
+only stage whole modlets, never loose files under `Mods/`, so the guest
+tree ships as one modlet there.
+
 The per-mod `config.toml` is the zdtd self-contained-config convention
 (docs/PLUGIN_API.md in the sibling repo): the host never parses it, each
 guest owns its format, and a missing file means the guest keeps its

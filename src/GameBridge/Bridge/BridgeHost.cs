@@ -45,6 +45,15 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>
         public static string WasmRoot { get; private set; } = string.Empty;
 
+        /// <summary>
+        /// Extra module trees contributed by staged modlets: each modlet may
+        /// carry its own Wasm/ folder (for example Mods/wasm-bridge/Wasm),
+        /// which a managed instance stages as a unit since `sb` only stages
+        /// whole modlets, never loose files under Mods/. Mods/Wasm itself
+        /// stays first; two trees shipping the same id resolve to the first.
+        /// </summary>
+        private static readonly List<string> ExtraWasmRoots = new List<string>();
+
         /// <summary>True once Start completed (mods may still be empty).</summary>
         public static bool Started { get; private set; }
 
@@ -79,6 +88,18 @@ namespace HordeForge.GameBridge.Bridge
 
                 WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
                 string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
+                CollectExtraWasmRoots(Path.GetDirectoryName(modletDir) ?? string.Empty, modletDir);
+                // A modlet-carried tree can ship its own shared limits; the
+                // top-level Mods/Wasm/wasm.toml still wins when both exist.
+                foreach (string extra in ExtraWasmRoots)
+                {
+                    string extraShared = Path.Combine(extra, "wasm.toml");
+                    if (!File.Exists(sharedTomlPath) && File.Exists(extraShared))
+                    {
+                        sharedTomlPath = extraShared;
+                        break;
+                    }
+                }
                 _settings = new WasmSettingsProvider(sharedTomlPath);
 
                 var config = new WasmHostConfig();
@@ -90,6 +111,10 @@ namespace HordeForge.GameBridge.Bridge
                 // LoadAllModules runs each newly loaded module's on_enable (see
                 // there), so start and "wasm load" initialize exactly once.
                 LoadAllModules();
+                if (ExtraWasmRoots.Count > 0)
+                {
+                    Log.Out("[WasmHost] extra module tree(s): " + string.Join(", ", ExtraWasmRoots.ToArray()));
+                }
                 Started = true;
                 Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
             }
@@ -242,32 +267,35 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0;
                 }
-                if (!Directory.Exists(WasmRoot))
+                if (!Directory.Exists(WasmRoot) && ExtraWasmRoots.Count == 0)
                 {
                     return 0;
                 }
                 var loadedIds = new List<string>();
-                foreach (string dir in Directory.GetDirectories(WasmRoot))
+                foreach (string root in ModuleRoots())
                 {
-                    string id = Path.GetFileName(dir);
-                    if (!IsValidModId(id))
+                    foreach (string dir in Directory.GetDirectories(root))
                     {
-                        // A folder name with path separators or control
-                        // characters (both legal on some filesystems) must
-                        // never reach the log source tags or module paths.
-                        Log.Warning("[WasmHost] skipping " + TextSanitizer.Clean(id) +
-                                    ": not a valid module folder name");
-                        continue;
+                        string id = Path.GetFileName(dir);
+                        if (!IsValidModId(id))
+                        {
+                            // A folder name with path separators or control
+                            // characters (both legal on some filesystems) must
+                            // never reach the log source tags or module paths.
+                            Log.Warning("[WasmHost] skipping " + TextSanitizer.Clean(id) +
+                                        ": not a valid module folder name");
+                            continue;
+                        }
+                        if (host.TryGetMod(id, out _))
+                        {
+                            continue;
+                        }
+                        if (!TryLoadFromDisk(host, id))
+                        {
+                            continue;
+                        }
+                        loadedIds.Add(id);
                     }
-                    if (host.TryGetMod(id, out _))
-                    {
-                        continue;
-                    }
-                    if (!TryLoadFromDisk(host, id))
-                    {
-                        continue;
-                    }
-                    loadedIds.Add(id);
                 }
                 foreach (string id in loadedIds)
                 {
@@ -286,8 +314,8 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static bool TryLoadFromDisk(WasmModHost host, string id)
         {
-            string modulePath = Path.Combine(WasmRoot, id, "module.wasm");
-            if (!File.Exists(modulePath))
+            string modulePath = ResolveModuleFile(id, "module.wasm");
+            if (modulePath.Length == 0)
             {
                 return false;
             }
@@ -335,8 +363,10 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static string ReadRawConfig(string id)
         {
-            string path = Path.Combine(WasmRoot, id, "config.toml");
-            return ManifestFiles.TryRead(path, out string content, out _) ? content : string.Empty;
+            string path = ResolveModuleFile(id, "config.toml");
+            return path.Length > 0 && ManifestFiles.TryRead(path, out string content, out _)
+                ? content
+                : string.Empty;
         }
 
         /// <summary>
@@ -478,7 +508,7 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static bool TryReadManifest(string id, out ModManifest? manifest)
         {
-            string dir = Path.Combine(WasmRoot, id);
+            string dir = ResolveModuleDir(id);
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");
             string jsonPath = Path.Combine(dir, "wasm-mod.json");
             try
@@ -530,8 +560,107 @@ namespace HordeForge.GameBridge.Bridge
                 _gameApi = null;
                 _servant = null;
                 _settings = null;
+                ExtraWasmRoots.Clear();
                 Started = false;
             }
+        }
+
+        /// <summary>
+        /// Every module tree in priority order: Mods/Wasm first, then each
+        /// staged modlet's own Wasm/ folder. Only existing directories are
+        /// returned, so a missing top-level Mods/Wasm is fine when a modlet
+        /// carries the whole tree.
+        /// </summary>
+        private static IEnumerable<string> ModuleRoots()
+        {
+            if (Directory.Exists(WasmRoot))
+            {
+                yield return WasmRoot;
+            }
+            for (int i = 0; i < ExtraWasmRoots.Count; i++)
+            {
+                if (Directory.Exists(ExtraWasmRoots[i]))
+                {
+                    yield return ExtraWasmRoots[i];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Collects each staged modlet's own Wasm/ folder (the bridge's own
+        /// modlet excluded: its sibling Mods/Wasm is WasmRoot already).
+        /// Runs once at Start; a managed instance stages whole modlets, so a
+        /// guest tree that must survive `sb wipe` ships as one (for example
+        /// Mods/wasm-bridge/Wasm/parachute).
+        /// </summary>
+        private static void CollectExtraWasmRoots(string modsDir, string ownModletDir)
+        {
+            ExtraWasmRoots.Clear();
+            string ownFull = Path.GetFullPath(ownModletDir);
+            string[] modlets;
+            try
+            {
+                modlets = Directory.GetDirectories(modsDir);
+            }
+            catch (Exception)
+            {
+                return;
+            }
+            Array.Sort(modlets, StringComparer.Ordinal);
+            foreach (string modlet in modlets)
+            {
+                string candidate = Path.Combine(modlet, "Wasm");
+                if (!Directory.Exists(candidate))
+                {
+                    continue;
+                }
+                try
+                {
+                    if (string.Equals(Path.GetFullPath(modlet), ownFull, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                ExtraWasmRoots.Add(candidate);
+            }
+        }
+
+        /// <summary>
+        /// First tree holding the module's directory, or empty when none
+        /// does. Mods/Wasm wins over modlet-carried trees.
+        /// </summary>
+        private static string ResolveModuleDir(string id)
+        {
+            foreach (string root in ModuleRoots())
+            {
+                string dir = Path.Combine(root, id);
+                if (Directory.Exists(dir))
+                {
+                    return dir;
+                }
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// First tree holding the module's named file, or empty when none
+        /// does. A directory without the file does not claim the module.
+        /// </summary>
+        private static string ResolveModuleFile(string id, string fileName)
+        {
+            foreach (string root in ModuleRoots())
+            {
+                string path = Path.Combine(root, id, fileName);
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+            return string.Empty;
         }
     }
 }
