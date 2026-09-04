@@ -56,18 +56,9 @@ namespace HordeForge.GameBridge.Bridge
         public bool TryGetSetting(string modId, string key, out string value)
         {
             // Per-mod settings are current by registration; only the shared
-            // file may have changed on disk, so consult it before the
-            // shared half of the lookup.
-            if (modId.Length > 0 && _table.TryGetSetting(modId, key, out value))
-            {
-                return true;
-            }
+            // file may have changed on disk, so reload before the lookup.
             ReloadSharedIfChanged();
-            if (_table.TryGetSetting(modId, key, out value))
-            {
-                return true;
-            }
-            return _table.TryGetSetting(string.Empty, key, out value);
+            return _table.TryGetSetting(modId, key, out value);
         }
 
         private void ReloadSharedIfChanged()
