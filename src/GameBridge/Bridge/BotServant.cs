@@ -363,21 +363,19 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// The glide fall sink (blocks/s, negative = down): while a player's
-        /// glide flag is armed the descent is capped at this rate, the
-        /// real-server equivalent of the zdtd [rules.glide] sink_vy_mps clamp
-        /// (the stock server has no C2S movement envelope to exempt, so the
-        /// bridge clamps the server entity position and the client follows
-        /// the corrections). Matches the parachute preset's sink_vy_mps.
+        /// glide flag is armed the descent is capped at this rate. Matches
+        /// the parachute preset's sink_vy_mps and the client slow-fall
+        /// patch, which enforces the same rate on the client-owned physics.
         /// </summary>
         private const float SinkVyMps = 2.5f;
 
         /// <summary>
         /// Caps a gliding player's descent at the sink rate by nudging the
-        /// entity up when it dropped too far since the previous tick. The
-        /// sense record keeps the real vy (the parachute mod arms on it);
-        /// the correction applies for the next tick, so the glide falls
-        /// slowly and lands safely. Best effort: only while the glide flag
-        /// is armed, never for anyone else.
+        /// server entity up when it dropped too far since the previous tick.
+        /// Belt and suspenders beside the client slow-fall patch (which owns
+        /// the visible glide on client-owned physics); the sense record keeps
+        /// the real vy (the parachute mod arms on it). Best effort: only
+        /// while the glide flag is armed, never for anyone else.
         /// </summary>
         private void ClampGlideDescent(EntityAlive alive, float vy, UnityEngine.Vector3 position, UnityEngine.Vector3 prevPos)
         {
