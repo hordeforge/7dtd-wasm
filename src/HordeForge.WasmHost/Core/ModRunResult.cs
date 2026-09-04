@@ -8,12 +8,6 @@ namespace HordeForge.WasmHost.Core
     /// </summary>
     public readonly struct ModRunResult
     {
-        /// <summary>Creates a structured call result.</summary>
-        public ModRunResult(ModRunStatus status, string message, string details, ulong fuelConsumed)
-            : this(string.Empty, status, message, details, fuelConsumed)
-        {
-        }
-
         /// <summary>Creates a structured call result attributed to a mod.</summary>
         public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
         {
@@ -46,7 +40,7 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Instructions consumed from the per-call fuel budget.</summary>
         public ulong FuelConsumed { get; }
 
-        /// <summary>True when the call completed successfully with StatusOk.</summary>
+        /// <summary>True when the call completed successfully (Status == Ok).</summary>
         public bool Ok => Status == ModRunStatus.Ok;
     }
 }
