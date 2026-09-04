@@ -158,10 +158,6 @@ namespace HordeForge.GameBridge.Bridge
             // Resolved through the same multi-root trees as the loader, so
             // a modlet-carried module finds its config too.
             content = string.Empty;
-            if (string.IsNullOrEmpty(modId))
-            {
-                return false;
-            }
             if (!ModId.IsValid(modId))
             {
                 return false;
