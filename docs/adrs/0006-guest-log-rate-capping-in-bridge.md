@@ -34,9 +34,10 @@ per-module per-second cap, counts them, and reports the totals.
 Easy: the host stays generic; the policy is visible and inspectable at
 runtime; SECURITY.md documents the guarantee. Foreclosed: a single shared
 cap policy across all embeddings (each embedding decides). Honest downside:
-the limiter is monotonic-clock based and bridge code, so it is exercised in
-the acceptance run rather than by the host unit suite. Revisit if the host
-API gains a per-module quota mechanism that makes rate policy a host concern.
+the limiter is monotonic-clock based bridge code, so it was exercised in
+the acceptance run rather than by the host unit suite (fixed 2026-09-04,
+see below). Revisit if the host API gains a per-module quota mechanism
+that makes rate policy a host concern.
 
 ## Amendment (2026-08-25)
 
@@ -60,3 +61,12 @@ failures, get_world_time failures) so the diagnostics themselves cannot
 flood the log. Each cap is fixed at limiter construction
 (`GuestRateLimiter(maxPerSecond)`). The decision is unchanged: all rate
 policy lives in the bridge, not the host.
+
+## Amendment (2026-09-04): the limiter is unit-tested after all
+
+The limiter class moved toward the test suite without moving the policy:
+its file is linked into the net8 test project (the class has no game
+references), and a second constructor takes the millisecond clock so
+window resets and TickCount wraparound are covered deterministically
+(GuestRateLimiterTests). The decision is unchanged: the cap policy lives
+in the bridge. The old honest downside above no longer holds.
