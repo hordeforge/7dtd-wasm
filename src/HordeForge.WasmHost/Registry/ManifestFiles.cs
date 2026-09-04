@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace HordeForge.GameBridge.Bridge
+namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
     /// Reads operator-authored manifest files (wasm-mod.toml, wasm-mod.json,
@@ -16,7 +16,7 @@ namespace HordeForge.GameBridge.Bridge
     /// corrupting setting values into U+FFFD before they are served to
     /// guests.
     /// </summary>
-    internal static class ManifestFiles
+    public static class ManifestFiles
     {
         /// <summary>Maximum accepted manifest file size (1 MiB).</summary>
         public const long MaxBytes = 1024 * 1024;
@@ -30,10 +30,10 @@ namespace HordeForge.GameBridge.Bridge
         /// error) so callers can report the real cause instead of a generic
         /// "unreadable".
         /// </summary>
-        public static bool TryRead(string path, out string content, out string? failureReason)
+        public static bool TryRead(string path, out string content, out string failureReason)
         {
             content = string.Empty;
-            failureReason = null;
+            failureReason = string.Empty;
             try
             {
                 var info = new FileInfo(path);
@@ -65,7 +65,7 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public static string ReadRequired(string path)
         {
-            if (!TryRead(path, out string content, out string? failureReason))
+            if (!TryRead(path, out string content, out string failureReason))
             {
                 throw new InvalidOperationException(path + " is unreadable: " + failureReason);
             }
