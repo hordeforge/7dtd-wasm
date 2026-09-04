@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace HordeForge.GameBridge.Bridge
+namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
     /// Strips C0 control characters, DEL, and the C1 control range from
@@ -10,8 +10,9 @@ namespace HordeForge.GameBridge.Bridge
     /// 8-bit C1 controls such as U+009B CSI) can drive terminals that decode
     /// UTF-8 input even when the 7-bit ESC byte is gone.
     /// </summary>
-    internal static class TextSanitizer
+    public static class TextSanitizer
     {
+        /// <summary>Returns <paramref name="text"/> with every control character replaced by '?'.</summary>
         public static string Clean(string text)
         {
             if (string.IsNullOrEmpty(text))

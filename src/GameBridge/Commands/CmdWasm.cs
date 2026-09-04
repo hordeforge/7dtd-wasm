@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using HordeForge.GameBridge.Bridge;
+using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Commands
 {

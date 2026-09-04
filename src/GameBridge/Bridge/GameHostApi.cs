@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using HordeForge.WasmHost.Abi;
+using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge
 {
