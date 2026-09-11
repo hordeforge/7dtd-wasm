@@ -6,10 +6,12 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
-Next release ships as 0.2.0: this cycle changes the public C# surface of
-the host library and the bridge (marked below). In this project's 0.x
-scheme the minor digit carries breaking changes and the patch digit never
-does, so any 0.1.x remains safe to take without reading further.
+## [0.2.0] - 2026-09-11
+
+This cycle changes the public C# surface of the host library and the bridge
+(marked below). In this project's 0.x scheme the minor digit carries breaking
+changes and the patch digit never does, so any 0.1.x remains safe to take
+without reading further.
 
 ### Changed (breaking)
 
