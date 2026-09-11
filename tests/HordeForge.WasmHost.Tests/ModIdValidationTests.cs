@@ -49,6 +49,21 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("\u009b31mcsi")]
         [InlineData("trailing\u009f")]
         [InlineData("trailing\u007f")]
+        // Invisible format characters (Cf): zero-width space, joiners, word
+        // joiner, bidi overrides/isolates, soft hyphen, U+FEFF. All render
+        // as nothing, so "bo" + one of these + "ss" must not coexist with a
+        // plain "boss" as two distinct registry keys.
+        [InlineData("bo\u200bss")]
+        [InlineData("bo\u200css")]
+        [InlineData("bo\u200dss")]
+        [InlineData("bo\u2060ss")]
+        [InlineData("bo\u202ess")]
+        [InlineData("bo\u2066ss")]
+        [InlineData("bo\u00adss")]
+        [InlineData("\ufeffboss")]
+        // Variation selectors: BMP block and plane-14 (high surrogate 0xDB40).
+        [InlineData("boss\ufe0f")]
+        [InlineData("boss\udb40\udd00")]
         public void UnsafeIdsAreRejected(string? id)
         {
             Assert.False(ModId.IsValid(id));

@@ -31,9 +31,39 @@ AI_ATTR = re.compile(
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 CHECKBOX = re.compile(r"^\s*- \[[ x]\]")
 
+# A TODO-looking list item that is not a checkbox (checked in markdown).
+TODO_BARE = re.compile(r"^\s*- (TODO|todo)")
+
 errors = 0
 warnings = 0
 text_files = []
+
+
+def line_errors(line: str) -> list[str]:
+    """Rule hits for one line: em dash, AI attribution. Pure for tests."""
+    hits = []
+    if EM_DASH.search(line):
+        hits.append("em dash found")
+    if AI_ATTR.search(line):
+        hits.append("possible AI attribution")
+    return hits
+
+
+def link_target_broken(path: pathlib.Path, target: str) -> bool:
+    """True when a markdown link target names a missing local file."""
+    if target.startswith(("http://", "https://", "#", "mailto:")):
+        return False
+    link = target.split("#")[0].strip()
+    if not link:
+        return False
+    return not (path.parent / link).resolve().exists()
+
+
+def is_todo_violation(line: str) -> bool:
+    """True for a TODO list item not using the checkbox format."""
+    if line.lstrip().startswith("- [ ]") or line.lstrip().startswith("- [x]"):
+        return False
+    return TODO_BARE.match(line) is not None
 
 
 def walk():
@@ -60,28 +90,17 @@ def check_markdown(path):
     global errors, warnings
     text = path.read_text(encoding="utf-8", errors="replace")
     for lineno, line in enumerate(text.splitlines(), 1):
-        if EM_DASH.search(line):
+        for hit in line_errors(line):
             errors += 1
-            print(f"{path}:{lineno}: em dash found")
-        if AI_ATTR.search(line):
-            errors += 1
-            print(f"{path}:{lineno}: possible AI attribution")
+            print(f"{path}:{lineno}: {hit}")
         # Internal links must resolve to an existing file.
         for target in LINK.findall(line):
-            if target.startswith(("http://", "https://", "#", "mailto:")):
-                continue
-            link = target.split("#")[0].strip()
-            if not link:
-                continue
-            resolved = (path.parent / link).resolve()
-            if not resolved.exists():
+            if link_target_broken(path, target):
                 errors += 1
                 print(f"{path}:{lineno}: broken link -> {target}")
     # TODO list items must use the checkbox format.
     for lineno, line in enumerate(text.splitlines(), 1):
-        if line.lstrip().startswith("- [ ]") or line.lstrip().startswith("- [x]"):
-            continue
-        if re.match(r"^\s*- (TODO|todo)", line):
+        if is_todo_violation(line):
             errors += 1
             print(f"{path}:{lineno}: TODO item must use '- [ ]' checkbox format")
 

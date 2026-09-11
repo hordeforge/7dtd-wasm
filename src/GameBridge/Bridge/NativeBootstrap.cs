@@ -14,11 +14,17 @@ namespace HordeForge.GameBridge.Bridge
     ///    the staged directory to PATH here is enough.
     ///  - ELF platforms (Linux) and macOS: the dynamic loader captures
     ///    LD_LIBRARY_PATH (macOS: DYLD_LIBRARY_PATH) at process start;
-    ///    changing them after start has no effect on later lookups. The
-    ///    engine must be resolvable when the server process starts, so
+    ///    changing them after start has no effect on later lookups, and
+    ///    Mono caches a failed DllImport lookup per library name, so an
+    ///    explicit dlopen of the staged file cannot rescue a later
+    ///    DllImport("wasmtime") either (verified with a Mono probe: only
+    ///    a process-start search path or a Mono dllmap entry resolves it).
+    ///    The engine must therefore be resolvable when the server process
+    ///    starts: process-start LD_LIBRARY_PATH (docs/ACCEPTANCE.md) or a
+    ///    launcher that prepends each staged modlet's Native/ dir (the
+    ///    sandbox `sb` does this from the instance's own Mods tree).
     ///    Prepare probes resolution and tells the operator how to start
-    ///    the server when it is not. Acceptance runs used exactly that
-    ///    process-start LD_LIBRARY_PATH (docs/ACCEPTANCE.md).
+    ///    the server when neither holds.
     ///
     /// Must run before any Wasmtime type is touched.
     /// </summary>

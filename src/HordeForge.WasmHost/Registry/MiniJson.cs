@@ -182,6 +182,11 @@ namespace HordeForge.WasmHost.Registry
                 }
                 _pos++;
                 var sb = new StringBuilder();
+                // Tracks an escaped high surrogate waiting for its low half:
+                // JSON strings must be valid Unicode, and a lone surrogate
+                // has no UTF-8 form, so it could never round-trip the guest
+                // string ABI without silent corruption.
+                bool pendingHigh = false;
                 while (true)
                 {
                     if (_pos >= _text.Length)
@@ -191,6 +196,7 @@ namespace HordeForge.WasmHost.Registry
                     char c = _text[_pos++];
                     if (c == '"')
                     {
+                        UnicodeEscapes.EndPendingHighOrThrow(ref pendingHigh);
                         return sb.ToString();
                     }
                     if (c == '\\')
@@ -202,14 +208,14 @@ namespace HordeForge.WasmHost.Registry
                         char e = _text[_pos++];
                         switch (e)
                         {
-                            case '"': sb.Append('"'); break;
-                            case '\\': sb.Append('\\'); break;
-                            case '/': sb.Append('/'); break;
-                            case 'b': sb.Append('\b'); break;
-                            case 'f': sb.Append('\f'); break;
-                            case 'n': sb.Append('\n'); break;
-                            case 'r': sb.Append('\r'); break;
-                            case 't': sb.Append('\t'); break;
+                            case '"': UnicodeEscapes.AppendPlainUnit(sb, '"', ref pendingHigh); break;
+                            case '\\': UnicodeEscapes.AppendPlainUnit(sb, '\\', ref pendingHigh); break;
+                            case '/': UnicodeEscapes.AppendPlainUnit(sb, '/', ref pendingHigh); break;
+                            case 'b': UnicodeEscapes.AppendPlainUnit(sb, '\b', ref pendingHigh); break;
+                            case 'f': UnicodeEscapes.AppendPlainUnit(sb, '\f', ref pendingHigh); break;
+                            case 'n': UnicodeEscapes.AppendPlainUnit(sb, '\n', ref pendingHigh); break;
+                            case 'r': UnicodeEscapes.AppendPlainUnit(sb, '\r', ref pendingHigh); break;
+                            case 't': UnicodeEscapes.AppendPlainUnit(sb, '\t', ref pendingHigh); break;
                             case 'u':
                                 if (_pos + 4 > _text.Length)
                                 {
@@ -224,7 +230,7 @@ namespace HordeForge.WasmHost.Registry
                                     throw new FormatException("bad unicode escape \\u" + hex + " at " + (_pos - 2));
                                 }
                                 _pos += 4;
-                                sb.Append((char)code);
+                                UnicodeEscapes.AppendEscapedCodeUnit(sb, (char)code, hex, ref pendingHigh);
                                 break;
                             default:
                                 throw new FormatException("unknown escape \\" + e);
@@ -232,7 +238,7 @@ namespace HordeForge.WasmHost.Registry
                     }
                     else
                     {
-                        sb.Append(c);
+                        UnicodeEscapes.AppendPlainUnit(sb, c, ref pendingHigh);
                     }
                 }
             }

@@ -1,0 +1,6 @@
+Proton: /home/maci/.local/share/Steam/steamapps/common/Proton - Experimental/proton
+Connect: 127.0.0.1:26900
+Log: /home/maci/.local/share/Steam/steamapps/compatdata/251570/pfx/drive_c/users/steamuser/AppData/Roaming/7DaysToDie/logs/output_log_client_7dtd_connect.txt
+Client mute: on (opt-out CLIENT_MUTE=0); polling up to 60s
+ntsync: up and running.
+Muted 7 Days To Die audio stream (sink input 9610).

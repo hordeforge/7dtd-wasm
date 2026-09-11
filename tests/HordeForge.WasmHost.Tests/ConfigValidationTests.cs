@@ -1,5 +1,6 @@
 using System;
 using HordeForge.WasmHost.Config;
+using HordeForge.WasmHost.Core;
 using Xunit;
 
 namespace HordeForge.WasmHost.Tests

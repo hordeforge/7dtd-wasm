@@ -83,9 +83,39 @@ namespace TargetCheck
             CheckType(md, "EntityAlive", t =>
             {
                 CheckProperty(md, t, "Health", isStatic: false);
+                CheckFieldOrProperty(md, t, "equipment", isStatic: false);
+                CheckFieldOrProperty(md, t, "Buffs", isStatic: false);
                 CheckMethod(md, t, "SetDead", "void()", isStatic: false);
                 CheckMethod(md, t, "IsDead", "bool()", isStatic: false);
                 CheckMethod(md, t, "DamageEntity", "int(DamageSource, int, bool, float)", isStatic: false);
+            });
+
+            // Parachute glide buff (BotServant.ApplyGlideBuff): applied while
+            // the glide flag is armed so the landing is safe.
+            CheckType(md, "EntityBuffs", t =>
+            {
+                CheckMethod(md, t, "AddBuff", "BuffStatus(string, int, bool, bool, float)", isStatic: false);
+                CheckMethod(md, t, "RemoveBuff", "void(string, int, bool)", isStatic: false);
+                CheckMethod(md, t, "HasBuff", "bool(string)", isStatic: false);
+            });
+
+            // Parachute glide sense (BotServant.WearsGlider): a worn item
+            // whose ItemClass carries the glider tag sets the sense v4
+            // wearing_glider bit.
+            CheckType(md, "Equipment", t =>
+            {
+                CheckMethod(md, t, "GetItems", "ItemValue[]()", isStatic: false);
+            });
+
+            CheckType(md, "ItemValue", t =>
+            {
+                CheckMethod(md, t, "IsEmpty", "bool()", isStatic: false);
+                CheckProperty(md, t, "ItemClass", isStatic: false);
+            });
+
+            CheckType(md, "ItemClass", t =>
+            {
+                CheckMethod(md, t, "HasAnyTags", "bool(FastTags`1<Global>)", isStatic: false);
             });
 
             CheckType(md, "EntityFactory", t =>

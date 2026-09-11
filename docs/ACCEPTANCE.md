@@ -64,6 +64,28 @@ install in the container. The native install should be repaired via Steam
 (`steamcmd +app_update 294420 validate`) before trusting it for further
 runs.
 
+## Parachute playtest (2026-08-30)
+
+The unmodified zdtd parachute module ran end to end on a live dedicated
+server (docker, fresh steamcmd V3.2.0 b9) driven by a real stock client
+through the `7dtd-playtest` orchestrator: the client wore the glider item,
+fell, and the mod armed the glide exemption and announced through the stock
+chat broadcast, which the client asserted (pass=2, exit=0). Server log
+showed `parachute: config deploy_vy=-6 delay_ticks=10` (the `zdtd.config`
+import serving the mod's config.toml), `glide <id> armed`, the announce,
+and `glide <id> cleared` on landing. Evidence and reproduction:
+`evidence/playtest-1/README.md`.
+
+Live findings fixed in this pass: V3.2.0's `teleportplayer` does not move
+remote-player entities (the fall is client-owned physics), the stock server
+does not populate `Entity.motion` for remote players (sense v4 `vy` is
+derived from the per-tick position history), and the V3.2.0 client on Linux
+must run with `crossplatform=None` (the EOS path crashes) and a stock
+`Assembly-CSharp.dll` (RealEarth's height-expand patch breaks chunk
+deserialization). Environment caveat: the live client+Proton layer became
+flaky after the passing run (a client-side `NetPackageChunk` read failure
+during world load), isolated to the environment, not the wasm/bridge code.
+
 ## What remains unproven
 
 - Windows in-game native loading (documented, not exercised).

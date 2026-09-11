@@ -334,6 +334,28 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
+        /// Runs one module's on_enable with the caller identity set to that
+        /// module. Callers that initialize a single freshly loaded mod (the
+        /// start scan, "wasm load", "wasm reload") run outside a dispatch
+        /// walk, and every host import (get_setting, log source tags)
+        /// resolves against the calling mod's id, so it must be set here and
+        /// not inherited from whichever mod the last dispatch touched.
+        /// Returns false when no module with this id is loaded.
+        /// </summary>
+        public bool TryInit(string id, out ModRunResult result)
+        {
+            ThrowIfDisposed();
+            if (!_mods.TryGetValue(id, out WasmMod? mod))
+            {
+                result = default;
+                return false;
+            }
+            _currentModId = mod.Id;
+            result = mod.Init();
+            return true;
+        }
+
+        /// <summary>
         /// Notifies every loaded mod that a player spawned into the world.
         /// Only mods that export the optional on_player_join handler are
         /// called; the player name is available to them through the
@@ -517,6 +539,41 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<long>(AbiConstants.ZdtdHostModule, AbiConstants.ImportTick, caller =>
             {
                 return Tick;
+            });
+
+            _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportConfig, (caller, outPtr, outCap) =>
+            {
+                // zdtd contract: copy the calling module's config.toml
+                // verbatim, min(out_cap, len) bytes; 0 = no config (module
+                // has none, or the buffer is too small - the guest checks
+                // the returned length). The host never parses it; each guest
+                // owns its format. Mirrors zdtd's config import exactly so
+                // the parachute mod's on_enable reads it unchanged.
+                if (outCap <= 0)
+                {
+                    return 0;
+                }
+                if (!_api.TryGetRawConfig(_currentModId, out string content) || content.Length == 0)
+                {
+                    return 0;
+                }
+                byte[] bytes = Encoding.UTF8.GetBytes(content);
+                int copy = Math.Min(bytes.Length, outCap);
+                Memory? memory = caller.GetMemory("memory");
+                if (memory == null)
+                {
+                    return 0;
+                }
+                try
+                {
+                    bytes.AsSpan(0, copy).CopyTo(memory.GetSpan(outPtr, copy));
+                }
+                catch (Exception ex)
+                {
+                    _api.Log(LogSource(), AbiConstants.LogError, "config failed: " + ex.Message);
+                    return 0;
+                }
+                return copy;
             });
 
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportQueue, (caller, ptr, len) =>

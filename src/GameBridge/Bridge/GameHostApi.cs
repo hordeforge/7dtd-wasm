@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using HordeForge.WasmHost.Abi;
+using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge
 {
@@ -13,6 +15,10 @@ namespace HordeForge.GameBridge.Bridge
     {
         private readonly WasmSettingsProvider _settings;
         private readonly BotServant _servant;
+        // Per-mod raw config (config.toml) cache, registered at module load
+        // and invalidated on reload; a guest looping on the config import
+        // must not stat the disk at call rate.
+        private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public GameHostApi(WasmSettingsProvider settings, BotServant servant)
         {
@@ -47,7 +53,11 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Rate limiter for get_world_time failure logs; exposed for "wasm status".</summary>
         public GuestRateLimiter WorldTimeErrorLimiter { get; }
 
-        /// <summary>Longest chat message accepted from a guest, in characters.</summary>
+        /// <summary>
+        /// Longest chat message accepted from a guest, counted in Unicode
+        /// code points so an astral-plane character (emoji and friends,
+        /// two UTF-16 units each) costs one like any other character.
+        /// </summary>
         public const int MaxChatMessageLength = 256;
 
         public void Log(string source, int level, string message)
@@ -114,6 +124,58 @@ namespace HordeForge.GameBridge.Bridge
             return _settings.TryGetSetting(modId, key, out value);
         }
 
+        /// <summary>
+        /// Registers a module's raw config (its config.toml, verbatim) so the
+        /// zdtd config import can serve it. Called by BridgeHost as modules
+        /// load; reload replaces the entry, unload removes it.
+        /// </summary>
+        public void RegisterConfig(string modId, string content)
+        {
+            _rawConfigs[modId] = content;
+        }
+
+        /// <summary>Drops a module's cached config; called on unload and before reload.</summary>
+        public void UnregisterConfig(string modId)
+        {
+            _rawConfigs.Remove(modId);
+        }
+
+        /// <summary>
+        /// Serves the calling mod's config.toml verbatim (the zdtd config
+        /// import). The host never parses it: each guest owns its format.
+        /// Returns false when the mod has no config file, so the guest keeps
+        /// its built-in defaults (zdtd: 0 = none).
+        /// </summary>
+        public bool TryGetRawConfig(string modId, out string content)
+        {
+            if (_rawConfigs.TryGetValue(modId, out content))
+            {
+                return content.Length > 0;
+            }
+            // Not registered (for example a module loaded outside the normal
+            // scan): read the file once and remember the outcome so a guest
+            // loop on the config import does not hit the disk per call.
+            // Resolved through the same multi-root trees as the loader, so
+            // a modlet-carried module finds its config too.
+            content = string.Empty;
+            if (!ModId.IsValid(modId))
+            {
+                return false;
+            }
+            string path = BridgeHost.ResolveModuleFile(modId, "config.toml");
+            if (path.Length == 0)
+            {
+                _rawConfigs[modId] = content;
+                return false;
+            }
+            if (ManifestFiles.TryRead(path, out string raw, out _))
+            {
+                content = raw;
+            }
+            _rawConfigs[modId] = content;
+            return content.Length > 0;
+        }
+
         public bool TryQueueCommand(string modId, string command)
         {
             // SimCommands execute game-side work (entity spawn, damage) that
@@ -124,19 +186,26 @@ namespace HordeForge.GameBridge.Bridge
                 return false;
             }
             command = TextSanitizer.Clean(command);
-            // The bot servant dispatches the brain's SimCommands; non-bot
-            // commands are logged and accepted.
+            // The bot servant dispatches the brain's SimCommands and the
+            // parachute mod's glide verb; non-servant queue text is a chat
+            // announce (the parachute deploy message reaches the stock chat
+            // broadcast this way, matching the mod's config: "announce via
+            // the stock chat broadcast"). A rejected chat falls back to a
+            // log line and still counts as accepted (the bytes were read).
             if (_servant.TryQueue(command, out bool handled))
             {
                 return true;
             }
             if (handled)
             {
-                // A bot command that failed mid-execution must reach the
+                // A servant command that failed mid-execution must reach the
                 // guest as rejected (queue -> -1), not as accepted.
                 return false;
             }
-            global::Log.Out("[WasmHost] cmd: " + command);
+            if (!SendChat(command))
+            {
+                global::Log.Out("[WasmHost] cmd (chat rejected): " + command);
+            }
             return true;
         }
 
@@ -173,7 +242,9 @@ namespace HordeForge.GameBridge.Bridge
                 // A guest must not push arbitrarily large strings into the
                 // chat broadcast; oversized messages are rejected outright
                 // (visible to the guest author) instead of silently cut.
-                if (message == null || message.Length > MaxChatMessageLength)
+                // Counted in code points, not string.Length (UTF-16 units):
+                // a 130-emoji message is 130 characters and 260 units.
+                if (message == null || CountCodePoints(message) > MaxChatMessageLength)
                 {
                     return false;
                 }
@@ -196,6 +267,20 @@ namespace HordeForge.GameBridge.Bridge
                 global::Log.Warning("[WasmHost] send_chat failed: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>Number of Unicode code points in <paramref name="text"/> (surrogate pairs count once).</summary>
+        private static int CountCodePoints(string text)
+        {
+            int count = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (!char.IsLowSurrogate(text[i]))
+                {
+                    count++;
+                }
+            }
+            return count;
         }
     }
 }

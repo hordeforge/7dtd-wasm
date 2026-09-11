@@ -45,7 +45,13 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>zdtd import: queue a text SimCommand for the bot servant.</summary>
         public const string ImportQueue = "queue";
 
-        /// <summary>zdtd import: fill a binary world snapshot ('ZBS3').</summary>
+        /// <summary>
+        /// zdtd import: fill the calling mod's config buffer with the raw
+        /// text of its own config.toml (0 = none; the host never parses it).
+        /// </summary>
+        public const string ImportConfig = "config";
+
+        /// <summary>zdtd import: fill a binary world snapshot ('ZBS4').</summary>
         public const string ImportSense = "sense";
 
         /// <summary>zdtd import: text request/response query (cover, path).</summary>

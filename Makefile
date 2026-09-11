@@ -124,6 +124,10 @@ fixtures: samples boss boss-zig
 	# The unmodified zdtd fps_bot plugin (workspace sibling), committed as a
 	# fixture so the compatibility surface is tested against the real module.
 	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
+	# The unmodified zdtd parachute mod (sense v4 + glide + config); its
+	# config.toml is staged so the zdtd.config import test serves the real file.
+	cp ../zdtd-server/mods/parachute/parachute.wasm             tests/fixtures/parachute.wasm
+	cp ../zdtd-server/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
 
 bridge:
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED)
@@ -154,6 +158,13 @@ dist: build fixtures bridge
 	# wasm.toml must raise limits.max_memory_bytes for it to load.
 	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
 	cp samples/zdtd-fps-bot/wasm-mod.toml dist/Mods/Wasm/fps-bot/
+	# The unmodified zdtd parachute mod: module + its own config.toml (served
+	# to the guest verbatim via the zdtd.config import). Needs the same raised
+	# memory cap; deploy tuning lives in config.toml, not the manifest.
+	mkdir -p dist/Mods/Wasm/parachute
+	cp ../zdtd-server/mods/parachute/parachute.wasm dist/Mods/Wasm/parachute/module.wasm
+	cp ../zdtd-server/mods/parachute/config.toml dist/Mods/Wasm/parachute/
+	cp samples/parachute/wasm-mod.toml dist/Mods/Wasm/parachute/
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	# SBOM: CycloneDX inventory built from the committed lock files, so
 	# consumers and vuln scanners know exactly what shipped.

@@ -1,0 +1,7 @@
+<xml>
+  <Name value="wasm-bridge"/>
+  <DisplayName value="Wasm guest tree (parachute playtest)"/>
+  <Description value="Parachute-only Mods/Wasm tree for the managed parachute suite: staged beside the bridge modlet, which reads Mods/Wasm as its sibling."/>
+  <Author value="hordeforge"/>
+  <Version value="0.1.0"/>
+</xml>

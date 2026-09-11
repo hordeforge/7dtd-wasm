@@ -1,0 +1,79 @@
+{
+  "server": "stock",
+  "suite": "parachute",
+  "world_name": "Navezgane",
+  "port": 26900,
+  "summary": {
+    "pass": 1,
+    "fail": 1,
+    "skip": 0
+  },
+  "done": {
+    "exit_hint": 1
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "case": "parachute/parachute_equip",
+      "detail": "item resolved=True "
+    },
+    {
+      "status": "FAIL",
+      "case": "parachute/parachute_fall_announce",
+      "detail": "no parachute deploy announce after lift after 30.0s | hit=False last="
+    }
+  ],
+  "peer_summary": null,
+  "peer_done": null,
+  "peer_results": [],
+  "slowest": [
+    {
+      "case": "parachute/parachute_fall_announce",
+      "ms": 30002.0
+    },
+    {
+      "case": "parachute/parachute_equip",
+      "ms": 4.0
+    }
+  ],
+  "nre_like_count": 0,
+  "nre_like_sample": [],
+  "peer_nre_like_count": 0,
+  "peer_nre_like_sample": [],
+  "malformed_client_events": 0,
+  "peer_malformed_client_events": 0,
+  "client_log": "/home/maci/.local/share/Steam/steamapps/compatdata/251570/pfx/drive_c/users/steamuser/AppData/Roaming/7DaysToDie/logs/output_log_client_7dtd_connect.txt",
+  "peer_client_log": null,
+  "peer_client_suite": null,
+  "server_log": "/home/maci/Desktop/hordeforge/7dtd-wasm/evidence/playtest-1/server-orch.log",
+  "unity_log": null,
+  "timeout_sec": 600.0,
+  "wall_sec": 67.4,
+  "ran_epoch": 1788023748,
+  "server_exited_mid_run": false,
+  "fixtures": {
+    "zombie_spawn_attempted": false,
+    "kill_fixture_attempted": false,
+    "barrier_counts": {
+      "spawn_zombie": 0,
+      "spawn_trader": 0,
+      "kill_fixture_zombie": 0,
+      "kill_player": 0,
+      "settime_bloodmoon": 0,
+      "settime_day": 0,
+      "spawn_vehicle": 0,
+      "spawn_loadgen_peer": 0,
+      "spawn_loadgen_bots": 0,
+      "bot_spawn": 0,
+      "bot_player_near": 0,
+      "persist_setup_done": 0,
+      "rejoin_setup_done": 0,
+      "teleport_persist_pad": 0,
+      "apm_dump": 0,
+      "chat_echo": 0,
+      "parachute_lift": 0
+    },
+    "fresh_save": true
+  },
+  "visual_reviews": {}
+}

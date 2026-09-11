@@ -43,6 +43,11 @@ namespace HordeForge.GameBridge.Bridge
 
         private readonly int _maxPerSecond;
 
+        // Monotonic millisecond clock, injectable for tests. Defaults to
+        // Environment.TickCount (~24.9-day wraparound, handled by the
+        // unchecked subtraction at the reset check).
+        private readonly Func<int> _clockMs;
+
         private sealed class Window
         {
             public int StartTickMs;
@@ -58,12 +63,22 @@ namespace HordeForge.GameBridge.Bridge
         /// being re-declared at every call site.
         /// </summary>
         public GuestRateLimiter(int maxPerSecond = MaxLinesPerSecond)
+            : this(maxPerSecond, () => Environment.TickCount)
+        {
+        }
+
+        /// <summary>
+        /// Same cap with an injected millisecond clock, so window resets
+        /// and wraparound are covered without sleeping.
+        /// </summary>
+        public GuestRateLimiter(int maxPerSecond, Func<int> clockMs)
         {
             if (maxPerSecond < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(maxPerSecond));
             }
             _maxPerSecond = maxPerSecond;
+            _clockMs = clockMs;
         }
 
         /// <summary>
@@ -74,7 +89,7 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public bool TryWrite(string source, out long droppedTotal)
         {
-            int nowMs = Environment.TickCount;
+            int nowMs = _clockMs();
             if (!_windows.TryGetValue(source, out var window))
             {
                 window = new Window { StartTickMs = nowMs };

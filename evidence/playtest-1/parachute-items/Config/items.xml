@@ -1,0 +1,20 @@
+<configs>
+  <!-- parachute: a wearable clothing item (ADR 0037), deployment copy for the
+       live playtest. Same intent as zdtd-server/mods/parachute/Config/items.xml
+       but written against the V3.1.0 items.xml schema, which the mod's copy
+       predates: items extend via a property (not an extends attribute), and
+       parseItem requires a Material property naming a valid material id
+       (Mcloth). Without these the whole patch fails to parse and the item
+       never loads, so the canonical mod file stays unmodified and this
+       deployment copy carries the version fixup. The Tags entry is what the
+       server's glider detection keys on (glider_item_tag = "parachute"). -->
+  <append xpath="/items">
+    <item name="parachute">
+      <property name="Extends" value="clothingOutfitT1" param1="CustomIcon"/>
+      <property name="Material" value="Mcloth"/>
+      <property name="Tags" value="parachute,clothing"/>
+      <property name="CustomIcon" value="ui_game_symbol_parachute"/>
+      <property name="DescriptionKey" value="parachuteDesc"/>
+    </item>
+  </append>
+</configs>

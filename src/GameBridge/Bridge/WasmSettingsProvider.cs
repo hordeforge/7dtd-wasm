@@ -15,13 +15,13 @@ namespace HordeForge.GameBridge.Bridge
     ///
     /// Per-mod settings are registered by BridgeHost as modules load, unload,
     /// and reload; the shared file is re-read when its mtime changes.
+    /// Precedence (per-mod over shared) lives in SettingsTable, which this
+    /// class feeds; this class owns only file watching and probe throttling.
     /// </summary>
     public sealed class WasmSettingsProvider
     {
         private readonly string _sharedPath;
-        private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _perMod =
-            new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
-        private readonly Dictionary<string, string> _shared = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly SettingsTable _table = new SettingsTable();
         private DateTime _sharedMtime = DateTime.MinValue;
         // mtime of the last reload attempt that failed and was logged, so a
         // broken wasm.toml is reported once per change instead of on every
@@ -43,27 +43,23 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Registers (or replaces) a module's settings from its manifest.</summary>
         public void UpdateMod(string modId, ModManifest? manifest)
         {
-            _perMod[modId] = manifest?.Settings ?? EmptySettings;
+            IReadOnlyDictionary<string, string>? settings = manifest != null ? manifest.Settings : null;
+            _table.UpdateMod(modId, settings);
         }
 
         /// <summary>Drops a module's settings on unload.</summary>
         public void RemoveMod(string modId)
         {
-            _perMod.Remove(modId);
+            _table.RemoveMod(modId);
         }
 
         public bool TryGetSetting(string modId, string key, out string value)
         {
-            if (modId.Length > 0 && _perMod.TryGetValue(modId, out var modSettings) && modSettings.TryGetValue(key, out value))
-            {
-                return true;
-            }
+            // Per-mod settings are current by registration; only the shared
+            // file may have changed on disk, so reload before the lookup.
             ReloadSharedIfChanged();
-            return _shared.TryGetValue(key, out value);
+            return _table.TryGetSetting(modId, key, out value);
         }
-
-        private static readonly IReadOnlyDictionary<string, string> EmptySettings =
-            new Dictionary<string, string>(StringComparer.Ordinal);
 
         private void ReloadSharedIfChanged()
         {
@@ -81,7 +77,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (!File.Exists(_sharedPath))
                 {
-                    _shared.Clear();
+                    _table.ClearShared();
                     _sharedMtime = DateTime.MinValue;
                     _loggedFailureValid = false;
                     return;
@@ -94,11 +90,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 string text = ManifestFiles.ReadRequired(_sharedPath);
                 ModManifest shared = ModManifest.ParseToml(text, "shared");
-                _shared.Clear();
-                foreach (var pair in shared.Settings)
-                {
-                    _shared[pair.Key] = pair.Value;
-                }
+                _table.UpdateShared(shared.Settings);
                 _sharedMtime = attemptedMtime;
                 _loggedFailureValid = false;
             }

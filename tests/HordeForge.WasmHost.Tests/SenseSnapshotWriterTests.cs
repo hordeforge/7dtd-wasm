@@ -5,11 +5,11 @@ using Xunit;
 namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
-    /// Byte-level contract of the zdtd sense snapshot ('ZBS3', BOTS_SPEC):
-    /// the layout is kept identical to the sibling zdtd-server wire format
-    /// so unmodified plugins parse it. These tests pin every documented
-    /// field offset from the SenseSnapshotWriter docstring; a drift here is
-    /// a silent ABI break guests read as garbage.
+    /// Byte-level contract of the zdtd sense snapshot ('ZBS4', BOTS_SPEC v4,
+    /// ADR 0037): the layout is kept identical to the sibling zdtd-server
+    /// wire format so unmodified plugins parse it. These tests pin every
+    /// documented field offset from the SenseSnapshotWriter docstring; a
+    /// drift here is a silent ABI break guests read as garbage.
     /// </summary>
     public sealed class SenseSnapshotWriterTests
     {
@@ -45,7 +45,9 @@ namespace HordeForge.WasmHost.Tests
                         Z = 3.5f,
                         Hp = 75f,
                         Yaw = 0.25f,
+                        Vy = -6.5f,
                         TargetId = 900,
+                        Wearing = 1,
                     },
                 },
             };
@@ -55,7 +57,7 @@ namespace HordeForge.WasmHost.Tests
 
             Assert.Equal(buffer.Length, written);
 
-            Assert.Equal(SenseSnapshotWriter.Magic, ReadU32(buffer, 0)); // 'ZBS3'
+            Assert.Equal(SenseSnapshotWriter.Magic, ReadU32(buffer, 0)); // 'ZBS4'
             Assert.Equal(1u, ReadU32(buffer, 4));                        // count
             Assert.Equal(0x01020304u, ReadU32(buffer, 8));               // tick
             Assert.Equal(unchecked((uint)-7), ReadU32(buffer, 12));      // self net id
@@ -73,7 +75,12 @@ namespace HordeForge.WasmHost.Tests
             Assert.Equal(FloatBits(3.5f), ReadU32(buffer, r + 16));
             Assert.Equal(FloatBits(75f), ReadU32(buffer, r + 20));
             Assert.Equal(FloatBits(0.25f), ReadU32(buffer, r + 24));
-            Assert.Equal(900u, ReadU32(buffer, r + 28));                 // target id
+            Assert.Equal(FloatBits(-6.5f), ReadU32(buffer, r + 28));     // vy (f32 bits, v4)
+            Assert.Equal(900u, ReadU32(buffer, r + 32));                 // target id
+            Assert.Equal(1, buffer[r + 36]);                             // wearing (v4)
+            Assert.Equal(0, buffer[r + 37]);                             // pad
+            Assert.Equal(0, buffer[r + 38]);                             // pad
+            Assert.Equal(0, buffer[r + 39]);                             // pad
         }
 
         [Fact]

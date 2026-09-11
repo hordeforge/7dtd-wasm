@@ -16,8 +16,8 @@ dependency, not priority.
 
 ## Host
 
-- [ ] Rate-cap guest log output with unit tests (currently bridge code
-      exercised only in acceptance; see ADR 0006).
+- [x] Rate-cap guest log output with unit tests (GuestRateLimiterTests;
+      see ADR 0006).
 - [ ] Boot payload for init (RFC candidate).
 - [ ] Event surface: entity, player, and world hooks (RFC candidate).
 - [ ] ABI versioning pass and compatibility policy (RFC candidate).

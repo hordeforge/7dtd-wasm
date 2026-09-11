@@ -1,0 +1,7 @@
+<xml>
+  <Name value="parachute-client"/>
+  <DisplayName value="Parachute glide (client slow-fall)"/>
+  <Description value="Client half of the parachute glide: caps fall speed while the server-side parachute mod's glide buff is active. Pairs with the parachute-items modlet and the 7dtd-wasm bridge."/>
+  <Author value="hordeforge"/>
+  <Version value="0.1.0"/>
+</xml>

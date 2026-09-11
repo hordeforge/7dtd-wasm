@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="7dtd-playtest.parachute" tests="2" failures="1" skipped="0">
+  <testcase classname="playtest" name="parachute/parachute_equip">
+  </testcase>
+  <testcase classname="playtest" name="parachute/parachute_fall_announce">
+    <failure message="no parachute deploy announce after lift after 30.0s | hit=False last= pos=(850.00, 61.08, 642.00)"/>
+  </testcase>
+</testsuite>
