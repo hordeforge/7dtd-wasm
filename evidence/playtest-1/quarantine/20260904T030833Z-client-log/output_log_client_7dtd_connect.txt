@@ -1,0 +1,954 @@
+Mono path[0] = 'Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/7DaysToDie_Data/Managed'
+Mono config path = 'Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/MonoBleedingEdge/etc'
+Input System module state changed to: Initialized.
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+Loading player data from Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/7DaysToDie_Data/data.unity3d
+Initialize engine version: 2022.3.62f2 (7670c08855a9)
+[Subsystems] Discovering subsystems at path Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/7DaysToDie_Data/UnitySubsystems
+Forcing GfxDevice: Direct3D 11
+GfxDevice: creating device client; threaded=1; jobified=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: AMD Radeon RX 7900 XTX (RADV NAVI31) (ID=0x744c)
+    Vendor:   ATI
+    VRAM:     24560 MB
+    Driver:   35.0.65535.65535
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.140 seconds
+- Finished resetting the current domain, in  0.001 seconds
+<RI> Initializing input.
+<RI> Input initialized.
+<RI> Initialized touch support.
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+UnloadTime: 0.480900 ms
+2026-09-04T11:05:47 0.002 INF [BACKTRACE] Initialize
+2026-09-04T11:05:47 0.006 INF [BACKTRACE] Root log path: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs
+2026-09-04T11:05:47 0.020 INF [BACKTRACE] Deleted old log: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-09-04_02-48-13.037.log
+2026-09-04T11:05:47 0.020 INF [BACKTRACE] Using log: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-09-04_02-51-06.878.log
+2026-09-04T11:05:47 0.020 INF [BACKTRACE] Using log: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-09-04_02-59-57.386.log
+2026-09-04T11:05:47 0.020 INF [BACKTRACE] Using log: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-09-04_03-02-58.405.log
+2026-09-04T11:05:47 0.020 INF [BACKTRACE] Player log path: C:\users\steamuser\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-09-04_03-05-47.945.log
+2026-09-04T11:05:47 0.029 INF [BACKTRACE] Initialized
+2026-09-04T11:05:47 0.048 INF Version: V 3.2.0 (b10) Compatibility Version: V 3.2.0, Build: WindowsPlayer 64 Bit
+2026-09-04T11:05:47 0.048 INF System information:
+2026-09-04T11:05:47 0.048 INF    OS: Windows 10  (10.0.19045) 64bit
+2026-09-04T11:05:47 0.048 INF    CPU: AMD Ryzen 9 9950X 16-Core Processor (cores: 32)
+2026-09-04T11:05:47 0.048 INF    RAM: 128462 MB
+2026-09-04T11:05:47 0.049 INF    GPU: AMD Radeon RX 7900 XTX (RADV NAVI31) (24560 MB)
+2026-09-04T11:05:47 0.051 INF    Graphics API: Direct3D 11.0 [level 11.1] (shader level 5.0)
+2026-09-04T11:05:47 0.057 INF Local UTC offset: 8 hours
+2026-09-04T11:05:48 0.069 INF Command line arguments: ./7DaysToDie.exe -force-d3d11 -nogs -noeac -logfile C:/users/steamuser/AppData/Roaming/7DaysToDie/logs/output_log_client_7dtd_connect.txt -skipintro -SkipNewsScreen=true -connect=127.0.0.1:27535 -screen-fullscreen 0 -screen-width 1280 -screen-height 720
+2026-09-04T11:05:48 0.070 WRN Command line argument 'connect' is not a configfile property, ignoring.
+2026-09-04T11:05:48 0.075 INF [Platform] Init
+2026-09-04T11:05:48 0.114 INF [Platform] Using native platform: Local
+2026-09-04T11:05:48 0.115 INF [Platform] Using server platform: Steam
+2026-09-04T11:05:48 0.115 INF [Platform] Using server platform: LAN
+2026-09-04T11:05:48 0.115 INF [Platform] Using server platform: Local
+2026-09-04T11:05:48 0.119 INF Starting PlayerInputManager...
+2026-09-04T11:05:48 0.120 INF InControl (version 1.8.9 build 9376, native module = True, XInput = True)
+2026-09-04T11:05:48 0.122 INF InControl (version 1.8.9 build 9376)
+2026-09-04T11:05:48 0.128 INF InControl Native (version 1.0.6)
+2026-09-04T11:05:48 0.181 INF [InControl] NativeInputDeviceManager enabled.
+2026-09-04T11:05:48 0.192 INF [BACKTRACE] Attempting to get User ID from platform: 
+2026-09-04T11:05:48 0.192 INF [BACKTRACE]  PlatformUserId missing at this time
+2026-09-04T11:05:48 0.193 INF [Platform] Initializing Local
+2026-09-04T11:05:48 0.195 INF [Platform] Initializing Steam
+2026-09-04T11:05:48 0.195 INF [Platform] Initializing LAN
+2026-09-04T11:05:49 1.210 INF [Analytics] Failed to find current Steam Branch
+System.InvalidOperationException: Steamworks is not initialized.
+  at Steamworks.InteropHelp.TestIfAvailableClient () [0x0001d] in <27ac48d45dd1469d853ad1ece8a3ec01>:0 
+  at Steamworks.SteamApps.GetCurrentBetaName (System.String& pchName, System.Int32 cchNameBufferSize) [0x00000] in <27ac48d45dd1469d853ad1ece8a3ec01>:0 
+  at BhvrAnalyticsServices.Services.AnalyticsServiceFactory.LoadServiceConfiguration (System.Boolean isDedicatedServer) [0x00017] in <988e5121d53d4cd6b728a8d36a9b72ff>:0 
+Steamworks is not initialized.
+2026-09-04T11:05:49 1.256 INF [SaveDataUtils] InitStatic Begin
+2026-09-04T11:05:49 1.259 INF [SaveDataUtils] UserGameDataDir: C:\users\steamuser\AppData\Roaming\7DaysToDie
+2026-09-04T11:05:49 1.259 INF [SaveDataUtils] SdPlayerPrefs -> Unity
+2026-09-04T11:05:49 1.259 INF [SaveDataUtils] InitStatic Complete
+2026-09-04T11:05:49 1.293 INF Last played version: V 3.2.0
+2026-09-04T11:05:49 1.457 INF Localization language from platform: english
+The referenced script on this Behaviour (Game Object 'BlockProcessor') is missing!
+Unloading 6 Unused Serialized files (Serialized files now loaded: 0)
+[PhysX] Initialized MultithreadedTaskDispatcher with 32 workers.
+UnloadTime: 1.226700 ms
+2026-09-04T11:05:49 1.520 INF Awake IsFocused: False
+2026-09-04T11:05:49 1.520 INF Awake
+2026-09-04T11:05:49 1.701 INF Occlusion: Awake
+Unloading 14 unused Assets to reduce memory usage. Loaded Objects now: 6943.
+Total: 9.440700 ms (FindLiveObjects: 0.320200 ms CreateObjectMapping: 0.066300 ms MarkObjects: 8.993700 ms  DeleteObjects: 0.059800 ms)
+
+2026-09-04T11:05:49 1.739 INF ApplyAllOptions streaming budget 22104 MB
+2026-09-04T11:05:49 1.740 INF ApplyAllOptions current screen 3840 x 2160, 120hz, window 1280 x 720, mode Windowed
+2026-09-04T11:05:49 1.741 INF Texture quality is set to 0
+2026-09-04T11:05:49 1.741 INF ApplyTextureFilter 3, AF Enable
+2026-09-04T11:05:49 1.742 INF ApplyTerrainOptions 4
+2026-09-04T11:05:49 1.868 INF [MODS] Start loading from: 'Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/7DaysToDie_Data/../Mods'
+2026-09-04T11:05:49 1.870 INF [MODS]   Trying to load from folder: '0_TFP_Harmony'
+2026-09-04T11:05:49 1.876 INF [MODS]     Loaded assembly 0Harmony (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\0Harmony.dll)
+2026-09-04T11:05:49 1.878 INF [MODS]     Loaded assembly Mono.Cecil (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\Mono.Cecil.dll)
+2026-09-04T11:05:49 1.878 INF [MODS]     Loaded assembly Mono.Cecil.Mdb (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\Mono.Cecil.Mdb.dll)
+2026-09-04T11:05:49 1.879 INF [MODS]     Loaded assembly Mono.Cecil.Pdb (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\Mono.Cecil.Pdb.dll)
+2026-09-04T11:05:49 1.880 INF [MODS]     Loaded assembly Mono.Cecil.Rocks (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\Mono.Cecil.Rocks.dll)
+2026-09-04T11:05:49 1.880 INF [MODS]     Loaded assembly MonoMod.Backports (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.Backports.dll)
+2026-09-04T11:05:49 1.882 INF [MODS]     Loaded assembly MonoMod.Core (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.Core.dll)
+2026-09-04T11:05:49 1.883 INF [MODS]     Loaded assembly MonoMod.Iced (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.Iced.dll)
+2026-09-04T11:05:49 1.884 INF [MODS]     Loaded assembly MonoMod.ILHelpers (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.ILHelpers.dll)
+2026-09-04T11:05:49 1.884 INF [MODS]     Loaded assembly MonoMod.RuntimeDetour (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.RuntimeDetour.dll)
+2026-09-04T11:05:49 1.886 INF [MODS]     Loaded assembly MonoMod.Utils (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\MonoMod.Utils.dll)
+2026-09-04T11:05:49 1.886 INF [MODS]     Loaded assembly System.ValueTuple (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\System.ValueTuple.dll)
+2026-09-04T11:05:49 1.887 INF [MODS]     Loaded assembly TfpHarmony (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\TfpHarmony.dll)
+2026-09-04T11:05:49 1.887 INF [MODS]     Loaded Mod: TFP_Harmony (1.1.0.4)
+2026-09-04T11:05:49 1.887 INF [MODS]   Trying to load from folder: '7dtd-fastconnect'
+2026-09-04T11:05:49 1.889 INF [MODS]     Loaded assembly 7dtd-fastconnect (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-fastconnect\7dtd-fastconnect.dll)
+2026-09-04T11:05:49 1.889 INF [MODS]     Loaded Mod: 7dtd-fastconnect (0.11.0)
+2026-09-04T11:05:49 1.889 INF [MODS]   Trying to load from folder: '7dtd-playtest'
+2026-09-04T11:05:49 1.891 INF [MODS]     Loaded assembly 7dtd-playtest (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-playtest\7dtd-playtest.dll)
+2026-09-04T11:05:49 1.891 INF [MODS]     Loaded Mod: 7dtd-playtest (0.10.0)
+2026-09-04T11:05:49 1.891 INF [MODS]   Trying to load from folder: 'dist'
+2026-09-04T11:05:49 1.892 INF [MODS]     Loaded assembly parachute-client (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\dist\parachute-client.dll)
+2026-09-04T11:05:49 1.892 INF [MODS]     Loaded Mod: parachute-client (0.1.0)
+2026-09-04T11:05:49 1.892 INF [MODS]   Trying to load from folder: 'parachute-items'
+2026-09-04T11:05:49 1.893 INF [MODS]     Loaded Mod: parachute-items (0.1.0)
+2026-09-04T11:05:49 1.894 INF [MODS] Initializing mod code
+2026-09-04T11:05:49 1.894 INF [MODS]   Initializing mod TFP_Harmony
+2026-09-04T11:05:49 1.903 INF [MODS]     Found ModAPI in assembly TfpHarmony (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\TfpHarmony.dll), creating instance
+2026-09-04T11:05:49 1.904 INF [MODS]       [Harmony] Init done
+Fallback handler could not load library Z:/home/maci/Desktop/hordeforge/7dtd-sandbox/instances/client-playtest/game/7DaysToDie_Data/MonoBleedingEdge/data-000000007CD03510.dll
+2026-09-04T11:05:50 2.131 INF [MODS]     Initialized code in mod 'TFP_Harmony' in assembly TfpHarmony (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\0_TFP_Harmony\TfpHarmony.dll)
+2026-09-04T11:05:50 2.131 INF [MODS]   Initializing mod 7dtd-fastconnect
+2026-09-04T11:05:50 2.131 INF [MODS]     Found ModAPI in assembly 7dtd-fastconnect (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-fastconnect\7dtd-fastconnect.dll), creating instance
+2026-09-04T11:05:50 2.132 INF [7dtd-fastconnect] InitMod v0.11.0 (connect/join only; playtest is 7dtd-playtest); diag OFF (`diag on/off/status`, or 7DTD_CONNECT_DEBUG=1)
+2026-09-04T11:05:50 2.133 INF [7dtd-fastconnect] automation boot mode enabled (auto when 7DTD_CONNECT/-connect is present; override with 7DTD_CONNECT_AUTOMATION)
+2026-09-04T11:05:50 2.136 INF Persistent GamePrefs saved
+2026-09-04T11:05:50 2.137 INF [7dtd-fastconnect] LoadManager.forceLoadSync=true (automation addressables)
+2026-09-04T11:05:50 2.139 INF Persistent GamePrefs saved
+2026-09-04T11:05:50 2.140 INF [7dtd-fastconnect] player name from 7DTD_PLAYER_NAME=client-playtest
+2026-09-04T11:05:50 2.142 INF Persistent GamePrefs saved
+2026-09-04T11:05:50 2.142 INF [7dtd-fastconnect] EULA prefs accepted=99
+2026-09-04T11:05:50 2.255 INF [7dtd-fastconnect] Harmony patches applied ok=28 fail=0 (news/discord skip for automation only)
+2026-09-04T11:05:50 2.256 INF [MODS]     Initialized code in mod '7dtd-fastconnect' in assembly 7dtd-fastconnect (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-fastconnect\7dtd-fastconnect.dll)
+2026-09-04T11:05:50 2.256 INF [MODS]   Initializing mod 7dtd-playtest
+2026-09-04T11:05:50 2.256 INF [MODS]     Found ModAPI in assembly 7dtd-playtest (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-playtest\7dtd-playtest.dll), creating instance
+2026-09-04T11:05:50 2.256 INF [7dtd-playtest] InitMod v0.8.0
+2026-09-04T11:05:50 2.320 INF [7dtd-playtest] Harmony patches ok=3 fail=0
+2026-09-04T11:05:50 2.321 INF [7dtd-playtest] armed suites=parachute laps=1 v0.8.0
+2026-09-04T11:05:50 2.323 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"armed suites=parachute laps=1 v0.8.0"}
+2026-09-04T11:05:50 2.324 INF [7dtd-playtest] queue cases=2
+2026-09-04T11:05:50 2.324 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"queue cases=2"}
+2026-09-04T11:05:50 2.324 INF [MODS]     Initialized code in mod '7dtd-playtest' in assembly 7dtd-playtest (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\7dtd-playtest\7dtd-playtest.dll)
+2026-09-04T11:05:50 2.325 INF [MODS]   Initializing mod parachute-client
+2026-09-04T11:05:50 2.325 INF [MODS]     Found ModAPI in assembly parachute-client (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\dist\parachute-client.dll), creating instance
+2026-09-04T11:05:50 2.333 INF [parachute-client] PatchAll ok
+2026-09-04T11:05:50 2.333 INF [MODS]     Initialized code in mod 'parachute-client' in assembly parachute-client (in Z:\home\maci\Desktop\hordeforge\7dtd-sandbox\instances\client-playtest\game\Mods\dist\parachute-client.dll)
+2026-09-04T11:05:50 2.333 INF [MODS] Loading done
+2026-09-04T11:05:50 2.343 INF Permissions file 'serveradmin.xml' not found, creating.
+2026-09-04T11:05:50 2.363 INF Command "automation" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.365 INF Command "ccphysics" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.365 INF Command "chunkcache" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.365 INF Command "createwebuser" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.366 INF Command "debugshot" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.366 INF Command "debugweather" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.366 INF Command "decomgr" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.367 INF Command "exportcurrentconfigs" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.367 INF Command "fallingblocks" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "getgamepref" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "getgamestat" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "getlogpath" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "getoptions" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "getsandboxoptions" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "gettime" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.368 INF Command "gfx" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.369 INF Command "graph" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.369 INF Command "help" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.370 INF Command "listplayerids" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.370 INF Command "listthreads" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.371 INF Command "loot" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.371 INF Command "memcl" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.371 INF Command "meshdatamanager" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.372 INF Command "performanceprofiler" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.374 INF Command "settempunit" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.375 INF Command "signeditordebug" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.375 INF Command "signtexman" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.376 INF Creating TransformDebug GameObject
+2026-09-04T11:05:50 2.377 INF Command "uioptions" has no explicit permission level, but a default permission of 1000, adding to permission list
+2026-09-04T11:05:50 2.393 INF GameSense server not found (no props file), disabling
+2026-09-04T11:05:50 2.394 WRN [Discord] Full Discord integration only available when running with EOS cross platform provider!
+2026-09-04T11:05:50 2.398 INF [PartyQuests] Initialized
+2026-09-04T11:05:50 2.401 INF Awake done in 881 ms
+2026-09-04T11:05:50 2.495 INF [XUi] Instantiating XUi from default prefab.
+2026-09-04T11:05:50 2.540 INF [7dtd-fastconnect] boot hb ticks=1 focused=False rib=True vsync=0 tfr=-1 static=False loginDone=False openMM=False action=character models
+2026-09-04T11:05:50 2.562 INF [XUi] Loading XUi asynchronously
+2026-09-04T11:05:51 3.095 INF Reloading serveradmin.xml
+2026-09-04T11:05:51 3.096 INF Loading permissions file at 'C:\users\steamuser\AppData\Roaming\7DaysToDie\Saves/serveradmin.xml'
+2026-09-04T11:05:51 3.102 INF Permissions file unchanged, skipping reloading
+2026-09-04T11:05:51 3.490 WRN Retrieving remote news file 'NewsFeatured.xml' failed: FileNotFound ()
+2026-09-04T11:05:51 3.501 WRN Retrieving remote news file 'News.xml' failed: FileNotFound ()
+2026-09-04T11:05:53 5.674 INF [XUi] Parsing all window groups completed in 2374 ms total.
+2026-09-04T11:05:53 5.704 INF Updated culture for display texts
+2026-09-04T11:05:53 5.712 WRN UIUtils: No device binding source could be found for PlayerAction GUI Apply
+Cannot Prepare a disabled VideoPlayer
+2026-09-04T11:05:54 6.396 INF Loaded default EULA
+2026-09-04T11:05:54 6.472 INF [7dtd-fastconnect] boot hb ticks=43 focused=False rib=True vsync=0 tfr=-1 static=False loginDone=False openMM=False action=particles
+2026-09-04T11:05:54 6.852 INF [XUi] Initialized all window groups completed in 1006 ms total.
+2026-09-04T11:05:54 6.959 INF LoadTextureArraysForQuality quality -1 to 0, reload False
+2026-09-04T11:05:55 7.418 INF LoadTextureArraysForQuality took 0.458
+2026-09-04T11:05:55 7.434 INF Loaded (local): events in 0.01
+2026-09-04T11:05:55 7.442 INF Loaded (local): rwgmixer in 0.00
+2026-09-04T11:05:55 7.454 INF Loaded (local): archetypes in 0.01
+2026-09-04T11:05:55 7.459 INF Loaded (local): loadingscreen in 0.00
+2026-09-04T11:05:55 7.468 INF Added 1336 subtitle data entries and 3 speaker colors
+2026-09-04T11:05:55 7.470 INF Loaded (local): subtitles in 0.00
+2026-09-04T11:05:55 7.474 INF Loaded (local): videos in 0.00
+2026-09-04T11:05:55 7.480 INF Loaded (local): sandbox_overrides in 0.00
+2026-09-04T11:05:55 7.480 INF WorldStaticData.Init() needed 4.762 s
+2026-09-04T11:05:55 7.481 INF [7dtd-fastconnect] CheckLogin force-open main menu (automation)
+2026-09-04T11:05:55 7.484 INF Persistent GamePrefs saved
+2026-09-04T11:05:55 7.485 INF [7dtd-fastconnect] blocking EULA window viewMode=False accepted=99
+2026-09-04T11:05:55 7.488 INF [7dtd-fastconnect] auto-join from 7DTD_CONNECT=127.0.0.1:27535
+2026-09-04T11:05:55 7.493 INF [7dtd-fastconnect] Connect by IP 127.0.0.1:27535 ver=V.3.20.10 level=Navezgane (requested host=127.0.0.1)
+2026-09-04T11:05:55 7.495 INF Connecting to server zdtd...
+2026-09-04T11:05:55 7.497 INF NetPackageManager Init
+2026-09-04T11:05:55 7.507 INF NET: LiteNetLib trying to connect to: 127.0.0.1:27535
+2026-09-04T11:05:55 7.535 INF [7dtd-fastconnect] connecting to 127.0.0.1:27535
+2026-09-04T11:05:55 7.542 INF NET: LiteNetLib: Connected to server
+2026-09-04T11:05:55 7.542 INF NET: LiteNetLib: Accepted by server
+2026-09-04T11:05:55 7.546 INF Started thread NCS_Reader_0
+2026-09-04T11:05:55 7.546 INF Started thread NCS_Writer_0
+2026-09-04T11:05:55 7.548 INF Started thread NCS_Reader_1
+2026-09-04T11:05:55 7.548 INF Started thread NCS_Writer_1
+2026-09-04T11:05:55 7.592 INF NPPL.Write
+2026-09-04T11:05:55 7.624 INF Login: authstate_nativeplatform
+2026-09-04T11:05:55 7.625 INF Login: authstate_encryption
+2026-09-04T11:05:55 7.684 INF Login: authstate_authenticated
+2026-09-04T11:05:55 7.686 INF Player allowed
+2026-09-04T11:05:55 7.689 INF [NET] Added server to history: 127.0.0.1
+2026-09-04T11:05:55 7.692 INF StartGame
+2026-09-04T11:05:55 7.709 INF [XUi] Instantiating XUi from default prefab.
+2026-09-04T11:05:55 7.736 INF Persistent GamePrefs saved
+GamePref.AdminFileName = serveradmin.xml
+GamePref.AirDropFrequency = 3
+GamePref.AirDropMarker = True
+GamePref.AISmellMode = 3
+GamePref.AllowSpawnNearBackpack = True
+GamePref.AllowSpawnNearFriend = 2
+GamePref.AutopilotMode = 0
+GamePref.BedrollDeadZoneSize = 15
+GamePref.BedrollExpiryTime = 45
+GamePref.BiomeProgression = True
+GamePref.BlockDamageAI = 100
+GamePref.BlockDamageAIBM = 100
+GamePref.BlockDamagePlayer = 100
+GamePref.BloodMoonEnemyCount = 8
+GamePref.BloodMoonFrequency = 7
+GamePref.BloodMoonRange = 0
+GamePref.BloodMoonWarning = 1
+GamePref.BuildCreate = False
+GamePref.CameraRestrictionMode = 0
+GamePref.ConnectToServerIP = 127.0.0.1
+GamePref.ConnectToServerPort = 26900
+GamePref.CreateLevelDim = 4096
+GamePref.CreateLevelName = My Level
+GamePref.CreativeMenuEnabled = False
+GamePref.DayCount = 3
+GamePref.DayLightLength = 18
+GamePref.DayNightLength = 60
+GamePref.DeathPenalty = 1
+GamePref.DebugMenuEnabled = False
+GamePref.DebugMenuShowTasks = False
+GamePref.DebugPanelsEnabled = -
+GamePref.DebugStopEnemiesMoving = False
+GamePref.DiscordAutoJoinVoiceMode = 0
+GamePref.DiscordDisabled = True
+GamePref.DiscordDmPrivacyMode = True
+GamePref.DiscordFirstTimeInfoShown = True
+GamePref.DiscordInputVolume = 1
+GamePref.DiscordLastAccountType = 0
+GamePref.DiscordMuteDmNotifications = True
+GamePref.DiscordOutputVolume = 1
+GamePref.DiscordSelectedInputDevice = default
+GamePref.DiscordSelectedOutputDevice = default
+GamePref.DiscordVoiceModePtt = False
+GamePref.DiscordVoiceVadModeAuto = True
+GamePref.DiscordVoiceVadThreshold = -60
+GamePref.DropOnDeath = 1
+GamePref.DropOnQuit = 0
+GamePref.DynamicMeshDistance = 1000
+GamePref.DynamicMeshEnabled = True
+GamePref.DynamicMeshLandClaimBuffer = 3
+GamePref.DynamicMeshLandClaimOnly = True
+GamePref.DynamicMeshMaxItemCache = 3
+GamePref.DynamicMeshMaxRegionCache = 1
+GamePref.DynamicMeshUseImposters = False
+GamePref.DynamicSpawner = 
+GamePref.EACEnabled = False
+GamePref.EnableMapRendering = False
+GamePref.EnemyDifficulty = 0
+GamePref.EnemySpawnMode = True
+GamePref.EulaLatestVersion = 99
+GamePref.EulaVersionAccepted = 99
+GamePref.FavoriteServersList = 
+GamePref.FragLimit = 20
+GamePref.GameDifficulty = 1
+GamePref.GameGuidClient = 
+GamePref.GameMode = GameModeSurvival
+GamePref.GameName = My Game
+GamePref.GameNameClient = My Game
+GamePref.GameSaveStorageType = 0
+GamePref.GameVersion = V 3.2.0
+GamePref.GameWorld = 
+GamePref.GameWorldLocationType = None
+GamePref.HideCommandExecutionLog = 0
+GamePref.IgnoreEOSSanctions = False
+GamePref.JarRefund = 60
+GamePref.JoiningOptions = True
+GamePref.LandClaimCount = 5
+GamePref.LandClaimDeadZone = 30
+GamePref.LandClaimDecayMode = 0
+GamePref.LandClaimExpiryTime = 7
+GamePref.LandClaimOfflineDelay = 0
+GamePref.LandClaimOfflineDurabilityModifier = 4
+GamePref.LandClaimOnlineDurabilityModifier = 4
+GamePref.LandClaimSize = 41
+GamePref.Language = 
+GamePref.LanguageBrowser = 
+GamePref.LastGameResetRevision = 13
+GamePref.LastLoadedPrefab = 
+GamePref.LastLoadingTipRead = -1
+GamePref.LootAbundance = 100
+GamePref.LootRespawnDays = 7
+GamePref.LootTimer = 
+GamePref.MatchLength = 10
+GamePref.MaxChunkAge = -1
+GamePref.MaxQueuedMeshLayers = 40
+GamePref.MaxSpawnedAnimals = 50
+GamePref.MaxSpawnedZombies = 64
+GamePref.MaxUncoveredMapChunksPerPlayer = 524288
+GamePref.NoGraphicsMode = False
+GamePref.OptionsAllowController = True
+GamePref.OptionsAmbientVolumeLevel = 1
+GamePref.OptionsAudioOcclusion = False
+GamePref.OptionsAutoPartyWithFriends = True
+GamePref.OptionsBackgroundGlobalOpacity = 0.95
+GamePref.OptionsBindingsResetRevision = 1
+GamePref.OptionsChatCommunication = True
+GamePref.OptionsControllerAimAssists = True
+GamePref.OptionsControllerCursorHoverSensitivity = 0.5
+GamePref.OptionsControllerCursorSnap = True
+GamePref.OptionsControllerIconStyle = 0
+GamePref.OptionsControllerJoystickLayout = 0
+GamePref.OptionsControllerLookAcceleration = 4
+GamePref.OptionsControllerLookAxisDeadzone = 0.1
+GamePref.OptionsControllerLookInvert = False
+GamePref.OptionsControllerMoveAxisDeadzone = 0.1
+GamePref.OptionsControllerSensitivityX = 0.35
+GamePref.OptionsControllerSensitivityY = 0.25
+GamePref.OptionsControllerTriggerEffects = False
+GamePref.OptionsControllerVehicleSensitivity = 1
+GamePref.OptionsControllerVibration = True
+GamePref.OptionsControllerVibrationStrength = 2
+GamePref.OptionsControllerWeaponAiming = False
+GamePref.OptionsControllerZoomSensitivity = 0.5
+GamePref.OptionsControlsDefaultQuickAction = 0
+GamePref.OptionsControlsResetRevision = 7
+GamePref.OptionsControlsSprintLock = 1
+GamePref.OptionsCrosshairADS = True
+GamePref.OptionsCrosshairColor = 0
+GamePref.OptionsCrosshairDot3P = True
+GamePref.OptionsCrosshairEnabled = True
+GamePref.OptionsCrosshairOpacity = 1
+GamePref.OptionsCrosshairRangedEnabled = True
+GamePref.OptionsCrosshairScale = 1
+GamePref.OptionsCrosshairThickness = 0.2
+GamePref.OptionsCrossplay = True
+GamePref.OptionsDisableChunkLODs = False
+GamePref.OptionsDisableXmlEvents = False
+GamePref.OptionsDynamicMusicDailyTime = 0.45
+GamePref.OptionsDynamicMusicEnabled = True
+GamePref.OptionsFilterProfanity = False
+GamePref.OptionsForegroundGlobalOpacity = 1
+GamePref.OptionsGfx3PCameraMode = 0
+GamePref.OptionsGfxAA = 4
+GamePref.OptionsGfxAASharpness = 0.6
+GamePref.OptionsGfxBloom = True
+GamePref.OptionsGfxBrightness = 0.5
+GamePref.OptionsGfxCameraDistance3P = 0.25
+GamePref.OptionsGfxDefaultFirstPersonCamera = True
+GamePref.OptionsGfxDOF = False
+GamePref.OptionsGfxDynamicMinFPS = 30
+GamePref.OptionsGfxDynamicMode = 0
+GamePref.OptionsGfxDynamicScale = 1
+GamePref.OptionsGfxFOV = 65
+GamePref.OptionsGfxFOV3P = 65
+GamePref.OptionsGfxFSRPreset = 2
+GamePref.OptionsGfxGrassDistance = 3
+GamePref.OptionsGfxLimitFpsInGame = -1
+GamePref.OptionsGfxLODDistance = 1
+GamePref.OptionsGfxMotionBlur = 2
+GamePref.OptionsGfxMotionBlurEnabled = True
+GamePref.OptionsGfxObjQuality = 4
+GamePref.OptionsGfxOcclusion = True
+GamePref.OptionsGfxQualityPreset = 4
+GamePref.OptionsGfxReflectQuality = 3
+GamePref.OptionsGfxReflectShadows = True
+GamePref.OptionsGfxResetRevision = 4
+GamePref.OptionsGfxResolution = 0
+GamePref.OptionsGfxShadowDistance = 3
+GamePref.OptionsGfxShadowQuality = 4
+GamePref.OptionsGfxSignQuality = 4
+GamePref.OptionsGfxSSAO = True
+GamePref.OptionsGfxSSReflections = 3
+GamePref.OptionsGfxStreamMipmaps = True
+GamePref.OptionsGfxSunShafts = True
+GamePref.OptionsGfxTerrainQuality = 4
+GamePref.OptionsGfxTexFilter = 3
+GamePref.OptionsGfxTexQuality = 0
+GamePref.OptionsGfxTreeDistance = 4
+GamePref.OptionsGfxUpscalerMode = 2
+GamePref.OptionsGfxViewDistance = 7
+GamePref.OptionsGfxVsync = 1
+GamePref.OptionsGfxWaterPtlLimiter = 1
+GamePref.OptionsGfxWaterQuality = 1
+GamePref.OptionsHudOpacity = 1
+GamePref.OptionsHudSize = 1
+GamePref.OptionsInterfaceSensitivity = 0.5
+GamePref.OptionsIntroMovieEnabled = False
+GamePref.OptionsInvertMouse = False
+GamePref.OptionsJournalPopup = True
+GamePref.OptionsLookSensitivity = 0.5
+GamePref.OptionsMenuMusicVolumeLevel = 0.7
+GamePref.OptionsMicVolumeLevel = 0.75
+GamePref.OptionsMumblePositionalAudioSupport = False
+GamePref.OptionsMusicVolumeLevel = 0.6
+GamePref.OptionsOverallAudioVolumeLevel = 1
+GamePref.OptionsPlayChanceFrequency = 3
+GamePref.OptionsPlayChanceProbability = 0.983
+GamePref.OptionsPlayerModelTexture = Player/Male/Player_male
+GamePref.OptionsPOICulling = 1
+GamePref.OptionsPoiVolumesSkipDeleteConfirmation = False
+GamePref.OptionsQuestsAutoAccept = True
+GamePref.OptionsQuestsAutoShare = True
+GamePref.OptionsScreenBoundsValue = 1
+GamePref.OptionsSelectionBoxAlphaMultiplier = 0.4
+GamePref.OptionsShowCompass = True
+GamePref.OptionsShowConsoleButton = False
+GamePref.OptionsShowCrosshair = True
+GamePref.OptionsStabSpawnBlocksOnGround = True
+GamePref.OptionsSubtitlesEnabled = True
+GamePref.OptionsTempCelsius = False
+GamePref.OptionsUiCompassUseEnglishCardinalDirections = False
+GamePref.OptionsUiFpsScaling = 1
+GamePref.OptionsVehicleLookSensitivity = 0.5
+GamePref.OptionsVoiceChatEnabled = True
+GamePref.OptionsVoiceInputDevice = 
+GamePref.OptionsVoiceOutputDevice = 
+GamePref.OptionsVoiceVolumeLevel = 0.75
+GamePref.OptionsWeaponAiming = False
+GamePref.OptionsZoomAccel = 0.5
+GamePref.OptionsZoomSensitivity = 0.3
+GamePref.PartySharedKillRange = 100
+GamePref.PersistentPlayerProfiles = False
+GamePref.PlayerAutologin = False
+GamePref.PlayerKillingMode = 2
+GamePref.PlayerName = client-playtest
+GamePref.PlayerSafeZoneHours = 7
+GamePref.PlayerSafeZoneLevel = 5
+GamePref.PlaytestBiome = 3
+GamePref.QuestProgressionDailyLimit = 4
+GamePref.RebuildMap = False
+GamePref.Region = 
+GamePref.ResetUnprotectedChunks = 0
+GamePref.SandboxCode = 
+GamePref.SandboxPreset = 
+GamePref.SaveDataLimit = -1
+GamePref.SaveDataLimitType = Unlimited
+GamePref.SelectionContextMode = 0
+GamePref.SelectionOperationMode = 0
+GamePref.ServerAdminSlots = 0
+GamePref.ServerAdminSlotsPermission = 0
+GamePref.ServerAllowCrossplay = True
+GamePref.ServerDescription = 
+GamePref.ServerDisabledNetworkProtocols = 
+GamePref.ServerEACPeerToPeer = True
+GamePref.ServerEnabled = False
+GamePref.ServerIP = 
+GamePref.ServerIsPublic = True
+GamePref.ServerLoginConfirmationText = 
+GamePref.ServerMatchmakingGroup = 
+GamePref.ServerMaxAllowedViewDistance = 12
+GamePref.ServerMaxPlayerCount = 8
+GamePref.ServerMaxWorldTransferSpeedKiBs = 512
+GamePref.ServerName = Default Server
+GamePref.ServerPort = 26900
+GamePref.ServerReservedSlots = 0
+GamePref.ServerReservedSlotsPermission = 100
+GamePref.ServerVisibility = 2
+GamePref.ServerWebsiteURL = 
+GamePref.ShowFriendPlayerOnMap = True
+GamePref.SkipSpawnButton = True
+GamePref.StormFreq = 100
+GamePref.TelnetEnabled = False
+GamePref.TelnetFailedLoginLimit = 10
+GamePref.TelnetFailedLoginsBlocktime = 10
+GamePref.TelnetPort = 25003
+GamePref.TerminalWindowEnabled = True
+GamePref.TwitchBloodMoonAllowed = True
+GamePref.TwitchServerPermission = 90
+GamePref.UNUSED_ControlPanelEnabled = False
+GamePref.UNUSED_ControlPanelPort = 8080
+GamePref.UNUSED_LastLoadedPrefabSize = 
+GamePref.UNUSED_NewGameSetDefaults = 
+GamePref.UNUSED_OptionsBloom = 
+GamePref.UNUSED_OptionsDOF = 
+GamePref.UNUSED_OptionsFieldOfViewNew = 
+GamePref.UNUSED_OptionsGamma = 
+GamePref.UNUSED_OptionsGfxGameplayResolutionHeight = 
+GamePref.UNUSED_OptionsGfxGameplayResolutionWidth = 
+GamePref.UNUSED_OptionsGfxUMATexQuality = 
+GamePref.UNUSED_OptionsMotionBlur = 
+GamePref.UNUSED_OptionsObjectBlur = 
+GamePref.UNUSED_OptionsPlayerModel = playerMale
+GamePref.UNUSED_OptionsReflectionBounces = 
+GamePref.UNUSED_OptionsReflectionCullList = 
+GamePref.UNUSED_OptionsReflectionFarClip = 
+GamePref.UNUSED_OptionsReflectionRefreshMode = 
+GamePref.UNUSED_OptionsReflectionShadowDistance = 
+GamePref.UNUSED_OptionsReflectionTimeSlicingMode = 
+GamePref.UNUSED_OptionsSSAO = 
+GamePref.UNUSED_OptionsStreamingMipmapsBudget = 
+GamePref.UNUSED_OptionsSunShafts = 
+GamePref.UNUSED_PlayerId = 
+GamePref.UNUSED_SaveGameFolder = 
+GamePref.UNUSED_UserDataFolder = 
+GamePref.UserWorldStorageType = 0
+GamePref.WebDashboardEnabled = False
+GamePref.WebDashboardPort = 8080
+GamePref.WebDashboardUrl = 
+GamePref.WorldGenSeed = 
+GamePref.WorldGenSize = 8192
+GamePref.XPMultiplier = 100
+GamePref.ZombieBMMove = 3
+GamePref.ZombieFeralMove = 3
+GamePref.ZombieFeralSense = 0
+GamePref.ZombieMove = 0
+GamePref.ZombieMoveNight = 3
+GamePref.ZombiePlayers = True
+GameStat.AirDropFrequency = 0
+GameStat.AirDropMarker = True
+GameStat.AllowedViewDistance = 12
+GameStat.AnimalCount = 0
+GameStat.AutoParty = False
+GameStat.BedrollExpiryTime = 45
+GameStat.BiomeGSModifier = 100
+GameStat.BiomeLSModifier = 100
+GameStat.BiomeProgression = True
+GameStat.BlockDamageAI = 100
+GameStat.BlockDamageAIBM = 100
+GameStat.BlockDamagePlayer = 100
+GameStat.BloodMoonDay = 0
+GameStat.BloodMoonEnemyCount = 8
+GameStat.BloodMoonWarning = 8
+GameStat.CameraRestrictionMode = 0
+GameStat.ChunkStabilityEnabled = True
+GameStat.CurrentRoundIx = 0
+GameStat.DayLightLength = 18
+GameStat.DayLimitActive = False
+GameStat.DayLimitThisRound = 0
+GameStat.DayNightLength = 60
+GameStat.DeathPenalty = XPOnly
+GameStat.DropOnDeath = 1
+GameStat.DropOnQuit = 0
+GameStat.EnemyCount = 0
+GameStat.EnemyDifficulty = Normal
+GameStat.EnemySpawnMode = True
+GameStat.FragLimitActive = False
+GameStat.FragLimitThisRound = 0
+GameStat.GameDifficulty = 2
+GameStat.GameModeId = 0
+GameStat.GameState = 0
+GameStat.GlobalGSModifier = 100
+GameStat.GlobalLSModifier = 100
+GameStat.GlobalMessageToShow = 
+GameStat.IsCreativeMenuEnabled = False
+GameStat.IsFlyingEnabled = False
+GameStat.IsPlayerCollisionEnabled = True
+GameStat.IsPlayerDamageEnabled = True
+GameStat.IsResetMapOnRestart = False
+GameStat.IsSaveSupplyCrates = True
+GameStat.IsSpawnEnemies = True
+GameStat.IsSpawnNearOtherPlayer = False
+GameStat.IsTeleportEnabled = False
+GameStat.IsVersionCheckDone = False
+GameStat.JarRefund = 60
+GameStat.LandClaimCount = 5
+GameStat.LandClaimDeadZone = 30
+GameStat.LandClaimDecayMode = 0
+GameStat.LandClaimExpiryTime = 3
+GameStat.LandClaimOfflineDelay = 0
+GameStat.LandClaimOfflineDurabilityModifier = 32
+GameStat.LandClaimOnlineDurabilityModifier = 32
+GameStat.LandClaimSize = 41
+GameStat.LoadScene = 
+GameStat.LootAbundance = 100
+GameStat.LootRespawnDays = 7
+GameStat.LootTimer = 
+GameStat.OptionsPOICulling = 0
+GameStat.PartySharedKillRange = 100
+GameStat.PlayerKillingMode = KillStrangersOnly
+GameStat.QuestProgressionDailyLimit = 4
+GameStat.SandboxCode = 
+GameStat.SandboxPreset = 
+GameStat.ScoreDiedMultiplier = -5
+GameStat.ScorePlayerKillMultiplier = 1
+GameStat.ScoreZombieKillMultiplier = 1
+GameStat.ShowAllPlayersOnMap = False
+GameStat.ShowFriendPlayerOnMap = True
+GameStat.ShowSpawnWindow = False
+GameStat.ShowWindow = 
+GameStat.StormFreq = 0
+GameStat.TimeLimitActive = False
+GameStat.TimeLimitThisRound = 0
+GameStat.TimeOfDayIncPerSec = 20
+GameStat.TwitchBloodMoonAllowed = True
+GameStat.UNUSED_GameDifficultyBonus = 
+GameStat.UNUSED_ShowZombieCounter = 
+GameStat.XPMultiplier = 100
+GameStat.ZombieHordeMeter = False
+Sandbox Code: 
+Sandbox Options:
+  - Invalid code -
+2026-09-04T11:05:55 7.763 INF [PlatformApplication] restart required = False
+2026-09-04T11:05:55 7.764 INF StartAsClient
+2026-09-04T11:05:55 7.764 INF Sending RequestToEnterGame...
+2026-09-04T11:05:55 7.766 INF Loading dymesh settings
+2026-09-04T11:05:55 7.766 INF Dynamic Mesh Settings
+2026-09-04T11:05:55 7.767 INF Use Imposter Values: False
+2026-09-04T11:05:55 7.767 INF Only Player Areas: True
+2026-09-04T11:05:55 7.767 INF Player Area Buffer: 3
+2026-09-04T11:05:55 7.767 INF Max View Distance: 1000
+2026-09-04T11:05:55 7.767 INF Regen all on new world: False
+2026-09-04T11:05:55 7.767 INF StartGame done
+2026-09-04T11:05:55 7.947 INF Received mapping data for: blocks
+2026-09-04T11:05:55 7.956 INF Received mapping data for: items
+2026-09-04T11:05:56 8.367 INF Received config file 'events' from server. Len: 161
+2026-09-04T11:05:56 8.367 INF Received config file 'materials' from server. Len: 4144
+2026-09-04T11:05:56 8.367 INF Received config file 'physicsbodies' from server. Len: 3260
+2026-09-04T11:05:56 8.367 INF Received config file 'painting' from server. Len: 2833
+2026-09-04T11:05:56 8.367 INF Received config file 'shapes' from server. Len: 74758
+2026-09-04T11:05:56 8.367 INF Received config file 'blocks' from server. Len: 258563
+2026-09-04T11:05:56 8.367 INF Received config file 'progression' from server. Len: 32458
+2026-09-04T11:05:56 8.367 INF Received config file 'buffs' from server. Len: 67442
+2026-09-04T11:05:56 8.367 INF Received config file 'misc' from server. Len: 1112
+2026-09-04T11:05:56 8.368 INF Received config file 'items' from server. Len: 132790
+2026-09-04T11:05:56 8.368 INF Received config file 'item_modifiers' from server. Len: 14590
+2026-09-04T11:05:56 8.368 INF Received config file 'entityclasses' from server. Len: 30853
+2026-09-04T11:05:56 8.368 INF Received config file 'qualityinfo' from server. Len: 127
+2026-09-04T11:05:56 8.368 INF Received config file 'sounds' from server. Len: 75336
+2026-09-04T11:05:56 8.368 INF Received config file 'recipes' from server. Len: 17997
+2026-09-04T11:05:56 8.368 INF Received config file 'blockplaceholders' from server. Len: 14667
+2026-09-04T11:05:56 8.368 INF Received config file 'loot' from server. Len: 52020
+2026-09-04T11:05:56 8.368 INF Received config file 'entitygroups' from server. Len: 71226
+2026-09-04T11:05:56 8.368 INF Received config file 'utilityai' from server. Len: 591
+2026-09-04T11:05:56 8.368 INF Received config file 'vehicles' from server. Len: 4200
+2026-09-04T11:05:56 8.368 INF Received config file 'weathersurvival' from server. Len: 79
+2026-09-04T11:05:56 8.368 INF Received config file 'archetypes' from server. Len: 1654
+2026-09-04T11:05:56 8.368 INF Received config file 'challenges' from server. Len: 9582
+2026-09-04T11:05:56 8.368 INF Received config file 'quests' from server. Len: 11518
+2026-09-04T11:05:56 8.369 INF Received config file 'traders' from server. Len: 8882
+2026-09-04T11:05:56 8.369 INF Received config file 'npc' from server. Len: 617
+2026-09-04T11:05:56 8.369 INF Received config file 'dialogs' from server. Len: 1895
+2026-09-04T11:05:56 8.369 INF Received config file 'ui_display' from server. Len: 7614
+2026-09-04T11:05:56 8.369 INF Received config file 'nav_objects' from server. Len: 3242
+2026-09-04T11:05:56 8.369 INF Received config file 'gameevents' from server. Len: 33593
+2026-09-04T11:05:56 8.369 INF Received config file 'twitch' from server. Len: 29031
+2026-09-04T11:05:56 8.369 INF Loading config 'twitch_events' from local files
+2026-09-04T11:05:56 8.369 INF Received config file 'dmscontent' from server. Len: 951
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_Common/styles' from server. Len: 2618
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_Common/templates' from server. Len: 14692
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_InGame/styles' from server. Len: 39
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_InGame/templates' from server. Len: 15004
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_InGame/windows' from server. Len: 60438
+2026-09-04T11:05:56 8.369 INF Received config file 'XUi_InGame/xui' from server. Len: 2298
+2026-09-04T11:05:56 8.369 INF Received config file 'biomes' from server. Len: 7239
+2026-09-04T11:05:56 8.369 INF Received config file 'worldglobal' from server. Len: 258
+2026-09-04T11:05:56 8.369 INF Received config file 'sandbox_overrides' from server. Len: 38
+2026-09-04T11:05:56 8.371 INF Received game GUID: 63E4F280BE35374D9DC6A1D58AA7A7A1
+2026-09-04T11:05:56 8.375 INF Loaded (received): events
+2026-09-04T11:05:56 8.505 INF Set Microsplat diffuse: MicroSplatConfig_diff_tarray (UnityEngine.Texture2DArray)
+2026-09-04T11:05:56 8.505 INF Set Microsplat normals: MicroSplatConfig_normal_tarray (UnityEngine.Texture2DArray)
+2026-09-04T11:05:56 8.505 INF Set Microsplat smooth:  MicroSplatConfig_smoothAO_tarray (UnityEngine.Texture2DArray)
+2026-09-04T11:05:56 8.513 INF Loaded (received): materials
+2026-09-04T11:05:56 8.525 INF Loaded (received): physicsbodies
+2026-09-04T11:05:56 8.530 INF Loaded (received): painting
+2026-09-04T11:05:56 8.578 INF Loaded (received): shapes
+2026-09-04T11:05:59 11.496 INF [7dtd-fastconnect] boot hb ticks=1386 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+2026-09-04T11:06:04 16.498 INF [7dtd-fastconnect] boot hb ticks=1483 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+Unloading 3 Unused Serialized files (Serialized files now loaded: 60)
+2026-09-04T11:06:06 18.605 INF Block IDs with mapping
+2026-09-04T11:06:06 18.615 INF Block IDs total 24810, terr 0, last 255
+2026-09-04T11:06:06 18.626 INF Loaded (received): blocks
+Unloading 30034 unused Assets to reduce memory usage. Loaded Objects now: 360317.
+Total: 250.928800 ms (FindLiveObjects: 19.294900 ms CreateObjectMapping: 10.121500 ms MarkObjects: 207.670800 ms  DeleteObjects: 13.840800 ms)
+
+2026-09-04T11:06:06 18.944 INF Loaded (received): progression
+2026-09-04T11:06:06 19.043 INF Loaded (received): buffs
+2026-09-04T11:06:06 19.051 INF Loaded (received): misc
+2026-09-04T11:06:07 19.284 WRN Type:ItemClassWildChicken, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null is missing the UnityEngine.Scripting.Preserve attribute, this will fail on consoles
+2026-09-04T11:06:07 19.353 INF Loaded (received): items
+2026-09-04T11:06:07 19.424 INF Item IDs with mapping
+2026-09-04T11:06:07 19.424 INF ItemIDs from Mapping
+2026-09-04T11:06:07 19.428 INF ItemClass assignLeftOverItems 65536 of 81920
+2026-09-04T11:06:07 19.487 INF Loaded (received): item_modifiers
+2026-09-04T11:06:07 19.549 INF Loaded (received): entityclasses
+2026-09-04T11:06:07 19.552 INF Loaded (received): qualityinfo
+2026-09-04T11:06:07 19.608 INF Loaded (received): sounds
+2026-09-04T11:06:07 19.645 INF Loaded (received): recipes
+2026-09-04T11:06:07 19.661 INF Loaded (received): blockplaceholders
+2026-09-04T11:06:07 19.700 INF Loaded (received): loot
+2026-09-04T11:06:07 19.745 INF Loaded (received): entitygroups
+2026-09-04T11:06:07 19.751 INF Loaded (received): utilityai
+2026-09-04T11:06:07 19.755 INF Loaded (received): vehicles
+2026-09-04T11:06:07 19.758 INF Loaded (received): weathersurvival
+2026-09-04T11:06:07 19.761 INF Loaded (received): archetypes
+2026-09-04T11:06:07 19.773 INF Loaded (received): challenges
+2026-09-04T11:06:07 19.811 INF Loaded (received): quests
+2026-09-04T11:06:07 19.821 INF Loaded (received): traders
+2026-09-04T11:06:07 19.834 INF Loaded (received): npc
+2026-09-04T11:06:07 19.843 INF Loaded (received): dialogs
+2026-09-04T11:06:07 19.856 INF Loaded (received): ui_display
+2026-09-04T11:06:07 19.868 INF Loaded (received): nav_objects
+2026-09-04T11:06:07 20.010 INF Loaded (received): gameevents
+2026-09-04T11:06:07 20.045 INF Loaded (received): twitch
+2026-09-04T11:06:07 20.055 INF Loaded (local): twitch_events in 0.00
+2026-09-04T11:06:08 20.071 INF Loaded (received): dmscontent
+2026-09-04T11:06:08 20.075 INF Loaded (received): XUi_Common/styles
+2026-09-04T11:06:08 20.079 INF Loaded (received): XUi_Common/templates
+2026-09-04T11:06:08 20.082 INF Loaded (received): XUi_InGame/styles
+2026-09-04T11:06:08 20.087 INF Loaded (received): XUi_InGame/templates
+2026-09-04T11:06:08 20.100 INF Loaded (received): XUi_InGame/windows
+2026-09-04T11:06:08 20.103 INF [XUi] Loading XUi asynchronously
+2026-09-04T11:06:08 20.128 INF Loaded (received): XUi_InGame/xui
+2026-09-04T11:06:08 20.276 INF Loaded (received): biomes
+2026-09-04T11:06:08 20.486 INF Loaded (received): worldglobal
+2026-09-04T11:06:08 20.664 INF Loaded (received): sandbox_overrides
+2026-09-04T11:06:09 21.415 INF [XUi] Parsing all window groups completed in 1092 ms total.
+2026-09-04T11:06:09 21.520 INF [7dtd-fastconnect] boot hb ticks=1694 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:09 21.779 INF createWorld: Navezgane, Navezgane (src: GameData, DeviceLocal), PlaytestParachute, GameModeSurvival
+2026-09-04T11:06:09 21.779 INF Occlusion: Enabled
+2026-09-04T11:06:09 21.814 INF Started thread ChunkRegeneration
+2026-09-04T11:06:09 21.815 INF Started thread ChunkCalc
+2026-09-04T11:06:09 21.815 INF Started thread ChunkMeshBake
+2026-09-04T11:06:09 21.949 INF World.Load: Navezgane Navezgane (src: GameData, DeviceLocal)
+2026-09-04T11:06:09 22.013 INF Started thread WaterSimulationApplyChanges
+2026-09-04T11:06:10 22.239 INF [7dtd-playtest] wait_ready game-not-started
+2026-09-04T11:06:10 22.239 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready game-not-started"}
+2026-09-04T11:06:10 22.590 INF ShapeControllers: 96
+2026-09-04T11:06:10 22.985 INF [XUi] Initialized all window groups completed in 1181 ms total.
+2026-09-04T11:06:10 22.991 INF Calculating world hashes took 795 ms (world size 193 MiB)
+2026-09-04T11:06:10 22.993 INF Initial ENABLE_FILE_BACKED_ARRAYS == False
+2026-09-04T11:06:10 23.048 INF GenWorldFromRaw load dtm took 851ms
+2026-09-04T11:06:11 23.093 INF Biomes image size w= 3072, h = 3072
+2026-09-04T11:06:11 23.455 INF GenWorldFromRaw biomes took 406ms
+Unloading 2 Unused Serialized files (Serialized files now loaded: 61)
+Unloading 1694 unused Assets to reduce memory usage. Loaded Objects now: 507623.
+Total: 360.398500 ms (FindLiveObjects: 29.547100 ms CreateObjectMapping: 10.358700 ms MarkObjects: 319.168300 ms  DeleteObjects: 1.323500 ms)
+
+2026-09-04T11:06:12 24.480 INF GenWorldFromRaw shader control textures took 354ms
+2026-09-04T11:06:12 24.696 INF GenWorldFromRaw misc took 215ms
+2026-09-04T11:06:13 25.603 INF GenWorldFromRaw splats took 907ms
+Unloading 0 Unused Serialized files (Serialized files now loaded: 61)
+Unloading 0 unused Assets to reduce memory usage. Loaded Objects now: 507627.
+Total: 361.917400 ms (FindLiveObjects: 31.580500 ms CreateObjectMapping: 11.033200 ms MarkObjects: 318.829500 ms  DeleteObjects: 0.473200 ms)
+
+2026-09-04T11:06:14 26.547 INF [7dtd-fastconnect] boot hb ticks=1758 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:14 26.584 INF [DECO] read 75472
+2026-09-04T11:06:14 26.621 INF Dynamic Music Initialized on Client
+2026-09-04T11:06:14 26.622 INF Begin DMS Conductor Preload Routine
+2026-09-04T11:06:14 26.622 INF Preloading LayeredSection Exploration : Type: DynamicMusic.Adventure
+2026-09-04T11:06:14 26.623 INF Loading new config for Exploration...
+2026-09-04T11:06:14 26.629 INF Loading new ClipSets for Exploration...
+2026-09-04T11:06:14 26.657 INF Exploration loaded new config and clipsets
+2026-09-04T11:06:14 26.694 INF Preloading LayeredSection Suspense : Type: DynamicMusic.Adventure
+2026-09-04T11:06:14 26.694 INF Loading new config for Suspense...
+2026-09-04T11:06:14 26.696 INF Loading new ClipSets for Suspense...
+2026-09-04T11:06:14 26.706 INF Suspense loaded new config and clipsets
+2026-09-04T11:06:14 26.732 INF Preloading LayeredSection Combat : Type: DynamicMusic.Combat
+2026-09-04T11:06:14 26.733 INF Loading new config for Combat...
+2026-09-04T11:06:14 26.736 INF Loading new ClipSets for Combat...
+2026-09-04T11:06:14 26.756 INF Combat loaded new config and clipsets
+2026-09-04T11:06:14 26.783 INF Preloading LayeredSection Bloodmoon : Type: DynamicMusic.Bloodmoon
+2026-09-04T11:06:14 26.784 INF Loading new config for Bloodmoon...
+2026-09-04T11:06:15 27.078 INF createWorld() done
+2026-09-04T11:06:15 27.184 INF Dymesh: Prepping dynamic mesh. Resend Default: True
+2026-09-04T11:06:15 27.184 INF Dymesh: Mesh location: C:\users\steamuser\AppData\Roaming\7DaysToDie\SavesLocal/63E4F280BE35374D9DC6A1D58AA7A7A1/DynamicMeshes/
+2026-09-04T11:06:15 27.204 INF [7dtd-playtest] wait_ready game-not-started
+2026-09-04T11:06:15 27.204 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready game-not-started"}
+2026-09-04T11:06:15 27.408 INF [7dtd-playtest] wait_ready game-not-started
+2026-09-04T11:06:15 27.408 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready game-not-started"}
+2026-09-04T11:06:15 27.457 INF PlayerId(175, 0)
+2026-09-04T11:06:15 27.457 INF Allowed ChunkViewDistance: 7
+The referenced script on this Behaviour (Game Object 'Camera') is missing!
+The referenced script on this Behaviour (Game Object '<null>') is missing!
+The referenced script on this Behaviour (Game Object 'Camera') is missing!
+The referenced script on this Behaviour (Game Object 'Camera') is missing!
+2026-09-04T11:06:15 28.032 INF Created player with id=175
+2026-09-04T11:06:15 28.039 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=client-playtest, id=175]
+2026-09-04T11:06:15 28.039 INF Found own player entity with id 175
+2026-09-04T11:06:15 28.045 INF [PlayerInteractions] JoinedMultplayerServer
+2026-09-04T11:06:15 28.050 INF Respawning: EnterMultiplayer
+2026-09-04T11:06:15 28.054 INF 60sec delta: 0,current: 976482,desired: 976482
+2026-09-04T11:06:15 28.055 INF [Backtrace] Updated Statistics
+2026-09-04T11:06:16 28.307 INF [PlayerInteractions] persistent player login
+2026-09-04T11:06:16 28.308 INF [Discord] Global lobby: 118.189.191.239_3AAF846657F33844BABB941ACED47F98
+2026-09-04T11:06:16 28.325 INF OpenSpawnWindow
+2026-09-04T11:06:16 28.731 INF Dymesh: Warming dynamic mesh
+2026-09-04T11:06:16 28.731 INF Dymesh: Creating dynamic mesh manager
+2026-09-04T11:06:16 28.734 INF Dymesh: Awake
+2026-09-04T11:06:16 28.735 INF Dymesh: Mesh location: C:\users\steamuser\AppData\Roaming\7DaysToDie\SavesLocal/63E4F280BE35374D9DC6A1D58AA7A7A1/DynamicMeshes/
+2026-09-04T11:06:16 28.736 INF Dymesh: Loading Items: C:\users\steamuser\AppData\Roaming\7DaysToDie\SavesLocal/63E4F280BE35374D9DC6A1D58AA7A7A1/DynamicMeshes/
+2026-09-04T11:06:16 28.737 INF Dymesh: Loaded Items: 0
+2026-09-04T11:06:16 28.738 INF Client package items: 0
+2026-09-04T11:06:16 28.738 INF Dymesh: Sending client arrive message. Items: 0
+2026-09-04T11:06:16 28.739 INF Dymesh: Loading all items took: 0.003 seconds.
+2026-09-04T11:06:16 28.743 INF Meshlist count is now 1
+2026-09-04T11:06:16 28.743 INF Meshlist count is now 2
+2026-09-04T11:06:16 28.744 INF Force load took 0 seconds
+2026-09-04T11:06:16 28.746 INF Clearing queues.
+2026-09-04T11:06:16 28.746 INF Cleared queues.
+2026-09-04T11:06:16 28.747 INF Dynamic thread starting
+2026-09-04T11:06:16 28.748 INF Dymesh door replacement: imposterBlock
+2026-09-04T11:06:16 29.016 WRN Unexpected case in Sign Data Manager: signRenderer is null
+2026-09-04T11:06:16 29.016 WRN Unexpected case in Sign Data Manager: signRenderer is null
+2026-09-04T11:06:16 29.016 WRN Unexpected case in Sign Data Manager: signRenderer is null
+2026-09-04T11:06:16 29.035 WRN Unexpected case in Sign Data Manager: signRenderer is null
+2026-09-04T11:06:16 29.059 WRN Unexpected case in Sign Data Manager: signRenderer is null
+2026-09-04T11:06:18 30.270 INF [7dtd-playtest] wait_ready player-unspawned-live t=1
+2026-09-04T11:06:18 30.270 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready player-unspawned-live t=1"}
+2026-09-04T11:06:18 30.371 INF Respawn almost done
+2026-09-04T11:06:18 30.377 INF GMSG: Player 'client-playtest' joined the game
+2026-09-04T11:06:18 30.382 INF 5721+0 Origin Reposition (0.0, 0.0, 0.0) to (848.0, 48.0, 640.0)
+2026-09-04T11:06:18 30.511 INF client-playtest onNewBiomeEntered +buffForest_Hazard
+2026-09-04T11:06:19 31.548 INF [7dtd-fastconnect] boot hb ticks=2818 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:20 32.062 INF [7dtd-playtest] ready player=175 pos=(850.00, 61.08, 642.00)
+2026-09-04T11:06:20 32.062 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"ready player=175 pos=(850.00, 61.08, 642.00)"}
+2026-09-04T11:06:20 32.071 INF [7dtd-playtest] PASS parachute/parachute_equip item resolved=True 
+2026-09-04T11:06:20 32.071 INF [7dtd-playtest] {"v":1,"t":"result","suite":"parachute","case":"parachute_equip","status":"pass","ms":5,"detail":"item resolved=True "}
+2026-09-04T11:06:20 32.509 INF MinEventLogMessage: XP gained during the last level:
+2026-09-04T11:06:20 32.510 INF CVarLogValue: $xpFromLootThisLevel == 0
+2026-09-04T11:06:20 32.510 INF CVarLogValue: $xpFromHarvestingThisLevel == 0
+2026-09-04T11:06:20 32.510 INF CVarLogValue: $xpFromKillThisLevel == 0
+2026-09-04T11:06:20 32.575 INF [7dtd-playtest] barrier parachute_lift:175
+2026-09-04T11:06:20 32.575 INF [7dtd-playtest] {"v":1,"t":"barrier","name":"parachute_lift:175"}
+2026-09-04T11:06:23 35.510 INF client-playtest WeatherStatusTick  to default
+2026-09-04T11:06:23 35.511 INF client-playtest WeatherBuffUpdate , indoors False
+2026-09-04T11:06:24 36.551 INF [7dtd-fastconnect] boot hb ticks=4019 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:29 41.552 INF [7dtd-fastconnect] boot hb ticks=4996 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:30 42.165 INF Entity client-playtest 175 killed
+2026-09-04T11:06:30 42.175 INF 8179 EntityBackpack id 180, plyrId 175, (850.0, 63.1, 642.0) (53, 40), chunk False (0, 0, 0), items 6 parachute, drinkJarBoiledWater at ((850.00, 63.08, 642.00)) : Write
+2026-09-04T11:06:30 42.176 INF 8179 EntityBackpack id 180, plyrId 175, (850.0, 63.1, 642.0) (53, 40), chunk False (0, 0, 0), items 6 parachute, drinkJarBoiledWater at ((850.00, 63.08, 642.00)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:30 42.241 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:30 42.253 WRN [EntityAsync] force spawning pending entity Backpack  id=180 pos=(850.0, 63.1, 642.0)
+2026-09-04T11:06:30 42.254 INF 8184 EntityBackpack id 180, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 6 parachute, drinkJarBoiledWater at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:30 42.256 INF 8184 EntityBackpack id 180, plyrId 175, (850.0, 63.1, 642.0) (53, 40), chunk True (53, 3, 40), items 6 parachute, drinkJarBoiledWater at ((850.00, 63.08, 642.00)) : Start
+2026-09-04T11:06:31 43.159 INF Respawning: Died
+2026-09-04T11:06:34 46.156 INF OpenSpawnWindow
+2026-09-04T11:06:34 46.555 INF [7dtd-fastconnect] boot hb ticks=5948 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:34 46.910 INF SectionType change from None to Combat
+2026-09-04T11:06:34 46.912 INF Played Combat
+2026-09-04T11:06:34 46.912 INF Fading in Combat
+2026-09-04T11:06:34 46.913 INF Notified SectionSelector that music played
+2026-09-04T11:06:37 49.781 INF Entity client-playtest 175 killed
+2026-09-04T11:06:37 49.782 INF 9623 EntityBackpack id 183, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : Write
+2026-09-04T11:06:37 49.782 INF 9623 EntityBackpack id 183, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:37 49.808 INF SectionType change from Combat to None
+2026-09-04T11:06:37 49.809 INF Fading out Combat
+Can not play a disabled audio source
+Can not play a disabled audio source
+2026-09-04T11:06:37 49.825 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:37 49.827 INF 9631 EntityBackpack id 183, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 1 parachute at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:37 49.828 INF 9631 EntityBackpack id 183, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk True (53, 3, 40), items 1 parachute at ((849.80, 63.63, 642.29)) : Start
+2026-09-04T11:06:38 50.780 INF Respawning: Died
+2026-09-04T11:06:38 50.807 INF SectionType change from None to Combat
+2026-09-04T11:06:38 50.808 INF Unpaused Combat
+2026-09-04T11:06:38 50.808 INF Fading in Combat
+2026-09-04T11:06:38 50.808 INF Notified SectionSelector that music played
+2026-09-04T11:06:39 51.556 INF [7dtd-fastconnect] boot hb ticks=6858 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:40 52.435 INF Entity client-playtest 175 killed
+2026-09-04T11:06:40 52.435 INF 10117 EntityBackpack id 184, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : Write
+2026-09-04T11:06:40 52.435 INF 10117 EntityBackpack id 184, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:40 52.458 INF SectionType change from Combat to None
+2026-09-04T11:06:40 52.458 INF Fading out Combat
+Can not play a disabled audio source
+Can not play a disabled audio source
+2026-09-04T11:06:40 52.480 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:40 52.481 WRN [EntityAsync] force spawning pending entity Backpack  id=184 pos=(849.8, 63.6, 642.3)
+2026-09-04T11:06:40 52.481 INF 10125 EntityBackpack id 184, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 1 parachute at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:40 52.482 INF 10125 EntityBackpack id 184, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk True (53, 3, 40), items 1 parachute at ((849.80, 63.63, 642.29)) : Start
+2026-09-04T11:06:41 53.438 INF Respawning: Died
+2026-09-04T11:06:41 53.457 INF SectionType change from None to Combat
+2026-09-04T11:06:41 53.458 INF Unpaused Combat
+2026-09-04T11:06:41 53.458 INF Fading in Combat
+2026-09-04T11:06:41 53.458 INF Notified SectionSelector that music played
+2026-09-04T11:06:43 55.129 INF Entity client-playtest 175 killed
+2026-09-04T11:06:43 55.130 INF 10663 EntityBackpack id 185, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : Write
+2026-09-04T11:06:43 55.130 INF 10663 EntityBackpack id 185, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:43 55.156 INF SectionType change from Combat to None
+2026-09-04T11:06:43 55.156 INF Fading out Combat
+Can not play a disabled audio source
+Can not play a disabled audio source
+2026-09-04T11:06:43 55.178 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:43 55.178 WRN [EntityAsync] force spawning pending entity Backpack  id=185 pos=(849.8, 63.6, 642.3)
+2026-09-04T11:06:43 55.179 INF 10672 EntityBackpack id 185, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 1 parachute at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:43 55.180 INF 10672 EntityBackpack id 185, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk True (53, 3, 40), items 1 parachute at ((849.80, 63.63, 642.29)) : Start
+2026-09-04T11:06:44 56.132 INF Respawning: Died
+2026-09-04T11:06:44 56.160 INF SectionType change from None to Combat
+2026-09-04T11:06:44 56.161 INF Unpaused Combat
+2026-09-04T11:06:44 56.161 INF Fading in Combat
+2026-09-04T11:06:44 56.161 INF Notified SectionSelector that music played
+2026-09-04T11:06:44 56.560 INF [7dtd-fastconnect] boot hb ticks=7865 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:45 57.783 INF Entity client-playtest 175 killed
+2026-09-04T11:06:45 57.783 INF 11199 EntityBackpack id 186, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : Write
+2026-09-04T11:06:45 57.783 INF 11199 EntityBackpack id 186, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:45 57.809 INF SectionType change from Combat to None
+2026-09-04T11:06:45 57.809 INF Fading out Combat
+Can not play a disabled audio source
+Can not play a disabled audio source
+2026-09-04T11:06:45 57.828 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:45 57.828 WRN [EntityAsync] force spawning pending entity Backpack  id=186 pos=(849.8, 63.6, 642.3)
+2026-09-04T11:06:45 57.829 INF 11208 EntityBackpack id 186, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 1 parachute at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:45 57.830 INF 11208 EntityBackpack id 186, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk True (53, 3, 40), items 1 parachute at ((849.80, 63.63, 642.29)) : Start
+2026-09-04T11:06:45 57.967 INF Time: 0.88m FPS: 200.62 Heap: 1438.6MB Max: 1438.6MB Chunks: 205 CGO: 100 Ply: 1 Zom: 0 Ent: 12 (17) Items: 10 CO: 1 RSS: 3786.2MB
+2026-09-04T11:06:46 58.785 INF Respawning: Died
+2026-09-04T11:06:46 58.809 INF SectionType change from None to Combat
+2026-09-04T11:06:46 58.809 INF Unpaused Combat
+2026-09-04T11:06:46 58.809 INF Fading in Combat
+2026-09-04T11:06:46 58.809 INF Notified SectionSelector that music played
+2026-09-04T11:06:48 60.785 INF Entity client-playtest 175 killed
+2026-09-04T11:06:48 60.785 INF 11757 EntityBackpack id 187, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : Write
+2026-09-04T11:06:48 60.785 INF 11757 EntityBackpack id 187, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk False (0, 0, 0), items 1 parachute at ((849.80, 63.63, 642.29)) : OnEntityUnload markedForUnload False, IsDead False, IsDespawned False
+2026-09-04T11:06:48 60.806 INF SectionType change from Combat to None
+2026-09-04T11:06:48 60.807 INF Fading out Combat
+Can not play a disabled audio source
+Can not play a disabled audio source
+2026-09-04T11:06:48 60.833 INF GMSG: Player 'client-playtest' died
+2026-09-04T11:06:48 60.834 WRN [EntityAsync] force spawning pending entity Backpack  id=187 pos=(849.8, 63.6, 642.3)
+2026-09-04T11:06:48 60.834 INF 11767 EntityBackpack id 187, plyrId 175, (0.0, 0.0, 0.0) (0, 0), chunk False (0, 0, 0), items 1 parachute at ((0.00, 0.00, 0.00)) : Read
+2026-09-04T11:06:48 60.835 INF 11767 EntityBackpack id 187, plyrId 175, (849.8, 63.6, 642.3) (53, 40), chunk True (53, 3, 40), items 1 parachute at ((849.80, 63.63, 642.29)) : Start
+2026-09-04T11:06:49 61.564 INF [7dtd-fastconnect] boot hb ticks=8830 focused=False rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
+2026-09-04T11:06:49 61.790 INF Respawning: Died
+2026-09-04T11:06:49 61.809 INF SectionType change from None to Combat
+2026-09-04T11:06:49 61.809 INF Unpaused Combat
+2026-09-04T11:06:49 61.810 INF Fading in Combat
+2026-09-04T11:06:49 61.810 INF Notified SectionSelector that music played
+2026-09-04T11:06:50 62.573 INF [7dtd-playtest] FAIL parachute/parachute_fall_announce no parachute deploy announce after lift after 30.0s | hit=False last= pos=(849.80, 61.63, 642.29)
+2026-09-04T11:06:50 62.573 INF [7dtd-playtest] {"v":1,"t":"result","suite":"parachute","case":"parachute_fall_announce","status":"fail","ms":30005,"detail":"no parachute deploy announce after lift after 30.0s | hit=False last= pos=(849.80, 61.63, 642.29)"}
+2026-09-04T11:06:51 63.076 INF [7dtd-playtest] SUMMARY pass=1 fail=1 skip=0 total=2 wall_ms=60754
+2026-09-04T11:06:51 63.076 INF [7dtd-playtest]   PASS parachute/parachute_equip item resolved=True 
+2026-09-04T11:06:51 63.076 INF [7dtd-playtest]   FAIL parachute/parachute_fall_announce no parachute deploy announce after lift after 30.0s | hit=False last= pos=(849.80, 61.63, 642.29)
+2026-09-04T11:06:51 63.077 INF [7dtd-playtest] slowest parachute/parachute_fall_announce=30005ms parachute/parachute_equip=5ms
+2026-09-04T11:06:51 63.077 INF [7dtd-playtest] {"v":1,"t":"summary","pass":1,"fail":1,"skip":0,"total":2,"wall_ms":60754,"suites":["parachute"]}
+2026-09-04T11:06:51 63.077 INF [7dtd-playtest] DONE exit_hint=1 wall_ms=60756
+2026-09-04T11:06:51 63.077 INF [7dtd-playtest] {"v":1,"t":"done","exit_hint":1,"pass":1,"fail":1,"skip":0,"wall_ms":60756}
