@@ -488,7 +488,7 @@ namespace HordeForge.WasmHost.Tests
             var (host, _) = NewHost();
             using (host)
             {
-                var manifest = ModManifest.Parse("{\"limits\": {\"fuelPerCall\": 500}}", "strings");
+                var manifest = ModManifest.ParseToml("[limits]\nfuel_per_call = 500\n", "strings");
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"), manifest);
                 Assert.True(mod.Init().Ok);
                 // The tick does real work (formatting, host API calls), far
@@ -507,7 +507,7 @@ namespace HordeForge.WasmHost.Tests
             var (host, _) = NewHost();
             using (host)
             {
-                var manifest = ModManifest.Parse("{\"limits\": {\"maxMemoryBytes\": 1048576}}", "hello");
+                var manifest = ModManifest.ParseToml("[limits]\nmax_memory_bytes = 1048576\n", "hello");
                 WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("hello", Fixture("hello"), manifest));
                 Assert.Contains("exceeds the effective cap", ex.Message);
             }
@@ -517,30 +517,19 @@ namespace HordeForge.WasmHost.Tests
         public void ManifestFuelAboveCeilingIsRejected()
         {
             WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
-                () => ModManifest.Parse("{\"limits\": {\"fuelPerCall\": 99999999999}}", "x"));
+                () => ModManifest.ParseToml("[limits]\nfuel_per_call = 99999999999\n", "x"));
             Assert.Contains("ceiling", ex.Message);
         }
 
         [Theory]
-        [InlineData("not json")]
-        [InlineData("{\"limits\": {\"fuelPerCall\": 0}}")]
-        [InlineData("{\"limits\": {\"fuelPerCall\": -5}}")]
-        [InlineData("{\"limits\": {\"maxMemoryBytes\": \"big\"}}")]
-        [InlineData("[1, 2, 3]")]
-        public void MalformedManifestIsRejected(string json)
+        [InlineData("not toml")]
+        [InlineData("[limits]\nfuel_per_call = 0\n")]
+        [InlineData("[limits]\nfuel_per_call = -5\n")]
+        [InlineData("[limits]\nmax_memory_bytes = \"big\"\n")]
+        [InlineData("future = [abc\n")]
+        public void MalformedManifestIsRejected(string toml)
         {
-            Assert.Throws<WasmModLoadException>(() => ModManifest.Parse(json, "bad"));
-        }
-
-        [Fact]
-        public void DeeplyNestedJsonManifestIsRejectedCleanly()
-        {
-            // A hostile manifest with extreme container nesting must come
-            // back as a normal load error, not overflow the stack (which
-            // would kill the whole server process).
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
-                () => ModManifest.Parse(new string('[', 100_000), "bad"));
-            Assert.Contains("nesting", ex.Message);
+            Assert.Throws<WasmModLoadException>(() => ModManifest.ParseToml(toml, "bad"));
         }
 
         [Fact]
@@ -865,7 +854,7 @@ greeting = ""hello""
             var (host, _) = NewHost();
             using (host)
             {
-                var manifest = ModManifest.Parse("{\"name\": \"x\", \"limits\": {}, \"future\": true}", "strings");
+                var manifest = ModManifest.ParseToml("name = \"x\"\n[future]\nflag = true\n", "strings");
                 WasmMod mod = host.LoadModule("strings", Fixture("strings"), manifest);
                 Assert.True(mod.Init().Ok);
                 Assert.True(mod.Tick().Ok);

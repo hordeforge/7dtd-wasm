@@ -506,27 +506,19 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Reads wasm-mod.toml (preferred) or the deprecated wasm-mod.json
-        /// for a module id. Returns false when a manifest is present but
-        /// invalid (logged); true with a null manifest when the module ships
-        /// none, so host defaults apply.
+        /// Reads wasm-mod.toml for a module id. Returns false when a manifest
+        /// is present but invalid (logged); true with a null manifest when
+        /// the module ships none, so host defaults apply.
         /// </summary>
         private static bool TryReadManifest(string id, out ModManifest? manifest)
         {
             string dir = ResolveModuleDir(id);
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");
-            string jsonPath = Path.Combine(dir, "wasm-mod.json");
             try
             {
                 if (File.Exists(tomlPath))
                 {
                     manifest = ModManifest.ParseToml(ManifestFiles.ReadRequired(tomlPath), id);
-                    return true;
-                }
-                if (File.Exists(jsonPath))
-                {
-                    // Deprecated format, kept for older modules.
-                    manifest = ModManifest.Parse(ManifestFiles.ReadRequired(jsonPath), id);
                     return true;
                 }
                 manifest = null;

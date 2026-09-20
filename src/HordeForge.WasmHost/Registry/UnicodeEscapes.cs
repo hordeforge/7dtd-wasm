@@ -4,12 +4,11 @@ using System.Text;
 namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
-    /// Shared \uXXXX escape decoder for the manifest parsers (MiniToml,
-    /// MiniJson). Both grammars require strings to be valid Unicode: a lone
+    /// Shared \uXXXX escape decoder for the TOML manifest parser (MiniToml).
+    /// The grammar requires strings to be valid Unicode: a lone
     /// surrogate has no UTF-8 form, so it could never round-trip the guest
     /// string ABI without silent corruption. The decoder tracks an escaped
     /// high surrogate waiting for its low half and rejects anything else.
-    /// One copy so the pair-validity rule cannot drift between the two.
     /// </summary>
     internal static class UnicodeEscapes
     {

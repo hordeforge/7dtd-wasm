@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (2026-08-24).
+Accepted (2026-08-24). Superseded (2026-09-20): the JSON manifest format
+and MiniJson were removed; `wasm-mod.toml` is the only manifest format and
+the dependency-free parser for it is MiniToml.
 
 ## Context
 

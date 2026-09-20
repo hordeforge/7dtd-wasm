@@ -5,16 +5,15 @@ using System.Text;
 namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
-    /// Reads operator-authored manifest files (wasm-mod.toml, wasm-mod.json,
-    /// wasm.toml) behind a hard size bound. These are tiny config files by
-    /// nature; anything at or beyond the bound is rejected instead of being
-    /// slurped into memory wholesale.
+    /// Reads operator-authored manifest files (wasm-mod.toml, wasm.toml)
+    /// behind a hard size bound. These are tiny config files by nature;
+    /// anything at or beyond the bound is rejected instead of being slurped
+    /// into memory wholesale.
     ///
     /// Decoding is explicitly UTF-8 with an invalid-byte fallback that
-    /// throws (TOML and JSON both mandate UTF-8): a file in any other
-    /// encoding fails its load with a clear reason instead of silently
-    /// corrupting setting values into U+FFFD before they are served to
-    /// guests.
+    /// throws (TOML mandates UTF-8): a file in any other encoding fails
+    /// its load with a clear reason instead of silently corrupting setting
+    /// values into U+FFFD before they are served to guests.
     /// </summary>
     public static class ManifestFiles
     {

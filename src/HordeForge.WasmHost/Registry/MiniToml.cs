@@ -7,8 +7,8 @@ namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
     /// Minimal, dependency-free TOML parser used for wasm-mod.toml and
-    /// wasm.toml, following the same reasoning as MiniJson (ADR 0005): the
-    /// sandbox trust boundary does not grow with a TOML library dll.
+    /// wasm.toml, keeping the sandbox trust boundary free of a TOML library
+    /// dll (ADR 0005).
     ///
     /// Supported subset (documented in docs/CONFIG.md):
     ///   comments (#), top-level key = value, [table] and [table.sub]
@@ -19,7 +19,7 @@ namespace HordeForge.WasmHost.Registry
     internal static class MiniToml
     {
         /// <summary>
-        /// Maximum array nesting accepted by the parser (see MiniJson.MaxDepth):
+        /// Maximum array nesting accepted by the parser:
         /// a hostile manifest must fail with a FormatException, never with a
         /// stack overflow that kills the server process.
         /// </summary>
@@ -83,19 +83,11 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("line " + (i + 1) + ": invalid key '" + key + "'");
                 }
-                // Quoted keys are TOML strings: unwrap them so "boss_name"
-                // and boss_name define the same key instead of one carrying
-                // its quote characters into every lookup.
-                string keyName = key[0] == '"' || key[0] == '\'' ? ParseString(key, i + 1) : key;
-                if (keyName.Length == 0)
+                if (current.HasKey(key))
                 {
-                    throw new FormatException("line " + (i + 1) + ": invalid key '" + key + "'");
+                    throw new FormatException("line " + (i + 1) + ": duplicate key '" + key + "' in this table");
                 }
-                if (current.HasKey(keyName))
-                {
-                    throw new FormatException("line " + (i + 1) + ": duplicate key '" + keyName + "' in this table");
-                }
-                current.Add(keyName, ParseValue(valueText, i + 1));
+                current.Add(key, ParseValue(valueText, i + 1));
             }
             return root;
         }
@@ -172,19 +164,6 @@ namespace HordeForge.WasmHost.Registry
                 if (name.Length == 0)
                 {
                     throw new FormatException("line " + lineNumber + ": empty table header part");
-                }
-                // Quoted header parts are TOML strings: unwrap them so
-                // ["settings"] and [settings] name the same table. A part
-                // that starts a quote must close it (dotted keys inside a
-                // quoted name stay unsupported, matching this parser's
-                // documented subset).
-                if (name[0] == '"' || name[0] == '\'')
-                {
-                    name = ParseString(name, lineNumber);
-                    if (name.Length == 0)
-                    {
-                        throw new FormatException("line " + lineNumber + ": empty table header part");
-                    }
                 }
                 parts.Add(name);
             }

@@ -166,6 +166,8 @@ boss_name = "maci"
   import, per mod (the mod's own settings win over shared `wasm.toml`
   settings).
 - Any other keys are ignored; malformed values reject the module with a
-  specific reason and the bridge skips it with a warning. The deprecated
-  JSON form (`wasm-mod.json`) is still accepted for older modules.
+  specific reason and the bridge skips it with a warning. Only
+  `wasm-mod.toml` is read; the deprecated JSON form (`wasm-mod.json`) is no
+  longer accepted, and quoted manifest keys are taken as literal key names
+  instead of being unwrapped.
 

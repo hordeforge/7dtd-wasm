@@ -6,11 +6,10 @@ using Xunit;
 namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
-    /// Unicode mechanics of the manifest parsers, exercised through the
+    /// Unicode mechanics of the manifest parser, exercised through the
     /// public ModManifest API: astral-plane characters must survive the
     /// string ABI round-trip (so escaped lone surrogates are rejected, not
-    /// silently corrupted into replacement characters), and quoted TOML
-    /// keys must define the same identity as their unquoted spelling.
+    /// silently corrupted into replacement characters).
     /// </summary>
     public sealed class ManifestUnicodeTests
     {
@@ -43,40 +42,12 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Theory]
-        [InlineData("\"\\uD800\\uDC00\"")]
-        [InlineData("\"a\\uD801\\uDC37b\"")]
-        public void JsonEscapedSurrogatePairsDecode(string value)
+        [InlineData("\"\\uD800\\uDC00\"", "\U00010000")]
+        [InlineData("\"a\\uD801\\uDC37b\"", "a\U00010437b")]
+        public void TomlEscapedSurrogatePairsDecode(string value, string expected)
         {
-            string json = "{\"settings\": {\"boss_name\": " + value + "}}";
-            ModManifest manifest = ModManifest.Parse(json, "test");
-            // The deprecated JSON manifest binds only limits, but parsing
-            // the string must succeed without throwing.
-            Assert.NotNull(manifest);
-        }
-
-        [Fact]
-        public void JsonLoneLowSurrogateEscapeIsRejected()
-        {
-            Assert.Throws<WasmModLoadException>(
-                () => ModManifest.Parse("{\"limits\": {\"note\": \"\\uDE00\"}}", "test"));
-        }
-
-        [Fact]
-        public void QuotedKeyDefinesTheUnquotedIdentity()
-        {
-            ModManifest manifest = ModManifest.ParseToml(
-                "[settings]\n\"boss_name\" = \"maci\"\n'other' = 7", "test");
-            Assert.True(manifest.Settings.ContainsKey("boss_name"));
-            Assert.True(manifest.Settings.ContainsKey("other"));
-            Assert.False(manifest.Settings.ContainsKey("\"boss_name\""));
-        }
-
-        [Fact]
-        public void QuotedHeaderPartNamesTheSameTable()
-        {
-            ModManifest manifest = ModManifest.ParseToml(
-                "[\"settings\"]\nboss_name = \"maci\"", "test");
-            Assert.Equal("maci", manifest.Settings["boss_name"]);
+            ModManifest manifest = ModManifest.ParseToml("[settings]\nboss_name = " + value, "test");
+            Assert.Equal(expected, manifest.Settings["boss_name"]);
         }
 
         [Fact]

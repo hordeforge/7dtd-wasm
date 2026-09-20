@@ -4,12 +4,12 @@ using System.Collections.Generic;
 namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
-    /// Operator-authored per-mod manifest (wasm-mod.toml, or the deprecated
-    /// wasm-mod.json) placed next to a guest module. The manifest is a
-    /// trusted operator file: its limits never exceed the host caps
-    /// (fuel_per_call overrides the effective default within the parser
-    /// ceiling; max_memory_bytes only tightens it). Unknown fields are
-    /// tolerated; malformed values reject the module with a specific reason.
+    /// Operator-authored per-mod manifest (wasm-mod.toml) placed next to a
+    /// guest module. The manifest is a trusted operator file: its limits
+    /// never exceed the host caps (fuel_per_call overrides the effective
+    /// default within the parser ceiling; max_memory_bytes only tightens
+    /// it). Unknown fields are tolerated; malformed values reject the
+    /// module with a specific reason.
     ///
     /// TOML shape (canonical, docs/CONFIG.md, following the zdtd-server
     /// conventions: snake_case keys, [section] groups, defaults identical
@@ -73,42 +73,6 @@ namespace HordeForge.WasmHost.Registry
             catch (FormatException ex)
             {
                 throw new WasmModLoadException(modId, "invalid wasm-mod.toml manifest: " + ex.Message, ex);
-            }
-        }
-
-        /// <summary>
-        /// Parses a JSON manifest (deprecated; kept for compatibility with
-        /// older modules). Prefer ParseToml.
-        /// </summary>
-        public static ModManifest Parse(string json, string modId)
-        {
-            if (json == null)
-            {
-                throw new ArgumentNullException(nameof(json));
-            }
-            var manifest = new ModManifest();
-            try
-            {
-                JsonValue root = MiniJson.Parse(json);
-                JsonObject obj = root.AsObject();
-
-                if (obj.TryGet("limits", out JsonValue limitsValue))
-                {
-                    JsonObject limits = limitsValue.AsObject();
-                    if (limits.TryGet("fuelPerCall", out JsonValue fuel))
-                    {
-                        manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuelPerCall"));
-                    }
-                    if (limits.TryGet("maxMemoryBytes", out JsonValue memory))
-                    {
-                        manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.maxMemoryBytes"));
-                    }
-                }
-                return manifest;
-            }
-            catch (FormatException ex)
-            {
-                throw new WasmModLoadException(modId, "invalid wasm-mod.json manifest: " + ex.Message, ex);
             }
         }
 
