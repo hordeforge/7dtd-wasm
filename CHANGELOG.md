@@ -6,6 +6,23 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+## [0.3.0] - 2026-09-20
+
+### Changed (breaking)
+
+- Only `wasm-mod.toml` is read: the deprecated `wasm-mod.json` manifest
+  format and the MiniJson parser behind it are deleted, so a module still
+  shipping JSON must convert its limits to TOML (same fields, snake_case
+  keys). MiniToml no longer unwraps quoted keys and headers either; a
+  quoted key is a literal name. ADR 0005 is marked superseded and
+  `docs/ABI.md` states the current surface.
+
+### Removed
+
+- `NativeAssets` (the platform runtime-id map duplicated by the `make
+  dist` staging) and the unused `StatusNotImplemented` /
+  `StatusInternalError` / `SettingOk` ABI constants.
+
 ## [0.2.0] - 2026-09-11
 
 This cycle changes the public C# surface of the host library and the bridge
