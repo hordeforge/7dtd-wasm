@@ -19,7 +19,7 @@ export CARGO_HOME := $(PWD)/.cargo
 export RESTORE_LOCKED ?= false
 
 # Wasmtime runtime id of THIS machine, used by "make dist" to stage the
-# matching native engine (same mapping as NativeAssets.RuntimeIdentifier).
+# matching native engine.
 UNAME_S := $(shell uname -s 2>/dev/null || echo Windows_NT)
 UNAME_M := $(shell uname -m 2>/dev/null)
 ifeq ($(OS),Windows_NT)

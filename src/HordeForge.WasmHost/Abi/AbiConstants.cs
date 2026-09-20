@@ -87,15 +87,7 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Status codes returned by guest exports. Zero always means ok.</summary>
         public const int StatusOk = 0;
 
-        /// <summary>The guest export is present but intentionally not implemented.</summary>
-        public const int StatusNotImplemented = 1;
-
-        /// <summary>The guest export failed internally.</summary>
-        public const int StatusInternalError = 2;
-
         /// <summary>Status codes returned by the get_setting host import.</summary>
-        public const int SettingOk = 0;
-
         /// <summary>The requested setting key does not exist.</summary>
         public const int SettingNotFound = -1;
 
