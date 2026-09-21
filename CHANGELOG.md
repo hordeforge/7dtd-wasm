@@ -6,6 +6,13 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+## [0.3.1] - 2026-09-21
+
+### Removed
+
+- `WasmModHost.TryInit(id, out result)` and `BotServant.ClearGlide()`. Both
+  had zero callers; dispatch walks and `Glide` status cover their uses.
+
 ## [0.3.0] - 2026-09-20
 
 ### Changed (breaking)

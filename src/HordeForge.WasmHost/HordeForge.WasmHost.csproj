@@ -11,7 +11,7 @@
     <!-- Pack metadata: the library is the publishable artifact of this
          repository; keep Version aligned with CHANGELOG.md. -->
     <PackageId>HordeForge.WasmHost</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <Authors>hordeforge</Authors>
     <Description>Embeddable WebAssembly mod host for 7 Days to Die dedicated servers: untrusted wasm32-wasip1 guest mods under fuel, memory, and module size limits on an embedded Wasmtime engine.</Description>
     <PackageTags>7dtd;wasm;wasmtime;sandbox;modding;mod-host</PackageTags>

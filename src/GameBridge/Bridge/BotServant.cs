@@ -259,17 +259,7 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Armed glide flags by net id (ADR 0037); exposed for "wasm status".</summary>
         public IReadOnlyDictionary<int, bool> Glide => _glide;
 
-        /// <summary>
-        /// Clears every armed glide flag. Called when a module that armed
-        /// them is reloaded or disabled (zdtd: withdrawn modules have their
-        /// applied glide cleared; fail closed).
-        /// </summary>
-        public void ClearGlide()
-        {
-            _glide.Clear();
-        }
-
-        public int WriteSense(Span<byte> buffer)
+public int WriteSense(Span<byte> buffer)
         {
             EnsureSpawned();
             var game = GameManager.Instance;
