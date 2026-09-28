@@ -77,13 +77,14 @@ class MainTest(unittest.TestCase):
         (root / "src" / "GameBridge").mkdir(parents=True)
         (root / "src" / "HordeForge.WasmHost").mkdir(parents=True)
         (root / "src" / "GameBridge" / "ModInfo.xml").write_text(
-            f'<xml><Version value="{version}" /></xml>\n', encoding="utf-8")
-        (root / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
-         ).write_text(f"<Project><Version>{version}</Version></Project>\n",
-                      encoding="utf-8")
+            f'<xml><Version value="{version}" /></xml>\n', encoding="utf-8"
+        )
+        (root / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj").write_text(
+            f"<Project><Version>{version}</Version></Project>\n", encoding="utf-8"
+        )
         (root / "CHANGELOG.md").write_text(
-            f"# Changelog\n\n## [{version}] - 2026-08-25\n\n- one\n",
-            encoding="utf-8")
+            f"# Changelog\n\n## [{version}] - 2026-08-25\n\n- one\n", encoding="utf-8"
+        )
 
     def run_main(self, root):
         out, err = io.StringIO(), io.StringIO()
@@ -105,8 +106,8 @@ class MainTest(unittest.TestCase):
             root = pathlib.Path(tmp)
             self.write_repo(root, version="1.2.3")
             (root / "CHANGELOG.md").write_text(
-                "# Changelog\n\n## [9.9.9] - 2026-08-25\n\n- one\n",
-                encoding="utf-8")
+                "# Changelog\n\n## [9.9.9] - 2026-08-25\n\n- one\n", encoding="utf-8"
+            )
             code, out, err = self.run_main(root)
         self.assertEqual(code, 1)
         self.assertEqual(out, "")

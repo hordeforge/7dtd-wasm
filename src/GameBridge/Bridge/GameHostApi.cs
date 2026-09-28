@@ -31,6 +31,7 @@ namespace HordeForge.GameBridge.Bridge
             CommandLimiter = new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond);
             SenseLimiter = new GuestRateLimiter(GuestRateLimiter.MaxSensePerSecond);
             WorldTimeErrorLimiter = new GuestRateLimiter();
+            ChatRejectLimiter = new GuestRateLimiter();
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
@@ -54,6 +55,16 @@ namespace HordeForge.GameBridge.Bridge
         public GuestRateLimiter WorldTimeErrorLimiter { get; }
 
         /// <summary>
+        /// Per-module cap on the "chat rejected" log line. The rejection
+        /// itself is bounded by the guest's fuel budget, not by the chat
+        /// limiter (an oversized or capped message is refused before it
+        /// reaches the chat check), so a guest looping on the import would
+        /// otherwise write server log lines at fuel rate. Exposed for
+        /// "wasm status".
+        /// </summary>
+        public GuestRateLimiter ChatRejectLimiter { get; }
+
+        /// <summary>
         /// Longest chat message accepted from a guest, counted in Unicode
         /// code points so an astral-plane character (emoji and friends,
         /// two UTF-16 units each) costs one like any other character.
@@ -68,7 +79,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 // Every 100th dropped line is logged so throttling is
                 // visible without the log itself being flooded.
-                if (dropped % 100 == 1)
+                if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
                 {
                     global::Log.Out("[WasmHost] dropped " + dropped + " log line(s) from guest " + source +
                                     " (rate cap " + GuestRateLimiter.MaxLinesPerSecond + "/s)");
@@ -111,7 +122,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     global::Log.Warning("[WasmHost] get_world_time failed (" + ex.Message + "); guests read 0 until it recovers");
                 }
-                else if (dropped % 100 == 1)
+                else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
                 {
                     global::Log.Out("[WasmHost] suppressed " + dropped + " get_world_time failure log(s)");
                 }
@@ -204,7 +215,15 @@ namespace HordeForge.GameBridge.Bridge
             }
             if (!SendChat(command))
             {
-                global::Log.Out("[WasmHost] cmd (chat rejected): " + command);
+                if (ChatRejectLimiter.TryWrite(modId, out long dropped))
+                {
+                    global::Log.Out("[WasmHost] cmd (chat rejected): " + command);
+                }
+                else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
+                {
+                    global::Log.Out("[WasmHost] suppressed " + dropped + " chat rejection log(s) from guest " +
+                                    TextSanitizer.Clean(modId));
+                }
             }
             return true;
         }

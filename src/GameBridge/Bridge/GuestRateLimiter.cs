@@ -12,13 +12,19 @@ namespace HordeForge.GameBridge.Bridge
     /// clock so an operator clock step
     /// or NTP correction can neither freeze output nor open a burst; excess
     /// items are dropped and counted.
-    /// The counters surface in "wasm status" and every 100th dropped item is
-    /// logged so operators can see a mod is being throttled without the log
-    /// itself being spammed.
+    /// The counters surface in "wasm status", and the callers that own a
+    /// limit log the running total every 100th drop so an operator can see
+    /// a mod is being throttled without the log itself being spammed.
     /// </summary>
     public sealed class GuestRateLimiter
     {
         public const int MaxLinesPerSecond = 10;
+
+        /// <summary>
+        /// Dropped items between "suppressed N" lines. A throttled source
+        /// stays visible (a running total) without a log line per drop.
+        /// </summary>
+        public const int SuppressedReportEvery = 100;
 
         /// <summary>
         /// Cap for guest SimCommands (bot spawn/move/look/shoot) per module.

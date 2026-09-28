@@ -58,8 +58,12 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--root", type=pathlib.Path, default=ROOT,
-                        help="repository to check (default: the tool's own repo)")
+    parser.add_argument(
+        "--root",
+        type=pathlib.Path,
+        default=ROOT,
+        help="repository to check (default: the tool's own repo)",
+    )
     args = parser.parse_args(argv)
 
     modinfo = args.root / "src" / "GameBridge" / "ModInfo.xml"
@@ -80,8 +84,11 @@ def main(argv: list[str] | None = None) -> int:
 
     unique = set(versions.values())
     if len(unique) != 1:
-        print("versioncheck: version declarations disagree; tag, artifact, "
-              "and changelog would describe different releases", file=sys.stderr)
+        print(
+            "versioncheck: version declarations disagree; tag, artifact, "
+            "and changelog would describe different releases",
+            file=sys.stderr,
+        )
         return 1
     print("versioncheck: ok", file=sys.stderr)
     return 0

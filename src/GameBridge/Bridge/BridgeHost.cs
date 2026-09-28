@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using HordeForge.WasmHost;
 using HordeForge.WasmHost.Config;
@@ -63,6 +64,25 @@ namespace HordeForge.GameBridge.Bridge
         // log at tick rate; totals surface in "wasm status".
         private static readonly GuestRateLimiter DispatchFailureLimiter = new GuestRateLimiter();
 
+        // A dispatch that overruns the frame budget is a real fault, not a
+        // per-mod flood, so it gets its own one-per-second budget: a guest
+        // burning fuel every tick must not suppress the warning, but it must
+        // not produce 20 lines a second either.
+        private static readonly GuestRateLimiter DispatchSlowLimiter = new GuestRateLimiter(DispatchSlowLogsPerSecond);
+
+        /// <summary>Slow-dispatch warnings allowed per second.</summary>
+        private const int DispatchSlowLogsPerSecond = 1;
+
+        /// <summary>How often a suppressed line count is logged per source.</summary>
+        private const int SuppressedLogEvery = 100;
+
+        /// <summary>Stopwatch ticks converted to milliseconds.</summary>
+        private static readonly double MillisecondsPerTimestampTick = 1000.0 / Stopwatch.Frequency;
+
+        // Wall-clock cost of the per-tick dispatch: guest counters say how
+        // often a mod failed, never how much of the game frame it ate.
+        private static readonly TickTelemetry _telemetry = new TickTelemetry();
+
         public static void Start()
         {
             lock (Gate)
@@ -111,6 +131,7 @@ namespace HordeForge.GameBridge.Bridge
                 _servant = new BotServant(() => _tick);
                 _gameApi = new GameHostApi(_settings, _servant);
                 _host = new WasmModHost(_gameApi, config);
+                _telemetry.Reset();
 
                 // LoadAllModules runs each newly loaded module's on_enable (see
                 // there), so start and "wasm load" initialize exactly once.
@@ -140,7 +161,10 @@ namespace HordeForge.GameBridge.Bridge
                 // per game tick (20 TPS), which is the same rhythm.
                 _tick++;
                 var ids = host.ModIds;
+                long startedAt = Stopwatch.GetTimestamp();
                 IReadOnlyList<ModRunResult> results = host.DispatchTick(_tick);
+                double elapsedMs = (Stopwatch.GetTimestamp() - startedAt) * MillisecondsPerTimestampTick;
+                int failures = 0;
                 for (int i = 0; i < results.Count; i++)
                 {
                     ModRunResult result = results[i];
@@ -148,13 +172,39 @@ namespace HordeForge.GameBridge.Bridge
                     {
                         continue;
                     }
+                    failures++;
                     string source = "tick/" + (result.ModId.Length > 0
                         ? result.ModId
                         : i < ids.Count ? ids[i] : "?");
-                    if (DispatchFailureLimiter.TryWrite(source, out _))
+                    if (DispatchFailureLimiter.TryWrite(source, out long dropped))
                     {
                         Log.Out("[WasmHost] tick: " + Describe(result));
                     }
+                    else if (dropped % SuppressedLogEvery == 1)
+                    {
+                        // A mod failing every tick would otherwise be silent
+                        // after the cap, leaving only a per-tick count in
+                        // "wasm status"; the running total says how far behind
+                        // the log is.
+                        Log.Out("[WasmHost] suppressed " + dropped + " tick failure log(s) from guest " +
+                                TextSanitizer.Clean(results[i].ModId));
+                    }
+                }
+                _telemetry.Record(_tick, elapsedMs, failures);
+                if (_telemetry.IsSlow && DispatchSlowLimiter.TryWrite("tick", out _))
+                {
+                    Log.Warning("[WasmHost] tick " + _tick + " dispatch took " +
+                                TickTelemetry.FormatMilliseconds(elapsedMs) + " for " + ids.Count +
+                                " module(s), over the " + TickTelemetry.FormatMilliseconds(TickTelemetry.SlowDispatchMs) +
+                                " budget; the game loop is losing time to guests");
+                }
+                if (_telemetry.HeartbeatDue)
+                {
+                    // Liveness plus cost once a minute: silence from this
+                    // mod is otherwise ambiguous between a healthy host and
+                    // a tick hook that stopped firing.
+                    Log.Out("[WasmHost] heartbeat tick " + _tick + ", " + ids.Count + " module(s); " +
+                            _telemetry.Describe());
                 }
             }
         }
@@ -230,12 +280,19 @@ namespace HordeForge.GameBridge.Bridge
                     AddDropped(lines, _gameApi.CommandLimiter, "sim commands");
                     AddDropped(lines, _gameApi.SenseLimiter, "sense snapshots");
                     AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
+                    AddDropped(lines, _gameApi.ChatRejectLimiter, "chat rejection logs");
                 }
-                if (_servant != null && _servant.Glide.Count > 0)
+                if (_servant != null)
                 {
-                    lines.Add("  glide armed (net ids): " + string.Join(", ", _servant.Glide.Keys));
+                    AddDropped(lines, _servant.CommandLogLimiter, "bot servant log lines");
+                    if (_servant.Glide.Count > 0)
+                    {
+                        lines.Add("  glide armed (net ids): " + string.Join(", ", _servant.Glide.Keys));
+                    }
                 }
                 AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
+                AddDropped(lines, DispatchSlowLimiter, "slow dispatch warnings");
+                lines.Add("  " + _telemetry.Describe());
                 return lines;
             }
         }
@@ -581,6 +638,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (_host != null)
                 {
+                    // The last heartbeat is an hour old on a long-running
+                    // server, so the run's totals are logged here: without
+                    // them a shutdown leaves no summary of what the guests
+                    // cost or how often they failed.
+                    Log.Out("[WasmHost] shutting down after " + _tick + " tick(s); " + _telemetry.Describe());
                     _host.Dispose();
                     // A guest that traps or runs out of fuel on its way out
                     // must still reach the log; Dispose keeps those results

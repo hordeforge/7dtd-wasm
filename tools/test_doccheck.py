@@ -90,8 +90,7 @@ class MainTest(unittest.TestCase):
     def test_clean_tree_exits_zero_with_empty_stdout(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
-            (root / "notes.md").write_text("clean survivor notes\n",
-                                           encoding="utf-8")
+            (root / "notes.md").write_text("clean survivor notes\n", encoding="utf-8")
             code, out, err = self.run_main(root)
         self.assertEqual(code, 0)
         self.assertEqual(out, "")

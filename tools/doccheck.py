@@ -169,8 +169,12 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--root", type=pathlib.Path, default=ROOT,
-                        help="repository to scan (default: the tool's own repo)")
+    parser.add_argument(
+        "--root",
+        type=pathlib.Path,
+        default=ROOT,
+        help="repository to scan (default: the tool's own repo)",
+    )
     args = parser.parse_args(argv)
 
     errors, warnings, text_files = 0, 0, []

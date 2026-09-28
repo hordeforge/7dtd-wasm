@@ -59,6 +59,13 @@ namespace HordeForge.GameBridge.Bridge
         private const int MaxSenseRecords = 41;
 
         private readonly Func<long> _tickProvider;
+        // Every log line below is written on a guest-driven path: a brain
+        // that keeps issuing a failing or repetitive SimCommand would
+        // otherwise write server log lines at its command rate, which
+        // buries everything else. Sources are per verb or per entity, so
+        // one noisy mod cannot mute another's diagnostics. Dropped totals
+        // surface in "wasm status" and every 100th drop is logged.
+        private readonly GuestRateLimiter _commandLogLimiter = new GuestRateLimiter();
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
         // Sense runs once per
@@ -89,6 +96,39 @@ namespace HordeForge.GameBridge.Bridge
         public BotServant(Func<long> tickProvider)
         {
             _tickProvider = tickProvider ?? throw new ArgumentNullException(nameof(tickProvider));
+        }
+
+        /// <summary>Per-source cap on this servant's log lines; exposed for "wasm status".</summary>
+        public GuestRateLimiter CommandLogLimiter => _commandLogLimiter;
+
+        /// <summary>
+        /// Writes one guest-command log line under the per-source cap, so a
+        /// brain repeating a command cannot flood the server log. Suppressed
+        /// lines are counted and reported in "wasm status".
+        /// </summary>
+        private void WriteCapped(string sourceKey, string message)
+        {
+            if (_commandLogLimiter.TryWrite(sourceKey, out long dropped))
+            {
+                Log.Out("[WasmHost] " + message);
+            }
+            else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
+            {
+                Log.Out("[WasmHost] suppressed " + dropped + " " + sourceKey + " log line(s)");
+            }
+        }
+
+        /// <summary>Warning-level counterpart of <see cref="WriteCapped"/>.</summary>
+        private void WarnCapped(string sourceKey, string message)
+        {
+            if (_commandLogLimiter.TryWrite(sourceKey, out long dropped))
+            {
+                Log.Warning("[WasmHost] " + message);
+            }
+            else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
+            {
+                Log.Warning("[WasmHost] suppressed " + dropped + " " + sourceKey + " failure log(s)");
+            }
         }
 
         private static SenseSnapshotWriter.EntityRecord[] CreateSenseRecords()
@@ -139,12 +179,12 @@ namespace HordeForge.GameBridge.Bridge
             string[] parts = command.Split(' ');
             if (parts.Length != 3)
             {
-                Log.Out("[WasmHost] glide (malformed): " + command);
+                WriteCapped("glide/parse", "glide (malformed): " + command);
                 return true;
             }
             if (!TryParseId(parts[1], out int netId))
             {
-                Log.Out("[WasmHost] glide (bad id): " + command);
+                WriteCapped("glide/parse", "glide (bad id): " + command);
                 return true;
             }
             if (!IsPlayer(netId))
@@ -154,7 +194,7 @@ namespace HordeForge.GameBridge.Bridge
                 // ClampGlideDescent), so without this gate a guest could
                 // steer any world entity, other players included. Gliding is
                 // a player feature: only a live player may be armed.
-                Log.Out("[WasmHost] glide (not a player): " + command);
+                WriteCapped("glide/parse", "glide (not a player): " + command);
                 return true;
             }
             string on = parts[2];
@@ -168,11 +208,11 @@ namespace HordeForge.GameBridge.Bridge
             }
             else
             {
-                Log.Out("[WasmHost] glide (bad flag): " + command);
+                WriteCapped("glide/parse", "glide (bad flag): " + command);
                 return true;
             }
             ApplyGlideBuff(netId, _glide[netId]);
-            Log.Out("[WasmHost] glide " + netId + " " + (_glide[netId] ? "armed" : "cleared"));
+            WriteCapped("glide/" + netId, "glide " + netId + " " + (_glide[netId] ? "armed" : "cleared"));
             return true;
         }
 
@@ -206,18 +246,18 @@ namespace HordeForge.GameBridge.Bridge
                     // netSync true so the client sees the buff the
                     // slow-fall patch keys on.
                     alive.Buffs.AddBuff(GlideBuffName, 0, true, false, -1f);
-                    Log.Out("[WasmHost] glide buff applied " + GlideBuffName + " to " + netId +
+                    WriteCapped("glidebuff/" + netId, "glide buff applied " + GlideBuffName + " to " + netId +
                             " has=" + alive.Buffs.HasBuff(GlideBuffName));
                 }
                 else
                 {
                     alive.Buffs.RemoveBuff(GlideBuffName, 0, true);
-                    Log.Out("[WasmHost] glide buff removed " + GlideBuffName + " from " + netId);
+                    WriteCapped("glidebuff/" + netId, "glide buff removed " + GlideBuffName + " from " + netId);
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning("[WasmHost] glide buff " + netId + " failed: " + ex.Message);
+                WarnCapped("glidebuff/" + netId, "glide buff " + netId + " failed: " + ex.Message);
             }
         }
 
@@ -258,16 +298,16 @@ namespace HordeForge.GameBridge.Bridge
                         string policy = parts.Length > 2
                             ? string.Join(" ", parts, 2, parts.Length - 2)
                             : string.Empty;
-                        Log.Out("[WasmHost] bot " + verb + ": " + policy);
+                        WriteCapped("bot/cfg", "bot " + verb + ": " + policy);
                         return true;
                     default:
-                        Log.Out("[WasmHost] bot cmd (unknown verb '" + verb + "'): " + command);
+                        WriteCapped("bot/unknown", "bot cmd (unknown verb '" + verb + "'): " + command);
                         return true;
                 }
             }
             catch (Exception ex)
             {
-                Log.Warning("[WasmHost] bot " + verb + " failed: " + ex);
+                WarnCapped("bot/" + verb, "bot " + verb + " failed: " + ex);
                 return false;
             }
         }
@@ -342,7 +382,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                Log.Warning("[WasmHost] sense failed: " + ex.Message);
+                WarnCapped("sense", "sense failed: " + ex.Message);
                 return 0;
             }
             return SenseSnapshotWriter.Write(snapshot, buffer);
@@ -587,13 +627,13 @@ namespace HordeForge.GameBridge.Bridge
                 int classId = EntityClass.FromString(BotEntityClass);
                 if (classId < 0)
                 {
-                    Log.Warning("[WasmHost] entity class '" + BotEntityClass + "' not found");
+                    WarnCapped("bot/spawn", "entity class '" + BotEntityClass + "' not found");
                     return false;
                 }
                 Entity e = EntityFactory.CreateEntity(classId, pos, UnityEngine.Vector3.zero);
                 if (e == null)
                 {
-                    Log.Warning("[WasmHost] bot entity creation failed");
+                    WarnCapped("bot/spawn", "bot entity creation failed");
                     return false;
                 }
                 game.World.SpawnEntityInWorld(e);
@@ -603,7 +643,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                Log.Warning("[WasmHost] bot spawn failed (world not ready?): " + ex.Message);
+                WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + ex.Message);
                 return false;
             }
         }
@@ -781,7 +821,7 @@ namespace HordeForge.GameBridge.Bridge
             int dmg = head ? PistolDamage * 2 : PistolDamage;
             var source = new DamageSourceEntity(EnumDamageSource.External, EnumDamageTypes.Piercing, botId);
             targetAlive.DamageEntity(source, dmg, head, 1f);
-            Log.Out("[WasmHost] bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
+            WriteCapped("bot/shot", "bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
         }
 
         private Entity? FindBot(int entityId)

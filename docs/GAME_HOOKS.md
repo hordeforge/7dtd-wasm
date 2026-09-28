@@ -24,6 +24,24 @@ tick number. `GameTimer.Instance.ticks` reads 0 on the dedicated server
 (observed in the acceptance run), so the bridge does not use it. The postfix
 is try/caught so a host failure never breaks the game loop.
 
+### What the operator sees
+
+Every tick dispatch is timed (`Stopwatch`, one sample per tick) and rolled
+into a one-minute window by `HordeForge.WasmHost.Core.TickTelemetry`:
+
+| Signal | Level | When |
+|---|---|---|
+| heartbeat | `Out` | every 1200 ticks (60 s at 20 TPS): tick number, module count, last/avg/max dispatch cost, failure and slow-tick totals |
+| slow dispatch | `Warning` | a dispatch over 25 ms, half a 20 TPS frame; capped at one per second, `tick` failure logs are capped separately |
+| tick failure | `Warning` | a guest that trapped, exhausted fuel, or errored on `on_tick`, naming the tick and the mod |
+| shutdown summary | `Out` | totals for the whole run when the host stops |
+
+Silence from the bridge is therefore a fault, not the healthy state: a
+missing heartbeat means the tick hook stopped firing. The same summary is
+printed by `wasm status` on demand, alongside the per-module call, trap,
+and fuel counters. Guests that spam are rate capped; the running drop
+totals surface in `wasm status` and every 100th dropped line is logged.
+
 ## Verified game API surface (V3.1.0, via tools/targetcheck)
 
 | Member | Verified signature |

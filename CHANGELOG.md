@@ -8,6 +8,15 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Added
 
+- Per-tick dispatch telemetry: a once-a-minute heartbeat, a warning when a
+  dispatch overruns half a frame, and the run's cost and failure totals in
+  `wasm status` and at shutdown (`HordeForge.WasmHost.Core.TickTelemetry`).
+  Guest dispatch failures are now warnings that name their tick instead of
+  info-level lines without one.
+- Guest-driven host log lines (bot servant commands and their failures, the
+  chat-rejection line) go through a per-source rate cap, with the dropped
+  totals in `wasm status`. They were bounded only by the guest's fuel
+  budget and could flood the server log.
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
 - `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the

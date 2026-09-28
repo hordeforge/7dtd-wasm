@@ -196,11 +196,19 @@ def main(argv: list[str]) -> int:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--root", type=pathlib.Path,
-                        default=pathlib.Path(__file__).resolve().parent.parent,
-                        help="repository to inventory (default: the tool's own repo)")
-    parser.add_argument("-o", "--output", type=pathlib.Path, metavar="FILE",
-                        help="write JSON here instead of stdout")
+    parser.add_argument(
+        "--root",
+        type=pathlib.Path,
+        default=pathlib.Path(__file__).resolve().parent.parent,
+        help="repository to inventory (default: the tool's own repo)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=pathlib.Path,
+        metavar="FILE",
+        help="write JSON here instead of stdout",
+    )
     args = parser.parse_args(argv)
 
     if not args.root.is_dir():
