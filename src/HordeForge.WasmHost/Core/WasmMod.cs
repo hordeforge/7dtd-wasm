@@ -123,7 +123,7 @@ namespace HordeForge.WasmHost.Core
         {
             if (Volatile.Read(ref _enabled))
             {
-                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
+                return Ok(0UL);
             }
             ModRunResult result = Run("on_enable", _init);
             if (result.Ok)
@@ -147,7 +147,7 @@ namespace HordeForge.WasmHost.Core
         {
             if (_shutdown == null)
             {
-                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
+                return Ok(0UL);
             }
             return Run("shutdown", _shutdown);
         }
@@ -250,13 +250,19 @@ namespace HordeForge.WasmHost.Core
                         consumed,
                         status);
                 }
-                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, consumed);
+                return Ok(consumed);
             }
             catch (Exception ex)
             {
                 ulong consumed = ConsumedFuelSafely();
                 return ClassifyFailure(callName, ex, consumed);
             }
+        }
+
+        /// <summary>Ok result with no message, for a call that ran clean.</summary>
+        private ModRunResult Ok(ulong fuelConsumed)
+        {
+            return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, fuelConsumed);
         }
 
         private ulong ConsumedFuel()

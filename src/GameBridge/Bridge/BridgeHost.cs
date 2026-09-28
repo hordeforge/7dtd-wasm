@@ -265,10 +265,7 @@ namespace HordeForge.GameBridge.Bridge
                     }
                     failures++;
                     ids ??= host.ModIds;
-                    string source = "tick/" + (result.ModId.Length > 0
-                        ? result.ModId
-                        : i < ids.Count ? ids[i] : "?");
-                    if (DispatchFailureLimiter.TryWrite(source, out long dropped))
+                    if (DispatchFailureLimiter.TryWrite(FailureSource(result, ids, i), out long dropped))
                     {
                         Log.Out("[WasmHost] tick: " + Describe(result));
                     }
@@ -279,7 +276,7 @@ namespace HordeForge.GameBridge.Bridge
                         // "wasm status"; the running total says how far behind
                         // the log is.
                         Log.Out("[WasmHost] suppressed " + dropped + " tick failure log(s) from guest " +
-                                TextSanitizer.Clean(results[i].ModId));
+                                TextSanitizer.Clean(result.ModId));
                     }
                 }
                 _telemetry.Record(_tick, elapsedMs, failures);
@@ -414,6 +411,21 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
+        /// Rate-limiter source key for a failed tick. The result names its
+        /// mod; a result that does not falls back to the position in the
+        /// load order, which tick results do follow, so both the key and the
+        /// suppressed line name the same guest.
+        /// </summary>
+        private static string FailureSource(ModRunResult result, IReadOnlyList<string> ids, int index)
+        {
+            if (result.ModId.Length > 0)
+            {
+                return "tick/" + result.ModId;
+            }
+            return "tick/" + (index < ids.Count ? ids[index] : "?");
+        }
+
+        /// <summary>
         /// A failed call's message and details, ready to log. Trap messages
         /// and backtraces can embed guest-chosen strings (module and
         /// function name sections); they pass through the same
@@ -435,6 +447,20 @@ namespace HordeForge.GameBridge.Bridge
             {
                 lines.Add("  " + dropped);
             }
+        }
+
+        /// <summary>
+        /// Drops every piece of per-module bridge state for an id that is no
+        /// longer loaded: its settings, its cached raw config, and the bots
+        /// it owned. Reload and unload both go through here, so a module can
+        /// never be left with settings but without config, or keep a share of
+        /// the bot budget it no longer owns.
+        /// </summary>
+        private static void ReleaseModuleState(string id)
+        {
+            _settings?.RemoveMod(id);
+            _gameApi?.UnregisterConfig(id);
+            _servant?.ReleaseModule(id);
         }
 
         /// <summary>
@@ -556,10 +582,10 @@ namespace HordeForge.GameBridge.Bridge
             catch (Exception ex)
             {
                 // An unreadable module file must not abort the scan or the
-                // bridge start; skip it like any other bad module. The IO
-                // message may embed the raw path, so it is cleaned like
-                // guest-derived text before it reaches the log.
-                Log.Warning("[WasmHost] cannot read " + modulePath + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
+                // bridge start; skip it like any other bad module. The path
+                // and the IO message may both carry text the host does not
+                // control, so both are cleaned before they reach the log.
+                Log.Warning("[WasmHost] cannot read " + TextSanitizer.Clean(modulePath) + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 return false;
             }
             try
@@ -678,12 +704,10 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " + Describe(shutdown));
                 }
-                _settings?.RemoveMod(id);
-                _gameApi?.UnregisterConfig(id);
                 // The outgoing instance's bots leave the world with it, so
                 // the reloaded module starts from an empty share of the bot
                 // budget and cannot inherit the old one's bodies.
-                _servant?.ReleaseModule(id);
+                ReleaseModuleState(id);
                 if (!TryLoadFromDisk(host, id))
                 {
                     return false;
@@ -709,9 +733,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return false;
                 }
-                _settings?.RemoveMod(id);
-                _gameApi?.UnregisterConfig(id);
-                _servant?.ReleaseModule(id);
+                ReleaseModuleState(id);
                 if (!shutdown.Ok)
                 {
                     // Fail soft: the mod is gone either way, but a trapped or

@@ -535,10 +535,9 @@ namespace HordeForge.WasmHost.Core
                         continue;
                     }
                     _currentModId = mod.Id;
-                    ModRunResult? result = invoke(mod);
-                    if (result.HasValue)
+                    if (invoke(mod) is ModRunResult result)
                     {
-                        results.Add(result.Value);
+                        results.Add(result);
                     }
                 }
             }
@@ -630,10 +629,7 @@ namespace HordeForge.WasmHost.Core
         {
             DefineLogAndTick(AbiConstants.HostModule);
 
-            _linker.DefineFunction<long>(AbiConstants.HostModule, "get_world_time", caller =>
-            {
-                return _api.GetWorldTime();
-            });
+            _linker.DefineFunction<long>(AbiConstants.HostModule, "get_world_time", caller => _api.GetWorldTime());
 
             _linker.DefineFunction<int, int, int, int, int>(AbiConstants.HostModule, "get_setting", (caller, keyPtr, keyLen, outPtr, outCap) =>
             {

@@ -170,12 +170,13 @@ namespace HordeForge.WasmHost.Registry
         private static void BindSettings(ModManifest manifest, TomlTable settings)
         {
             var bound = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (string key in settings.Keys)
+            foreach (KeyValuePair<string, TomlValue> pair in settings.Entries)
             {
+                string key = pair.Key;
                 string value;
                 try
                 {
-                    value = settings.TryGet(key, out TomlValue v) ? v.AsString("settings." + key) : string.Empty;
+                    value = pair.Value.AsString("settings." + key);
                 }
                 catch (FormatException ex)
                 {

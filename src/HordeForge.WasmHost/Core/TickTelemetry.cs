@@ -3,11 +3,13 @@ using System.Globalization;
 namespace HordeForge.WasmHost.Core
 {
     /// <summary>
-    /// Rolling wall-clock cost of the per-tick guest dispatch. The guest
-    /// counters on <see cref="WasmMod"/> say how often a mod failed, never
-    /// how much of the game frame the dispatch ate, so without this a
-    /// fuel-burning mod looks identical to a cheap one in the log. One
-    /// instance per host; the caller records exactly one sample per tick.
+    /// Wall-clock cost of the per-tick guest dispatch, averaged over the
+    /// last full block of <see cref="WindowTicks"/> samples (the window
+    /// starts empty at each reset and is never trimmed sample by sample).
+    /// The guest counters on <see cref="WasmMod"/> say how often a mod
+    /// failed, never how much of the game frame the dispatch ate, so without
+    /// this a fuel-burning mod looks identical to a cheap one in the log.
+    /// One instance per host; the caller records exactly one sample per tick.
     /// No allocation, no clock read of its own (the caller passes the
     /// measured duration, keeping this testable without sleeping).
     ///
@@ -34,7 +36,7 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public const double SlowDispatchMs = 25.0;
 
-        /// <summary>Samples in the rolling average window.</summary>
+        /// <summary>Samples in the average window.</summary>
         public const int WindowTicks = 1200;
 
         // Serializes the counters below. Every getter reads under it too, so

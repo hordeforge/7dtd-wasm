@@ -182,6 +182,7 @@ src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override string As
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public TomlString(string value)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public string Value { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public IEnumerable<KeyValuePair<string, TomlValue>> Entries { get; }
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public IEnumerable<string> Keys { get; }
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool HasKey(string key)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool TryGet(string key, out TomlValue value)

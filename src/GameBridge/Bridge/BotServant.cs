@@ -242,21 +242,23 @@ namespace HordeForge.GameBridge.Bridge
                 return true;
             }
             string on = parts[2];
+            bool armed;
             if (on == "1" || on == "on" || on == "true")
             {
-                _glide[netId] = true;
+                armed = true;
             }
             else if (on == "0" || on == "off" || on == "false")
             {
-                _glide[netId] = false;
+                armed = false;
             }
             else
             {
                 WriteCapped("glide/parse", "glide (bad flag): " + command);
                 return true;
             }
-            ApplyGlideBuff(netId, _glide[netId]);
-            WriteCapped("glide/" + netId, "glide " + netId + " " + (_glide[netId] ? "armed" : "cleared"));
+            _glide[netId] = armed;
+            ApplyGlideBuff(netId, armed);
+            WriteCapped("glide/" + netId, "glide " + netId + " " + (armed ? "armed" : "cleared"));
             return true;
         }
 

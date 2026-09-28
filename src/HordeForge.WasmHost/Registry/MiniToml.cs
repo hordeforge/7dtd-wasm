@@ -421,9 +421,19 @@ namespace HordeForge.WasmHost.Registry
             _values[key] = value;
         }
 
+        /// <summary>Every key in the table.</summary>
         public IEnumerable<string> Keys
         {
             get { return _values.Keys; }
+        }
+
+        /// <summary>
+        /// Every key with its parsed value, so a caller walking the table
+        /// does not look each key up a second time.
+        /// </summary>
+        public IEnumerable<KeyValuePair<string, TomlValue>> Entries
+        {
+            get { return _values; }
         }
 
         public override TomlTable AsTable(string context)
