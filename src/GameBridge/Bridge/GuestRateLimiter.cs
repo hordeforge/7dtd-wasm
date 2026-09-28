@@ -21,6 +21,13 @@ namespace HordeForge.GameBridge.Bridge
     /// built from guest-written text goes in through
     /// <see cref="SourceKey"/>, which bounds its length. Neither the number
     /// of tracked sources nor the size of a key grows with total traffic.
+    ///
+    /// Thread safety: one limiter is safe to share between threads. The
+    /// window table, the sweep scratch list and the sweep clock are
+    /// otherwise unguarded collections, and every entry point here is
+    /// reachable from a guest import, so two threads writing one source
+    /// would race on the dictionary and a concurrent sweep could evict a
+    /// window the other thread is still counting against.
     /// </summary>
     public sealed class GuestRateLimiter
     {
@@ -87,6 +94,11 @@ namespace HordeForge.GameBridge.Bridge
         internal const int MaxSourceKeyChars = 64;
 
         private readonly int _maxPerSecond;
+
+        // Serializes the window table, the sweep scratch list and the sweep
+        // clock. Held for the length of one TryWrite or one DescribeDropped
+        // and across no game call, so it never nests with another lock.
+        private readonly object _gate = new object();
 
         // Monotonic millisecond clock, injectable for tests. Defaults to
         // Environment.TickCount (~24.9-day wraparound, handled by the
@@ -161,47 +173,50 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public bool TryWrite(string source, out long droppedTotal)
         {
-            int nowMs = _clockMs();
-            if (!_windows.TryGetValue(source, out var window))
+            lock (_gate)
             {
-                window = new Window { StartTickMs = nowMs };
-                _windows[source] = window;
-            }
-            // Reset only after a full window of monotonic time. Wall-clock
-            // seconds here would drop every line for as long as a backward
-            // clock step (manual change, NTP correction) takes to catch up,
-            // and hand every source a free burst on a forward step. Unchecked
-            // int subtraction stays correct across TickCount wraparound
-            // (~24.9 days) for any sane window length.
-            if (nowMs - window.StartTickMs >= WindowMs)
-            {
-                window.StartTickMs = nowMs;
-                window.Count = 0;
-            }
-            // The idle sweep runs on its own clock, not on the calling
-            // source's reset: a source written once never rolls its window,
-            // so tying the sweep to a reset meant a workload of nothing but
-            // fresh sources never reached it and the table grew without
-            // bound. At most once a second per limiter, and only above the
-            // tracked-source threshold, so the log path stays O(1) and
-            // allocation free in the common case. The int.MinValue sentinel
-            // is checked explicitly; unchecked subtraction would wrap and
-            // read as "not due" (same reasoning as the window reset).
-            if (_windows.Count > MaxTrackedSources
-                && (_lastSweepMs == int.MinValue || nowMs - _lastSweepMs >= SweepIntervalMs))
-            {
-                _lastSweepMs = nowMs;
-                EvictIdleSources(nowMs);
-            }
-            if (window.Count >= _maxPerSecond)
-            {
-                window.Dropped++;
+                int nowMs = _clockMs();
+                if (!_windows.TryGetValue(source, out var window))
+                {
+                    window = new Window { StartTickMs = nowMs };
+                    _windows[source] = window;
+                }
+                // Reset only after a full window of monotonic time. Wall-clock
+                // seconds here would drop every line for as long as a backward
+                // clock step (manual change, NTP correction) takes to catch up,
+                // and hand every source a free burst on a forward step. Unchecked
+                // int subtraction stays correct across TickCount wraparound
+                // (~24.9 days) for any sane window length.
+                if (nowMs - window.StartTickMs >= WindowMs)
+                {
+                    window.StartTickMs = nowMs;
+                    window.Count = 0;
+                }
+                // The idle sweep runs on its own clock, not on the calling
+                // source's reset: a source written once never rolls its window,
+                // so tying the sweep to a reset meant a workload of nothing but
+                // fresh sources never reached it and the table grew without
+                // bound. At most once a second per limiter, and only above the
+                // tracked-source threshold, so the log path stays O(1) and
+                // allocation free in the common case. The int.MinValue sentinel
+                // is checked explicitly; unchecked subtraction would wrap and
+                // read as "not due" (same reasoning as the window reset).
+                if (_windows.Count > MaxTrackedSources
+                    && (_lastSweepMs == int.MinValue || nowMs - _lastSweepMs >= SweepIntervalMs))
+                {
+                    _lastSweepMs = nowMs;
+                    EvictIdleSources(nowMs);
+                }
+                if (window.Count >= _maxPerSecond)
+                {
+                    window.Dropped++;
+                    droppedTotal = window.Dropped;
+                    return false;
+                }
+                window.Count++;
                 droppedTotal = window.Dropped;
-                return false;
+                return true;
             }
-            window.Count++;
-            droppedTotal = window.Dropped;
-            return true;
         }
 
         /// <summary>
@@ -238,24 +253,27 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public string DescribeDropped(string noun)
         {
-            var parts = new List<string>();
-            foreach (var pair in _windows)
+            lock (_gate)
             {
-                if (pair.Value.Dropped > 0)
+                var parts = new List<string>();
+                foreach (var pair in _windows)
                 {
-                    parts.Add(pair.Key);
+                    if (pair.Value.Dropped > 0)
+                    {
+                        parts.Add(pair.Key);
+                    }
                 }
+                if (parts.Count == 0)
+                {
+                    return string.Empty;
+                }
+                parts.Sort(StringComparer.Ordinal);
+                for (int i = 0; i < parts.Count; i++)
+                {
+                    parts[i] = parts[i] + "=" + _windows[parts[i]].Dropped;
+                }
+                return noun + " dropped: " + string.Join(", ", parts);
             }
-            if (parts.Count == 0)
-            {
-                return string.Empty;
-            }
-            parts.Sort(StringComparer.Ordinal);
-            for (int i = 0; i < parts.Count; i++)
-            {
-                parts[i] = parts[i] + "=" + _windows[parts[i]].Dropped;
-            }
-            return noun + " dropped: " + string.Join(", ", parts);
         }
     }
 }

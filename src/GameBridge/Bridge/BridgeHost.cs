@@ -52,8 +52,10 @@ namespace HordeForge.GameBridge.Bridge
         // the process clock; a driver that steps its own time (a simulation
         // or a test) replaces it before Start and the whole bridge follows
         // that time. Nothing in the bridge reads a millisecond clock any
-        // other way.
-        private static Func<int> _clockMs = () => Environment.TickCount;
+        // other way. Volatile because a driver that swaps it from another
+        // thread must be seen by every reader here, none of which holds
+        // Gate when it asks for the clock.
+        private static volatile Func<int> _clockMs = () => Environment.TickCount;
 
         /// <summary>
         /// The millisecond clock every bridge rate window measures against.
@@ -82,8 +84,16 @@ namespace HordeForge.GameBridge.Bridge
         /// `sb wipe` ships as one, for example Mods/wasm-bridge/Wasm).
         /// Only existing directories count; two trees shipping the same id
         /// resolve to the first.
+        ///
+        /// Published as an immutable snapshot and replaced wholesale under
+        /// <see cref="Gate"/>, never filled in place: the resolvers below
+        /// are reachable from a guest import, which does not take Gate, and
+        /// enumerating a list that Start was rebuilding or Shutdown was
+        /// clearing throws mid-walk or resolves against half the trees. A
+        /// reference read is atomic; volatile hands the whole published list
+        /// to a reader that never takes the gate.
         /// </summary>
-        private static readonly List<string> ModuleTreeRoots = new List<string>();
+        private static volatile IReadOnlyList<string> _moduleTreeRoots = Array.Empty<string>();
 
         /// <summary>True once Start completed (mods may still be empty).</summary>
         public static bool Started { get; private set; }
@@ -139,7 +149,6 @@ namespace HordeForge.GameBridge.Bridge
                 NativeBootstrap.Prepare(modletDir);
 
                 WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
-                ModuleTreeRoots.Clear();
                 string extraFailure;
                 IReadOnlyList<string> extraRoots = ModuleRoots.CollectExtra(
                     Path.GetDirectoryName(modletDir) ?? string.Empty, modletDir, out extraFailure);
@@ -152,11 +161,12 @@ namespace HordeForge.GameBridge.Bridge
                     Log.Warning("[WasmHost] modlet-carried module trees unavailable: " +
                                 TextSanitizer.Clean(extraFailure) + "; only " + WasmRoot + " is scanned");
                 }
-                ModuleTreeRoots.AddRange(ModuleRoots.Order(WasmRoot, extraRoots));
+                var treeRoots = new List<string>(ModuleRoots.Order(WasmRoot, extraRoots));
+                _moduleTreeRoots = treeRoots;
                 // A modlet-carried tree can ship its own shared limits; the
                 // top-level Mods/Wasm/wasm.toml still wins when both exist.
                 string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
-                foreach (string extra in ModuleTreeRoots)
+                foreach (string extra in treeRoots)
                 {
                     string extraShared = Path.Combine(extra, "wasm.toml");
                     if (!File.Exists(sharedTomlPath) && File.Exists(extraShared))
@@ -200,7 +210,7 @@ namespace HordeForge.GameBridge.Bridge
                     _gameApi = null;
                     _servant = null;
                     _settings = null;
-                    ModuleTreeRoots.Clear();
+                    _moduleTreeRoots = Array.Empty<string>();
                     return;
                 }
                 _telemetry.Reset();
@@ -208,10 +218,10 @@ namespace HordeForge.GameBridge.Bridge
                 // LoadAllModules runs each newly loaded module's on_enable (see
                 // there), so start and "wasm load" initialize exactly once.
                 LoadAllModules();
-                if (ModuleTreeRoots.Count > 1)
+                if (treeRoots.Count > 1)
                 {
                     Log.Out("[WasmHost] extra module tree(s): " +
-                        string.Join(", ", ModuleTreeRoots.GetRange(1, ModuleTreeRoots.Count - 1).ToArray()));
+                        string.Join(", ", treeRoots.GetRange(1, treeRoots.Count - 1).ToArray()));
                 }
                 Started = true;
                 Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
@@ -442,12 +452,16 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0;
                 }
-                if (ModuleTreeRoots.Count == 0)
+                // One read of the published snapshot: a scan must resolve
+                // every id against the same set of trees even if a restart
+                // publishes a new one while it runs.
+                IReadOnlyList<string> treeRoots = _moduleTreeRoots;
+                if (treeRoots.Count == 0)
                 {
                     return 0;
                 }
                 var loadedIds = new List<string>();
-                foreach (string root in ModuleTreeRoots)
+                foreach (string root in treeRoots)
                 {
                     string[] dirs;
                     try
@@ -838,7 +852,7 @@ namespace HordeForge.GameBridge.Bridge
                 _gameApi = null;
                 _servant = null;
                 _settings = null;
-                ModuleTreeRoots.Clear();
+                _moduleTreeRoots = Array.Empty<string>();
                 Started = false;
             }
         }
@@ -849,7 +863,7 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         internal static string ResolveModuleDir(string id)
         {
-            return ModuleRoots.ResolveDir(ModuleTreeRoots, id);
+            return ModuleRoots.ResolveDir(_moduleTreeRoots, id);
         }
 
         /// <summary>
@@ -860,7 +874,7 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         internal static string ResolveModuleFile(string id, string fileName)
         {
-            return ModuleRoots.ResolveFile(ModuleTreeRoots, id, fileName);
+            return ModuleRoots.ResolveFile(_moduleTreeRoots, id, fileName);
         }
     }
 }

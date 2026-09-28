@@ -17,6 +17,16 @@ namespace HordeForge.GameBridge.Bridge
     /// Stage 2 status: spawn, move, look, shoot, glide, and sense are
     /// implemented; cover/path queries still return no answer and
     /// on_admin_command is not yet wired to the console.
+    ///
+    /// Thread safety: both public entry points take the servant gate, so
+    /// one servant is safe to share. The state below is ordinary
+    /// collections and pooled scratch buffers reused across calls (the
+    /// comment on the sense buffers), and every entry point is reachable
+    /// from a guest import, so two threads serving two guests would refill
+    /// the same snapshot, the same id lists and the same position history
+    /// under each other. The gate is taken outermost here and the
+    /// servant calls nothing that re-enters it, so it never nests with
+    /// another lock beyond the limiter it logs through.
     /// </summary>
     public sealed class BotServant
     {
@@ -73,6 +83,15 @@ namespace HordeForge.GameBridge.Bridge
         private const int MaxSenseRecords = 41;
 
         private readonly Func<long> _tickProvider;
+
+        // Serializes every field below: the bot, yaw, glide and position
+        // tables, the count floor, the top-up clock, and the pooled scratch
+        // buffers. Taken by the two public entry points (TryQueue,
+        // WriteSense) and by the Glide copy, never by a leaf helper, so the
+        // scope is one guest command or one snapshot and reentry through
+        // Monitor keeps the internal chains working.
+        private readonly object _gate = new object();
+
         // Millisecond clock for the log cap and the spawn top-up throttle,
         // so neither window depends on wall time the servant cannot be
         // driven through (BridgeHost.ClockMs is the process default).
@@ -181,17 +200,16 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return false;
             }
-            if (command.StartsWith("bot ", StringComparison.Ordinal))
+            bool isBot = command.StartsWith("bot ", StringComparison.Ordinal);
+            handled = true;
+            lock (_gate)
             {
-                handled = true;
-                return TryQueueBot(modId, command);
+                if (!isBot && !command.StartsWith("glide ", StringComparison.Ordinal))
+                {
+                    return TryQueueBot(modId, command);
+                }
+                return isBot ? TryQueueBot(modId, command) : TryQueueGlide(command);
             }
-            if (command.StartsWith("glide ", StringComparison.Ordinal))
-            {
-                handled = true;
-                return TryQueueGlide(command);
-            }
-            return false;
         }
 
         /// <summary>
@@ -348,8 +366,16 @@ namespace HordeForge.GameBridge.Bridge
         /// the queue import, so a caller enumerating this must not be able
         /// to reach back into the servant's state.
         /// </summary>
-        public IReadOnlyDictionary<int, bool> Glide =>
-            new Dictionary<int, bool>(_glide);
+        public IReadOnlyDictionary<int, bool> Glide
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return new Dictionary<int, bool>(_glide);
+                }
+            }
+        }
 
         /// <summary>
         /// Serializes the current world snapshot into the calling guest's
@@ -363,6 +389,14 @@ namespace HordeForge.GameBridge.Bridge
         /// request at tick rate does not allocate.
         /// </summary>
         public int WriteSense(string modId, Span<byte> buffer)
+        {
+            lock (_gate)
+            {
+                return WriteSenseLocked(modId, buffer);
+            }
+        }
+
+        private int WriteSenseLocked(string modId, Span<byte> buffer)
         {
             EnsureSpawned(modId);
             var game = GameManager.Instance;

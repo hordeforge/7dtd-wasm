@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using HordeForge.WasmHost.Abi;
 using Wasmtime;
 
@@ -72,20 +73,37 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public ulong FuelPerCall => _fuelPerCall;
 
-        /// <summary>Total fuel consumed across all calls so far.</summary>
-        public ulong TotalFuelConsumed { get; private set; }
+        // The counters below are written on whichever thread drives the guest
+        // and read by any thread holding a WasmMod from
+        // WasmModHost.TryGetMod, whose documented purpose is reading them.
+        // They are updated with Interlocked so a reader on another thread
+        // sees a whole value: a plain long++ is a read-modify-write, and on
+        // a 32-bit runtime a concurrent reader can see a half-updated one.
+        private long _totalFuelConsumed;
+        private long _trapCalls;
+        private long _fuelExhaustedCalls;
+        private long _errorCalls;
+        private long _totalCalls;
+
+        /// <summary>
+        /// Total fuel consumed across all calls so far. Held as a long so it
+        /// can be updated atomically; the cast back is exact because only
+        /// non-negative amounts are ever added (a fuel total cannot reach
+        /// long.MaxValue in a process lifetime).
+        /// </summary>
+        public ulong TotalFuelConsumed => (ulong)Interlocked.Read(ref _totalFuelConsumed);
 
         /// <summary>Number of calls that ended in a guest trap.</summary>
-        public long TrapCalls { get; private set; }
+        public long TrapCalls => Interlocked.Read(ref _trapCalls);
 
         /// <summary>Number of calls that exhausted the fuel budget.</summary>
-        public long FuelExhaustedCalls { get; private set; }
+        public long FuelExhaustedCalls => Interlocked.Read(ref _fuelExhaustedCalls);
 
         /// <summary>Number of calls that ended in a host or guest error.</summary>
-        public long ErrorCalls { get; private set; }
+        public long ErrorCalls => Interlocked.Read(ref _errorCalls);
 
         /// <summary>Total number of calls (init, tick, player join, shutdown) made so far.</summary>
-        public long TotalCalls { get; private set; }
+        public long TotalCalls => Interlocked.Read(ref _totalCalls);
 
         /// <summary>
         /// Invokes the guest on_enable export. Guests read configuration
@@ -103,20 +121,20 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public ModRunResult Init()
         {
-            if (_enabled)
+            if (Volatile.Read(ref _enabled))
             {
                 return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
             }
             ModRunResult result = Run("on_enable", _init);
             if (result.Ok)
             {
-                _enabled = true;
+                Volatile.Write(ref _enabled, true);
             }
             return result;
         }
 
         /// <summary>True once on_enable has completed for this generation.</summary>
-        public bool Enabled => _enabled;
+        public bool Enabled => Volatile.Read(ref _enabled);
 
         /// <summary>Invokes the guest on_tick export; the tick number is read via the tick import.</summary>
         public ModRunResult Tick()
@@ -212,7 +230,7 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         private ModRunResult Run(string callName, Func<int> invoke)
         {
-            TotalCalls++;
+            Interlocked.Increment(ref _totalCalls);
             try
             {
                 // Inside the try: arming the budget touches the store, and a
@@ -223,7 +241,7 @@ namespace HordeForge.WasmHost.Core
                 ulong consumed = ConsumedFuel();
                 if (status != AbiConstants.StatusOk)
                 {
-                    ErrorCalls++;
+                    Interlocked.Increment(ref _errorCalls);
                     return new ModRunResult(
                         Id,
                         ModRunStatus.Error,
@@ -245,7 +263,13 @@ namespace HordeForge.WasmHost.Core
         {
             ulong remaining = _store.Fuel;
             ulong consumed = remaining >= _fuelPerCall ? 0UL : _fuelPerCall - remaining;
-            TotalFuelConsumed += consumed;
+            // The accumulator is signed so it can be updated atomically. A
+            // guest would have to burn more than long.MaxValue instructions
+            // in one call to reach the clamp, which no engine runs that long;
+            // the clamp is there so an enormous configured budget cannot
+            // wrap the total negative.
+            long delta = consumed > (ulong)long.MaxValue ? long.MaxValue : (long)consumed;
+            Interlocked.Add(ref _totalFuelConsumed, delta);
             return consumed;
         }
 
@@ -274,7 +298,7 @@ namespace HordeForge.WasmHost.Core
             {
                 if (trap.Type == TrapCode.OutOfFuel)
                 {
-                    FuelExhaustedCalls++;
+                    Interlocked.Increment(ref _fuelExhaustedCalls);
                     return new ModRunResult(
                         Id,
                         ModRunStatus.FuelExhausted,
@@ -282,7 +306,7 @@ namespace HordeForge.WasmHost.Core
                         message,
                         consumed);
                 }
-                TrapCalls++;
+                Interlocked.Increment(ref _trapCalls);
                 return new ModRunResult(
                     Id,
                     ModRunStatus.Trap,
@@ -290,7 +314,7 @@ namespace HordeForge.WasmHost.Core
                     message + " [" + trap.Type + "]",
                     consumed);
             }
-            ErrorCalls++;
+            Interlocked.Increment(ref _errorCalls);
             return new ModRunResult(Id, ModRunStatus.Error, "error during " + callName, message, consumed);
         }
     }

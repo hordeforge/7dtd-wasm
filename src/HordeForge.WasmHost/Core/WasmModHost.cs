@@ -847,9 +847,13 @@ namespace HordeForge.WasmHost.Core
         /// load order, for every mod whose shutdown did not complete. A guest
         /// that traps on its way out would otherwise leave no trace at all,
         /// so the embedder can log these after disposing. Empty until
-        /// Dispose has run, and unchanged by later calls. A fresh read-only
-        /// copy, like <see cref="ModIds"/> and the dispatch results: the
-        /// list behind it belongs to the host.
+        /// Dispose has run, and unchanged by later calls.
+        ///
+        /// A fresh read-only copy, like <see cref="ModIds"/> and the
+        /// dispatch results: Dispose fills the list while holding
+        /// <see cref="_gate"/>, and an embedder that read the live list
+        /// from another thread would be enumerating a List that is being
+        /// appended to. The list behind the copy belongs to the host.
         /// </summary>
         public IReadOnlyList<ModRunResult> ShutdownFailures
         {

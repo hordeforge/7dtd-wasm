@@ -112,6 +112,28 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   URL on the listing, and `tools/packcheck.py` did not look at
   `<TargetFrameworks>`, so dropping a framework README.md promises would
   ship silently. Both are checked now, with tests.
+- The state a guest import reaches without the caller's lock is now guarded
+  where it is actually shared. `GuestRateLimiter`'s window table, the
+  per-mod counter fields on `WasmMod`, `TickTelemetry`'s counters, the
+  bot servant's pooled sense buffers and bot/glide tables, the game host
+  API's raw config cache, and the settings provider's probe fields were all
+  plain fields and ordinary collections with no synchronization of their
+  own: the bridge's own gate covers the game loop and the console thread,
+  but nothing protected them if a guest call arrived on a second thread.
+  Each now takes one private lock, held across no other, in the order
+  `BridgeHost.Gate` -> host API -> servant -> limiter.
+- `WasmModHost.ShutdownFailures` handed out the live list that `Dispose`
+  fills under the host gate, so an embedder reading it from another thread
+  could enumerate a `List` being appended to. It returns a read-only copy,
+  like `ModIds`.
+- `BridgeHost.ClockMs` is a documented cross-thread setter read on the hot
+  path without the gate; the backing field is volatile so a swap is seen
+  by every reader.
+- The module tree list was filled and cleared in place under the bridge
+  gate but enumerated by `ResolveModuleDir` / `ResolveModuleFile`, which a
+  guest's config import reaches without that gate. It is published as an
+  immutable snapshot now and replaced wholesale, so a resolve can never
+  walk a list another thread is rewriting.
 - `apicheck.py` recorded a constructor's `: this(...)` / `: base(...)`
   clause as part of its signature, so a chained constructor read as a
   removal plus an addition and the gate failed on a clean tree

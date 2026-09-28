@@ -248,6 +248,16 @@ in CI, not only on a host that already has a toolchain config.
   records) has one writer at a time. The gate can pause a console command
   until the current dispatch returns; both sides are bounded by fuel and
   module size caps.
+- The state a guest import reaches does not rely on that gate alone:
+  `GuestRateLimiter`, the settings provider, the game host API's config
+  cache, `TickTelemetry`, and the bot servant's pooled sense buffers each
+  take one private lock, taken in the order gate -> host API -> servant ->
+  limiter and never held across another. The per-mod counters on a `WasmMod`
+  are read through `Interlocked`, because `TryGetMod` hands the instance to
+  a reader that need not be the dispatching thread. The module tree list is
+  published as an immutable snapshot rather than filled in place, so the
+  resolvers a guest import reaches cannot walk a list `Start` or `Shutdown`
+  is rewriting.
 
 ## Game API verification (tools/targetcheck)
 

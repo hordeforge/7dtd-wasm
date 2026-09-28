@@ -10,6 +10,12 @@ namespace HordeForge.GameBridge.Bridge
     /// guest calls (log, get_world_time, get_setting, send_chat) reach real
     /// game services. All methods are defensive: on a dedicated server
     /// without a loaded world they degrade to defaults instead of throwing.
+    ///
+    /// Every method here runs on a guest import, so the raw config cache is
+    /// the one piece of unsynchronized state this type owns: a register from
+    /// a module load concurrent with a guest's config import would race on
+    /// the dictionary. It has its own lock, never held across the servant or
+    /// the game.
     /// </summary>
     public sealed class GameHostApi : IGameHostApi
     {
@@ -19,6 +25,11 @@ namespace HordeForge.GameBridge.Bridge
         // and invalidated on reload; a guest looping on the config import
         // must not stat the disk at call rate.
         private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        // Guards the config cache only. The servant and the limiters guard
+        // their own state, so this lock is never held while calling them and
+        // the order BridgeHost.Gate -> this -> servant is one way.
+        private readonly object _gate = new object();
 
         /// <summary>
         /// Creates the API. <paramref name="clockMs"/> is the millisecond
@@ -160,13 +171,19 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public void RegisterConfig(string modId, string content)
         {
-            _rawConfigs[modId] = content;
+            lock (_gate)
+            {
+                _rawConfigs[modId] = content;
+            }
         }
 
         /// <summary>Drops a module's cached config; called on unload and before reload.</summary>
         public void UnregisterConfig(string modId)
         {
-            _rawConfigs.Remove(modId);
+            lock (_gate)
+            {
+                _rawConfigs.Remove(modId);
+            }
         }
 
         /// <summary>
@@ -177,40 +194,46 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public bool TryGetRawConfig(string modId, out string content)
         {
-            if (_rawConfigs.TryGetValue(modId, out content))
+            lock (_gate)
             {
+                if (_rawConfigs.TryGetValue(modId, out content))
+                {
+                    return content.Length > 0;
+                }
+                // Not registered (for example a module loaded outside the normal
+                // scan): read the file once and remember the outcome so a guest
+                // loop on the config import does not hit the disk per call.
+                // Resolved through the same multi-root trees as the loader, so
+                // a modlet-carried module finds its config too. The read happens
+                // under the lock because the alternative is two threads
+                // missing the cache and both reading; it runs once per module
+                // and the file is size capped, so the stall is bounded.
+                content = string.Empty;
+                if (!ModId.IsValid(modId))
+                {
+                    return false;
+                }
+                string path = BridgeHost.ResolveModuleFile(modId, "config.toml");
+                if (path.Length == 0)
+                {
+                    _rawConfigs[modId] = content;
+                    return false;
+                }
+                if (ManifestFiles.TryRead(path, out string raw, out string failureReason))
+                {
+                    content = raw;
+                }
+                else
+                {
+                    // The file exists but could not be served. The guest reads
+                    // 0 ("no config") either way, so dropping the reason here
+                    // would leave the mod running on defaults with nothing in
+                    // the log to explain why.
+                    ReportConfigReadFailure(modId, failureReason);
+                }
+                _rawConfigs[modId] = content;
                 return content.Length > 0;
             }
-            // Not registered (for example a module loaded outside the normal
-            // scan): read the file once and remember the outcome so a guest
-            // loop on the config import does not hit the disk per call.
-            // Resolved through the same multi-root trees as the loader, so
-            // a modlet-carried module finds its config too.
-            content = string.Empty;
-            if (!ModId.IsValid(modId))
-            {
-                return false;
-            }
-            string path = BridgeHost.ResolveModuleFile(modId, "config.toml");
-            if (path.Length == 0)
-            {
-                _rawConfigs[modId] = content;
-                return false;
-            }
-            if (ManifestFiles.TryRead(path, out string raw, out string failureReason))
-            {
-                content = raw;
-            }
-            else
-            {
-                // The file exists but could not be served. The guest reads
-                // 0 ("no config") either way, so dropping the reason here
-                // would leave the mod running on defaults with nothing in
-                // the log to explain why.
-                ReportConfigReadFailure(modId, failureReason);
-            }
-            _rawConfigs[modId] = content;
-            return content.Length > 0;
         }
 
         /// <summary>

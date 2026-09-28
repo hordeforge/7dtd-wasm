@@ -17,10 +17,23 @@ namespace HordeForge.GameBridge.Bridge
     /// and reload; the shared file is re-read when its mtime changes.
     /// Precedence (per-mod over shared) lives in SettingsTable, which this
     /// class feeds; this class owns only file watching and probe throttling.
+    ///
+    /// Thread safety: one provider is safe to share. Settings are registered
+    /// from the module load path and read from a guest's get_setting import,
+    /// and the probe fields below (mtime, failure latch, probe clock) are
+    /// plain fields, so a lookup racing a register would corrupt the tables
+    /// it walks. The gate is taken by every method here, and the disk read
+    /// in <see cref="ReloadSharedIfChanged"/> runs under it: the probe is
+    /// throttled to one stat per ProbeIntervalMs, so the stall is bounded
+    /// and the alternative, checking the clock outside the gate, would let
+    /// two threads both read the file.
     /// </summary>
     public sealed class WasmSettingsProvider
     {
         private readonly string _sharedPath;
+        // Serializes the table and the probe state below; see the type
+        // comment. Monitor, so the internal chains reenter.
+        private readonly object _gate = new object();
         // Clock behind the probe throttle; see ProbeIntervalMs.
         private readonly Func<int> _clockMs;
         private readonly SettingsTable _table = new SettingsTable();
@@ -54,21 +67,30 @@ namespace HordeForge.GameBridge.Bridge
         public void UpdateMod(string modId, ModManifest? manifest)
         {
             IReadOnlyDictionary<string, string>? settings = manifest != null ? manifest.Settings : null;
-            _table.UpdateMod(modId, settings);
+            lock (_gate)
+            {
+                _table.UpdateMod(modId, settings);
+            }
         }
 
         /// <summary>Drops a module's settings on unload.</summary>
         public void RemoveMod(string modId)
         {
-            _table.RemoveMod(modId);
+            lock (_gate)
+            {
+                _table.RemoveMod(modId);
+            }
         }
 
         public bool TryGetSetting(string modId, string key, out string value)
         {
-            // Per-mod settings are current by registration; only the shared
-            // file may have changed on disk, so reload before the lookup.
-            ReloadSharedIfChanged();
-            return _table.TryGetSetting(modId, key, out value);
+            lock (_gate)
+            {
+                // Per-mod settings are current by registration; only the shared
+                // file may have changed on disk, so reload before the lookup.
+                ReloadSharedIfChanged();
+                return _table.TryGetSetting(modId, key, out value);
+            }
         }
 
         private void ReloadSharedIfChanged()
