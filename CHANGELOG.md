@@ -9,7 +9,9 @@ Codename: Quarantine (7dtd-wasm).
 This cycle carries breaking changes, so it ships as 0.4.0: in this project's
 0.x scheme the minor digit carries breaking changes and the patch digit never
 does (CONTRIBUTING, "Versioning and releases"). Cutting it as 0.3.2 would put
-a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
+a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1. What
+a consumer has to do about each one is in `docs/MIGRATION.md`, grouped by
+operator, embedder, and guest author.
 
 ### Added
 
@@ -163,8 +165,10 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so
   `results.Add(result)` had no conversion to use. The pattern match on the
-  return value states the same thing and compiles. The library, the net48
-  bridge, and the test suite were unbuildable at this commit.
+  return value states the same thing and compiles, but the call was left
+  reading `results.Add(result.Value)` on the matched, already non-nullable
+  `result`, where `.Value` is a member that does not exist. The library, the
+  net48 bridge, and the test suite were unbuildable at this commit.
 - The C# style rules in `.editorconfig` were editor suggestions: nothing
   promoted them, so a rule set that a developer silently ignored was the
   only thing a CI run saw. `EnforceCodeStyleInBuild` is on, and
@@ -545,6 +549,15 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Changed
 
+- `docs/MIGRATION.md`: the upgrade steps the breaking entries below imply
+  but never spell out, one subsection per consumer kind (operator, embedder,
+  guest author) with the before, the after, and the fix, plus a table of the
+  symbols removed in earlier releases and what replaces them. Those entries
+  are written for the person auditing the change; nothing told the person
+  who has to act on it. `docs/INDEX.md` carries the document, README points
+  at it, and CONTRIBUTING now requires a release carrying breaking changes
+  to have a section there before the tag, and records the order the release
+  is cut in.
 - `make dist` also ships the two zdtd guest modules (`fps_bot` 2.5.0 and
   `parachute` 0.1.0) as unmodified binaries from the sibling
   `hordeforge/zdtd-server` checkout, and neither the CycloneDX SBOM nor

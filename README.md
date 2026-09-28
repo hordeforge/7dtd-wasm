@@ -290,6 +290,10 @@ servant it can spawn entities and apply damage. Operator-facing guarantees
 and limits are in [SECURITY.md](SECURITY.md); the full model, including the
 gaps, is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
+Upgrading an operator tree, an embedded host, or a guest across a release
+with breaking changes: [docs/MIGRATION.md](docs/MIGRATION.md) names the steps
+per release.
+
 ## Status
 
 - [x] Host library: load, dispatch, fuel, memory cap, traps (tested)

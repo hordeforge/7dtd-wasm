@@ -121,6 +121,14 @@ requested:
 - **Breaking changes bump the minor digit** and say "(breaking)" in their
   changelog entries. Breaking means the guest ABI (docs/ABI.md), the host
   library's public C# surface, or an operator-visible config/wire format.
+- **A release that carries breaking changes says what to do about them.**
+  The changelog entry says what changed and why, which is written for the
+  person auditing it; the action a consumer has to take goes in
+  [docs/MIGRATION.md](docs/MIGRATION.md), one section per release, grouped
+  by the consumer kind that has to act (operator, embedder, guest author),
+  with the before, the after, and the fix. A breaking entry that names no
+  migration step belongs in that file before the tag, or it is not ready to
+  ship.
 - **The public surface is pinned, so a break cannot pass unnoticed.**
   `tools/apicheck.py` (part of `make check`) compares the public and
   protected surface of `src/HordeForge.WasmHost` with the committed
@@ -141,6 +149,35 @@ requested:
 There is no deprecation policy yet: this is pre-1.0, symbols can disappear
 between minors, and the changelog entry naming the replacement is the only
 notice a removal gets.
+
+### Cutting a release
+
+The order matters, because the first three steps are what the tag gate
+checks and the last two are what the tag cannot check for you.
+
+1. Retitle the `## Unreleased` section of CHANGELOG.md to
+   `## [X.Y.Z] - YYYY-MM-DD` with the date it ships, and set the same
+   version in `src/GameBridge/ModInfo.xml` and in `<Version>` in
+   `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj`. One commit, so the
+   three declarations cannot be split.
+2. Every `(breaking)` entry in that section has its upgrade steps in
+   [docs/MIGRATION.md](docs/MIGRATION.md) under the same version heading.
+3. `python3 tools/versioncheck.py` (it runs on `make check`) and
+   `make check-ci`.
+4. `make pack`, then attach `artifacts/packages/*.nupkg` to the release.
+   The package is not published by the tag: pushing `vX.Y.Z` runs the CI
+   gate and the tag check, and nothing else. nuget.org rejects a version
+   that already exists, so a version is immutable once it lands there; if a
+   published version turns out to be broken, the fix ships as the next
+   patch and the published one stays.
+5. `make dist` on a machine with a dedicated server install, then attach
+   `dist/Mods/1_HordeForge_WasmHost` to the release. The tag workflow does
+   not build the mod archive (it needs the game's own assemblies, which a
+   hosted runner does not have), so a release whose modlet was never staged
+   is one an operator can download broken. The staged tree is what
+   `evidence/acceptance-1/run_acceptance.sh` and
+   `evidence/playtest-1/run_server.sh` run against.
+6. Tag `vX.Y.Z` at the commit that carries all of the above.
 
 ## Packaging
 

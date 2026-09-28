@@ -5,6 +5,7 @@ Checks that shipped text follows the workspace rules:
   * no em dashes anywhere in the repo's text files
   * no AI attribution (no "generated/written/assisted by <tool>")
   * every markdown link to a local file points at an existing file
+  * every document directly under docs/ is listed in docs/INDEX.md
   * TODO items follow the "- [ ]" checkbox format
 
 Exit code is non-zero when any check fails, so CI and "make check" can gate.
@@ -78,6 +79,36 @@ def is_todo_violation(line: str) -> bool:
     if CHECKBOX.match(line):
         return False
     return TODO_BARE.match(line) is not None
+
+
+DOCS_DIR = "docs"
+DOCS_INDEX = "INDEX.md"
+
+
+def unindexed_docs(root: pathlib.Path) -> list[pathlib.Path]:
+    """Documents directly under docs/ that docs/INDEX.md does not list.
+
+    The index is the design contract's table of contents, so a document
+    nobody reaches from it is a document no consumer is told about. Only the
+    top level is checked: adrs/, rfcs/ and prds/ are indexed by the README in
+    each of those directories. A root with no docs/INDEX.md has no such
+    contract (a partial checkout, a test tree), so the rule is inert there.
+    """
+    docs = root / DOCS_DIR
+    index = docs / DOCS_INDEX
+    if not index.is_file():
+        return []
+    text = index.read_text(encoding="utf-8")
+    listed = {
+        (index.parent / target.split("#")[0].strip()).resolve()
+        for target in LINK.findall(text)
+        if not target.startswith(("http://", "https://", "#", "mailto:"))
+    }
+    return sorted(
+        path
+        for path in docs.glob("*.md")
+        if path.name != DOCS_INDEX and path.resolve() not in listed
+    )
 
 
 def walk(root: pathlib.Path) -> None:
@@ -176,6 +207,9 @@ def main(argv: list[str] | None = None) -> int:
         emit(f"doccheck: {args.root} is not a directory")
         return 2
     walk(args.root)
+    for path in unindexed_docs(args.root):
+        errors += 1
+        emit(f"{path}: not listed in {DOCS_DIR}/{DOCS_INDEX}")
     if errors:
         emit(f"doccheck: {errors} error(s) found")
         return 1

@@ -78,6 +78,60 @@ class TodoViolationTest(unittest.TestCase):
         self.assertFalse(doccheck.is_todo_violation("TODO without bullet"))
 
 
+class UnindexedDocsTest(unittest.TestCase):
+    """docs/INDEX.md is the contract index, so a document outside it fails."""
+
+    def build(self, root, index_body, names):
+        docs = root / "docs"
+        docs.mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (docs / name).write_text("body\n", encoding="utf-8")
+        (docs / "INDEX.md").write_text(index_body, encoding="utf-8")
+        return docs
+
+    def test_listed_document_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.build(root, "| [A.md](A.md) | owns a |\n", ["A.md"])
+            self.assertEqual(doccheck.unindexed_docs(root), [])
+
+    def test_unlisted_document_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.build(root, "| [A.md](A.md) | owns a |\n", ["A.md", "B.md"])
+            self.assertEqual([p.name for p in doccheck.unindexed_docs(root)], ["B.md"])
+
+    def test_index_does_not_need_to_list_itself(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.build(root, "no links\n", ["INDEX.md"])
+            self.assertEqual(doccheck.unindexed_docs(root), [])
+
+    def test_subdirectories_are_left_to_their_own_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            docs = self.build(root, "| [A.md](A.md) | owns a |\n", ["A.md"])
+            (docs / "adrs").mkdir()
+            (docs / "adrs" / "0001-x.md").write_text("x\n", encoding="utf-8")
+            self.assertEqual(doccheck.unindexed_docs(root), [])
+
+    def test_root_without_an_index_is_inert(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "notes.md").write_text("clean\n", encoding="utf-8")
+            self.assertEqual(doccheck.unindexed_docs(root), [])
+
+    def test_main_reports_an_unindexed_document(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.build(root, "no links\n", ["A.md"])
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = doccheck.main(["--root", str(root)])
+        self.assertEqual(code, 1)
+        self.assertIn("not listed in docs/INDEX.md", err.getvalue())
+
+
 class MainTest(unittest.TestCase):
     """The gate reports on stderr and leaves stdout empty for the caller."""
 
