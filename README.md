@@ -156,7 +156,9 @@ is missing before it fails:
 rustup from your PATH, so no Rust is installed system-wide; CI runs the same
 target, and both install the channel declared in
 `samples/rust-toolchain.toml`. `make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'` runs one
-test or class while you work.
+test or class while you work, and `make test-list` prints every name such a
+filter can match (a filter that matches nothing fails, because a green run that
+tested nothing is the worst possible answer).
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
 with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the

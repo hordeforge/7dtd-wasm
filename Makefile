@@ -122,6 +122,14 @@ else
   STEAM_ROOT ?= $(HOME)/.local/share/Steam/steamapps/common
 endif
 
+# Global packages folder the Wasmtime native engine is restored into. "make
+# dist" stages that engine by path, and the folder is not always $(HOME)/.nuget:
+# NUGET_PACKAGES moves it, and the workspace-local SDK this Makefile prefers
+# has its own. Asking the SDK that ran the build is the one source that cannot
+# disagree with where restore actually put the package. Lazily expanded, so the
+# query costs nothing on the targets that never stage the engine.
+NUGET_GLOBAL_PACKAGES = $(shell $(DOTNET) nuget locals global-packages --list 2>/dev/null | sed 's/^[^:]*:[[:space:]]*//')
+
 # Dedicated server install used for the net48 bridge build and target check.
 GAME_DIR ?= $(STEAM_ROOT)/7 Days to Die Dedicated Server
 
@@ -166,7 +174,7 @@ RUST_TOOLCHAIN = $(shell $(PYTHON) tools/pinned.py rust)
 # module the host then rejects at load.
 ZIG_VERSION := 0.16.0
 
-.PHONY: help build test toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack check check-ci clean
+.PHONY: help build test test-list toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -175,6 +183,8 @@ help:
 	@echo "  make test TEST_FILTER=<expr>"
 	@echo "                      run only the tests matching a VSTest filter, e.g."
 	@echo "                      TEST_FILTER='FullyQualifiedName~WasmModHostTests'"
+	@echo "                      (a filter that matches nothing fails, it does not pass)"
+	@echo "  make test-list      print every test name a TEST_FILTER can match"
 	@echo "  make toolchain      populate the in-project rustup toolchain (.cargo/, .rustup/)"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
 	@echo "  make samples-check  guest lint gate (rustc + clippy denied)"
@@ -186,6 +196,7 @@ help:
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
 	@echo "  make pack           pack the host library as a NuGet package under artifacts/packages/"
+	@echo "  make locks          regenerate every packages.lock.json after a dependency bump"
 	@echo "  make check          everything check-ci runs, plus bridge and bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  make clean          remove build output, samples/target, dist/ and artifacts/"
@@ -200,12 +211,35 @@ help:
 build:
 	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
-# The edit-test loop. TEST_FILTER is a VSTest filter expression, so a single
-# test or class runs without touching anything else:
+# Where the test run's output is staged so the no-match check below can read
+# it. .scratch/ is gitignored and wiped by "make clean".
+TEST_LOG ?= $(CURDIR)/.scratch/test.log
+
+# The edit-test loop. TEST_FILTER is a VSTest filter expression over
+# DisplayName (for xunit, the fully qualified test name), so a single test or
+# class runs without touching anything else:
 #   make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'
-#   make test TEST_FILTER='Name~FuelExhausted'
+#   make test TEST_FILTER='DisplayName~FuelBudget'
+#   make test-list     every test name, for building a filter
+# A filter that matches nothing is a typo, not a pass: vstest prints "No test
+# matches the given testcase filter" and still exits 0, so a mistyped filter
+# would report green for a run that tested nothing. The check below turns that
+# into a named failure.
 test:
-	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",)
+	@mkdir -p $(dir $(TEST_LOG))
+	@$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) > $(TEST_LOG) 2>&1; \
+	  rc=$$?; cat $(TEST_LOG); \
+	  if grep -q 'No test matches the given testcase filter' $(TEST_LOG); then \
+	    echo "make: TEST_FILTER='$(TEST_FILTER)' matched no test."; \
+	    echo "  A VSTest filter that matches nothing still exits 0, so this would"; \
+	    echo "  otherwise read as a passing run. Every test name: make test-list"; \
+	    exit 2; \
+	  fi; \
+	  exit $$rc
+
+# The names a TEST_FILTER can match, so the filter above is not guesswork.
+test-list:
+	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) --list-tests
 
 # Populate the in-project rustup toolchain. RUSTUP_HOME and CARGO_HOME are
 # exported at the top of this file, so this installs nothing system-wide and
@@ -313,8 +347,17 @@ dist: build fixtures bridge
 	cp src/GameBridge/bin/Release/*.dll dist/Mods/1_HordeForge_WasmHost/
 	rm -f dist/Mods/1_HordeForge_WasmHost/System.Runtime.CompilerServices.Unsafe.dll
 	cp src/GameBridge/ModInfo.xml dist/Mods/1_HordeForge_WasmHost/
-	# Native engine for this platform ($(WASMTIME_RID), see header).
-	cp "$(HOME)/.nuget/packages/wasmtime/$(WASMTIME_VERSION)/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
+	# Native engine for this platform ($(WASMTIME_RID), see header), from the
+	# global packages folder the SDK that ran the build actually used. An
+	# unresolvable folder would otherwise surface as a bare "cp: cannot stat"
+	# naming a relative path, so it is named here instead.
+	@test -n "$(NUGET_GLOBAL_PACKAGES)" && test -d "$(NUGET_GLOBAL_PACKAGES)/wasmtime/$(WASMTIME_VERSION)" || { \
+	  echo "make: the Wasmtime package is not under the SDK's global packages folder"; \
+	  echo "  ($(NUGET_GLOBAL_PACKAGES), queried from $(DOTNET))."; \
+	  echo "  Run 'make build' first so restore places it, and check NUGET_PACKAGES"; \
+	  echo "  if it points somewhere this build does not use."; \
+	  exit 1; }
+	cp "$(NUGET_GLOBAL_PACKAGES)/wasmtime/$(WASMTIME_VERSION)/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
 	# Apache-2.0 redistribution requires the license and attribution to travel
 	# with the binaries they cover (Wasmtime and the .NET Foundation closure).
 	cp THIRD-PARTY-NOTICES.md dist/Mods/1_HordeForge_WasmHost/
@@ -365,6 +408,25 @@ pack:
 	$(DOTNET) pack src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) -o $(PACKAGE_OUT)
 	@echo "NuGet package staged under $(PACKAGE_OUT)/"
 
+# Regenerate every committed packages.lock.json after a dependency change.
+# "make check" restores locked, so a manifest that moved without its lock file
+# fails there; this is the other half. It restores each project individually
+# rather than through $(SLN), because the solution covers only the host library
+# and its tests: GameBridge and targetcheck have committed lock files too, and
+# a solution-level restore silently leaves both stale.
+LOCK_PROJECTS = \
+  src/HordeForge.WasmHost/HordeForge.WasmHost.csproj \
+  tests/HordeForge.WasmHost.Tests/HordeForge.WasmHost.Tests.csproj \
+  tools/targetcheck/targetcheck.csproj \
+  src/GameBridge/GameBridge.csproj
+
+locks:
+	@for project in $(LOCK_PROJECTS); do \
+	  echo "restoring $$project"; \
+	  $(DOTNET) restore "$$project" --force-evaluate || exit 1; \
+	done
+	@echo "Lock files refreshed. Commit the diff alongside the manifest change."
+
 check: export RESTORE_LOCKED := true
 check: check-ci
 	$(MAKE) bridge
@@ -390,4 +452,4 @@ check-ci:
 	$(MAKE) pack
 
 clean:
-	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj samples/target dist artifacts
+	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj samples/target dist artifacts .scratch/test.log

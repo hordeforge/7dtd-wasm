@@ -31,6 +31,7 @@ welcome; contributions that weaken it are not.
 make toolchain     # once per clone: fills .cargo/ and .rustup/ (no system-wide Rust)
 make test          # host suite must stay green
 make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'   # one test or class
+make test-list     # every test name a TEST_FILTER can match
 make samples-check # guest lint gate: rustc + clippy warnings are build errors
 make fixtures      # if you touched samples/ or guests; also needs zig and ZDTD_SERVER
 make bridge        # net48 bridge against GAME_DIR
@@ -39,11 +40,16 @@ make check         # docs gate + sbom tests + tools lint + guest lint + build + 
 make check-ci      # the same gate minus bridge and bridge-check (no game install needed)
 
 # Dependency changes: bump the PackageReference, then regenerate every
-# committed packages.lock.json with a plain (unlocked) restore; "make
-# check" restores locked and fails when a manifest drifts from its lock.
-dotnet build HordeForge.WasmHost.sln   # refresh all packages.lock.json
+# committed packages.lock.json; "make check" restores locked and fails when a
+# manifest drifts from its lock.
+make locks                             # refresh all four packages.lock.json
 python3 tools/sbom.py                  # preview the CycloneDX SBOM make dist ships
 ```
+
+`make locks` restores each project on its own rather than through the solution:
+`HordeForge.WasmHost.sln` covers only the host library and its tests, so a
+solution-level restore leaves the `src/GameBridge` and `tools/targetcheck` lock
+files stale and locked restore fails on the next `make check`.
 
 `make check-ci` is the full gate for anything that does not touch the game
 bridge, and it is what CI runs, so it is the shortest honest answer to "is my

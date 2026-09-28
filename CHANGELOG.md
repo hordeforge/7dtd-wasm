@@ -134,6 +134,24 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   guest's config import reaches without that gate. It is published as an
   immutable snapshot now and replaced wholesale, so a resolve can never
   walk a list another thread is rewriting.
+- `make test TEST_FILTER=...` reported success for a filter that matched no
+  test: vstest prints "No test matches the given testcase filter" and exits
+  0, so a mistyped filter read as a green run of the whole suite. The target
+  now fails with the filter it was given, and `make test-list` prints every
+  name a filter can match. The filter in `make help` was one of the failing
+  kind (`Name~FuelExhausted`, which names no test here).
+- `make dist` staged the Wasmtime native engine from `$(HOME)/.nuget/packages`
+  regardless of where the SDK that ran the build actually restored it, so
+  `NUGET_PACKAGES`, and the workspace-local SDK this Makefile prefers, both
+  pointed the copy at a path that does not exist. It asks the SDK for its
+  global packages folder now, and a missing engine is named instead of
+  surfacing as a bare `cp: cannot stat`.
+- The documented way to refresh `packages.lock.json` after a dependency bump
+  was `dotnet build HordeForge.WasmHost.sln`, which covers only the host
+  library and its tests: the committed lock files under `src/GameBridge` and
+  `tools/targetcheck` were left stale, and the next locked `make check`
+  failed on a manifest whose lock file had never been regenerated. `make
+  locks` restores each project on its own.
 - `apicheck.py` recorded a constructor's `: this(...)` / `: base(...)`
   clause as part of its signature, so a chained constructor read as a
   removal plus an addition and the gate failed on a clean tree
