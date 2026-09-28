@@ -4,11 +4,18 @@
 
 The dedicated server operator installs third-party mods. Mods are treated as
 **hostile**: they may try to read server memory, crash the server, burn CPU,
-exhaust memory, or interfere with other mods. The host exists so a mod can
-only do what the operator explicitly allows.
+exhaust memory, or interfere with other mods. The host keeps a guest inside
+its own linear memory and inside a fuel budget; it does **not** give the
+operator per-guest permissions. A loaded guest reaches game state through
+the host imports on the terms listed under "What is NOT sandboxed" below, and
+one guest's state is not partitioned from another's.
 
 The game process itself is trusted. The bridge mod is trusted. Guest modules
 are not.
+
+The full model, with entry points, boundaries, per-boundary threats, and the
+gaps ranked, is [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md). This file is
+the operator summary; that one is what a security review is aimed with.
 
 ## What the sandbox guarantees
 
@@ -26,6 +33,24 @@ are not.
 
 ## What is NOT sandboxed
 
+- **Game authority through the host imports**: the guest is not confined to
+  its own memory and its own CPU. Through `send_chat` it broadcasts to every
+  player (`GameHostApi.SendChat`). Through the zdtd `queue` import it drives
+  the bot servant, which creates entity bodies, teleports the ones it tracks,
+  applies buffs, and applies damage. The servant gates who may **fire** (a
+  live servant bot) but not who may be **hit**: `bot shoot <bot> <entity>`
+  damages any living entity, players included, at up to
+  `MaxCommandsPerSecond` (200/s). Bot bodies are owned by the servant, not by
+  the guest that fires them, so two guests can shoot each other's bots. The
+  same global, unpartitioned state applies to the `glide` flags: any guest can
+  arm or clear the flag on any player. See `docs/THREAT_MODEL.md` sections 5
+  and 8.
+- **The console surface**: `wasm load`, `wasm reload <id>`, and `wasm
+  unload <id>` compile and instantiate a file from `Mods/Wasm` (or a staged
+  modlet's `Wasm/` folder) inside the game process. The bridge performs no
+  signature or checksum check and records no operator identity, so anything
+  with telnet console access can load code. See `docs/GAME_HOOKS.md` for who
+  may run the command.
 - **The bridge itself**: a bug in `1_HordeForge_WasmHost` runs with game
   privileges. It is small, reviewed, and all its game API targets are
   validated by `tools/targetcheck`, but it is still game-process code.
@@ -54,6 +79,15 @@ are not.
 - Load new modules only while the server is stopped, or use `wasm reload <id>`
   on a live server. A module that traps every tick cannot take the server
   down, but it will spam the log, so unload it via `wasm unload <id>`.
+- **There is no cap on how many modules may be loaded.** Every module gets a
+  full fuel budget on every tick, so the tick cost scales with the module
+  count. The 20 TPS loop is the thing being shared, and the slow-dispatch
+  warning and the `wasm status` heartbeat are how an operator notices.
+  Ship the modules the server needs, not a pile.
+- The telnet console password is the only credential in front of the whole
+  `wasm` surface. Keep it off shared networks and out of the repository; a
+  serverconfig committed with a plaintext password ships that access to
+  everyone who can read the file.
 
 ## Reporting
 

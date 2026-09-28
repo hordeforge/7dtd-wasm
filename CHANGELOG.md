@@ -15,6 +15,10 @@ Codename: Quarantine (7dtd-wasm).
   package that stops packing or stops declaring its terms fails the gate
   instead of the publish step. The README now ships inside the package, which
   is what the nuget.org listing renders.
+- `docs/THREAT_MODEL.md`: the repository threat model, risk-ranked, with
+  every entry point, trust boundary, per-boundary threat, and mitigation
+  mapped to the code that implements it, and the gaps named separately from
+  the controls.
 - Per-tick dispatch telemetry: a once-a-minute heartbeat, a warning when a
   dispatch overruns half a frame, and the run's cost and failure totals in
   `wasm status` and at shutdown (`HordeForge.WasmHost.Core.TickTelemetry`).
@@ -116,6 +120,13 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Changed
 
+- `SECURITY.md` and the README safety section no longer imply the host gives
+  the operator per-guest permissions. Both now state what a loaded guest can
+  reach through the imports: global chat, and the bot servant, which gates
+  who may fire but not who may be hit, over a bot population no guest owns.
+  The console surface (`wasm load` and `wasm reload`, no signature check and
+  no recorded operator) and the absence of a module-count cap are named in
+  the operational notes, and the threat model link is one click away.
 - Decision and requirement documents that had drifted from the code:
   ADR 0007 no longer claims the JSON manifest is still accepted (ADR 0005
   superseded it), PRD 0001 no longer claims undeclared-maximum modules are

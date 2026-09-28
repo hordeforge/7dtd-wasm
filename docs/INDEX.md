@@ -17,6 +17,7 @@ to fix in the same change.
 | [GAME_HOOKS.md](GAME_HOOKS.md) | In-game integration: tick hook, console commands, settings, verified game API surface | Which game members the bridge touches and how |
 | [GUEST_AUTHORS.md](GUEST_AUTHORS.md) | How to write a guest mod | Guest-side rules, deployment, manifest usage |
 | [ACCEPTANCE.md](ACCEPTANCE.md) | In-game acceptance status and evidence | What has and has not been proven on a live server |
+| [THREAT_MODEL.md](THREAT_MODEL.md) | Attack surface, trust boundaries, threats per boundary, mitigation mapping | Which entry points exist, which mitigations are implemented, and which are named gaps |
 | [adrs/](adrs/README.md) | Accepted design decisions | Why each decision was made and what would justify revisiting it |
 | [rfcs/](rfcs/README.md) | Design questions still being argued | Open questions and their drivers |
 | [prds/](prds/README.md) | Capability requirements | What a capability must do and its acceptance boxes |

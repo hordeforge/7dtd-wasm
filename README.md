@@ -265,9 +265,12 @@ optional.
 ## Safety model
 
 The threat model is "the guest is malicious." Guests cannot read or write
-outside their own linear memory, cannot touch the game process beyond the
-ABI, and are always interrupted at their budget. Details and limits in
-[SECURITY.md](SECURITY.md).
+outside their own linear memory and reach the game process only through the
+documented imports, and are always interrupted at their budget. The imports
+do carry game authority: a guest can broadcast chat, and through the bot
+servant it can spawn entities and apply damage. Operator-facing guarantees
+and limits are in [SECURITY.md](SECURITY.md); the full model, including the
+gaps, is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md).
 
 ## Status
 
