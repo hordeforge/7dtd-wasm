@@ -121,8 +121,16 @@ namespace HordeForge.GameBridge.Bridge
 
         private readonly Dictionary<string, Window> _windows = new Dictionary<string, Window>(StringComparer.Ordinal);
 
-        /// <summary>Sources currently tracked; the table's own size, for tests.</summary>
-        internal int TrackedSourceCount => _windows.Count;
+        /// <summary>
+        /// Sources currently tracked; the table's own size, for tests.
+        /// Under the gate like every other read here: a caller sizing or
+        /// asserting on the table while a guest import writes it would
+        /// otherwise walk a Dictionary during a resize.
+        /// </summary>
+        internal int TrackedSourceCount
+        {
+            get { lock (_gate) { return _windows.Count; } }
+        }
 
         // Pooled removal list for the idle sweep, so bounding the table
         // never allocates on the guest's log path.

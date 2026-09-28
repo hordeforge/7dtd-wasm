@@ -101,6 +101,43 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void TrackedSourceCountIsReadableWhileSourcesAreWritten()
+        {
+            int nowMs = 0;
+            var limiter = new GuestRateLimiter(10, () => nowMs);
+
+            // The table size is read by tests and by any caller sizing the
+            // table, and it is written by every TryWrite. Reading
+            // Dictionary.Count against a writer that is inserting (and
+            // resizing) is a walk of the bucket array, so the read belongs
+            // under the same gate as the write.
+            RunWorkers(
+                () =>
+                {
+                    for (int i = 0; i < Iterations; i++)
+                    {
+                        for (int s = 0; s < Sources; s++)
+                        {
+                            limiter.TryWrite("source" + (i * Sources + s), out _);
+                        }
+                    }
+                },
+                () =>
+                {
+                    for (int i = 0; i < Iterations; i++)
+                    {
+                        int tracked = limiter.TrackedSourceCount;
+                        Assert.InRange(tracked, 0, Iterations * Sources);
+                    }
+                });
+
+            // Every fresh source the writer named is tracked: the table is
+            // only swept above the idle threshold, which this clock never
+            // reaches, so nothing is lost.
+            Assert.Equal(Iterations * Sources, limiter.TrackedSourceCount);
+        }
+
+        [Fact]
         public void TelemetryRecordsEverySampleWhileItIsRead()
         {
             var telemetry = new TickTelemetry();

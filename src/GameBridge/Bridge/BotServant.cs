@@ -19,18 +19,16 @@ namespace HordeForge.GameBridge.Bridge
     /// implemented; cover/path queries still return no answer and
     /// on_admin_command is not yet wired to the console.
     ///
-    /// Thread safety: the guest entry points (TryQueue, WriteSense) take
-    /// the servant gate, and ReleaseModule is run by the bridge's reload
-    /// and unload paths under BridgeHost.Gate, which is what serializes it
-    /// against a concurrent sense call; it takes no servant lock itself.
-    /// The state below is ordinary
-    /// collections and pooled scratch buffers reused across calls (the
-    /// comment on the sense buffers), and every entry point is reachable
-    /// from a guest import, so two threads serving two guests would refill
-    /// the same snapshot, the same id lists and the same position history
-    /// under each other. The gate is taken outermost here and the
-    /// servant calls nothing that re-enters it, so it never nests with
-    /// another lock beyond the limiter it logs through.
+    /// Thread safety: every public entry point takes the servant gate
+    /// (TryQueue, WriteSense, ReleaseModule, and the Glide copy), so one
+    /// servant is safe to share. The state below is ordinary collections
+    /// and pooled scratch buffers reused across calls (the comment on the
+    /// sense buffers), and every entry point is reachable from a guest
+    /// import or from a module unload, so two threads serving two guests
+    /// would refill the same snapshot, the same id lists and the same
+    /// position history under each other. The gate is taken outermost here
+    /// and the servant calls nothing that re-enters it, so it never nests
+    /// with another lock beyond the limiter it logs through.
     /// </summary>
     public sealed class BotServant
     {
@@ -92,11 +90,14 @@ namespace HordeForge.GameBridge.Bridge
 
         // Serializes every field below: the bot, yaw, glide and position
         // tables, the count floor, the top-up clock, and the pooled scratch
-        // buffers. Taken by the two guest entry points (TryQueue,
-        // WriteSense) and by the Glide copy, never by a leaf helper, so the
-        // scope is one guest command or one snapshot and reentry through
-        // Monitor keeps the internal chains working. ReleaseModule is the
-        // exception: it runs under BridgeHost.Gate, not under this lock.
+        // buffers. Taken by every public entry point (TryQueue, WriteSense,
+        // ReleaseModule) and by the Glide copy, never by a leaf helper, so
+        // the scope is one guest command, one snapshot, or one unload, and
+        // reentry through Monitor keeps the internal chains working. The
+        // gate, not the bridge's own, is what makes a servant safe to
+        // share: a release from the console thread walks the same tables a
+        // sense request on the dispatching thread walks, and the two
+        // collections here are plain Dictionary and HashSet.
         private readonly object _gate = new object();
 
         // Millisecond clock for the log cap and the spawn top-up throttle,
@@ -937,11 +938,24 @@ namespace HordeForge.GameBridge.Bridge
         /// Despawns <paramref name="modId"/>'s bots. A module that is
         /// unloaded leaves the world, so the bodies and its share of the bot
         /// budget go with it; a reload gets a fresh set from the new
-        /// instance's own floor. A body whose despawn throws goes back under
-        /// the servant's tracking, as Despawn does, and the summary line
-        /// counts it as left in the world.
+        /// instance's own floor. Under the servant gate like the other entry
+        /// points: it rewrites the same bot, yaw, floor, and ownership tables
+        /// a guest command or a sense request walks, and a release running
+        /// beside one of those (an unload on the console thread while the
+        /// dispatching thread is serving a request) would otherwise corrupt
+        /// a Dictionary mid-write and leave a body tracked by nobody. A body
+        /// whose despawn throws goes back under the servant's tracking, as
+        /// Despawn does, and the summary line counts it as left in the world.
         /// </summary>
         public void ReleaseModule(string modId)
+        {
+            lock (_gate)
+            {
+                ReleaseModuleLocked(modId);
+            }
+        }
+
+        private void ReleaseModuleLocked(string modId)
         {
             IReadOnlyList<int> released = _botOwners.Release(modId);
             _countFloors.Remove(modId);

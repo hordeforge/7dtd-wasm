@@ -155,6 +155,18 @@ operator, embedder, and guest author.
 
 ### Fixed
 
+- `BotServant.ReleaseModule` rewrote the bot, yaw, floor, and ownership
+  tables without taking the servant gate, while every other public entry
+  point on the servant takes it. It is reachable from a module unload and
+  from the reload that follows it, so a release running beside a guest
+  command or a sense request on another thread walked the same plain
+  `Dictionary` and `HashSet` the other call was rewriting. It takes the
+  gate now, and the type comment names it as an entry point.
+- `GuestRateLimiter.TrackedSourceCount` read the window table's count with
+  no lock, so a caller reading it while a guest import inserted a source
+  (and resized the table) was reading `Dictionary.Count` against a table in
+  flux. It reads under the limiter gate like the rest of the type, and
+  `SharedStateConcurrencyTests` covers the read beside concurrent writers.
 - `tests/HordeForge.WasmHost.Tests/LogShim.cs` was excluded from the test
   compile by an explicit `<Compile Remove>`, so neither type in it was in the
   suite: a second `Log` that `GameLogShim` already provides, and a
