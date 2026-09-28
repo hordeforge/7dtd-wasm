@@ -64,6 +64,10 @@ namespace HordeForge.WasmHost.Tests
         // Variation selectors: BMP block and plane-14 (high surrogate 0xDB40).
         [InlineData("boss\ufe0f")]
         [InlineData("boss\udb40\udd00")]
+        // A folder name that is not valid UTF-8 (legal on Linux) reaches
+        // .NET as U+FFFD; the id no longer re-encodes to its own directory.
+        [InlineData("bo\ufffdss")]
+        [InlineData("\ufffd")]
         public void UnsafeIdsAreRejected(string? id)
         {
             Assert.False(ModId.IsValid(id));

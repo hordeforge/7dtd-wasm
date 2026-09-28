@@ -17,7 +17,11 @@ namespace HordeForge.WasmHost.Registry
     /// characters (zero-width space/joiners, word joiners, bidi controls,
     /// U+FEFF) or variation selectors: those render as nothing, so two ids
     /// that look identical could otherwise coexist as distinct registry
-    /// entries and settings/log attribution would diverge silently.
+    /// entries and settings/log attribution would diverge silently. The
+    /// replacement character is rejected for the same reason with a harder
+    /// edge: a folder name that is not valid UTF-8 (legal on Linux) reaches
+    /// .NET as U+FFFD, and the id built from it no longer names its own
+    /// directory once re-encoded, so the module would silently never load.
     /// </summary>
     public static class ModId
     {
@@ -51,6 +55,14 @@ namespace HordeForge.WasmHost.Registry
                 // every plane-14 selector/tag character (they all encode
                 // with the high surrogate 0xDB40).
                 if ((c >= '\uFE00' && c <= '\uFE0F') || c == '\uDB40')
+                {
+                    return false;
+                }
+                // U+FFFD: a folder name that is not valid UTF-8 (legal on
+                // Linux) reaches .NET as replacement characters, and the id
+                // built from it no longer names its own directory once it is
+                // re-encoded, so the module would silently never load.
+                if (c == '\uFFFD')
                 {
                     return false;
                 }

@@ -59,6 +59,37 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void Utf16FileFailsInsteadOfSwitchingEncoding()
+        {
+            // A UTF-16 BOM must not make the host read the file in another
+            // encoding: TOML mandates UTF-8, so the load fails with a
+            // reason the operator can act on.
+            string path = Path.Combine(_base, "utf16.toml");
+            File.WriteAllText(path, "greeting = \"hi\"", Encoding.Unicode);
+            Assert.False(ManifestFiles.TryRead(path, out string content, out string reason));
+            Assert.Equal(string.Empty, content);
+            Assert.NotEqual(string.Empty, reason);
+        }
+
+        [Fact]
+        public void Utf8BomIsStripped()
+        {
+            string path = Path.Combine(_base, "bom.toml");
+            File.WriteAllText(path, "greeting = \"hi\"", new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            Assert.True(ManifestFiles.TryRead(path, out string content, out string reason));
+            Assert.Equal("greeting = \"hi\"", content);
+            Assert.Equal(string.Empty, reason);
+        }
+
+        [Fact]
+        public void NonAsciiTextSurvives()
+        {
+            string path = Write("unicode.toml", "greeting = \"héllo 中文 \U0001F600\"");
+            Assert.True(ManifestFiles.TryRead(path, out string content, out _));
+            Assert.Equal("greeting = \"héllo 中文 \U0001F600\"", content);
+        }
+
+        [Fact]
         public void ReadRequiredThrowsWithReason()
         {
             string missing = Path.Combine(_base, "nope.toml");

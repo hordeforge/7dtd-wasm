@@ -83,7 +83,7 @@ surface so those plugins run unmodified:
 | `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected |
 | `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS4', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
 | `query` | `(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Text request/response (`cover bx bz tx tz`, `path bx bz tx tz`). Returns response bytes, -1 no answer, -2 buffer too small |
-| `config` | `(out_ptr: i32, out_cap: i32) -> i32` | Copy the calling mod's config.toml verbatim, min(out_cap, len) bytes; 0 = no config (module has none, or the buffer is too small). The host never parses it; each guest owns its format (zdtd contract, so the parachute mod's on_enable reads it unchanged) |
+| `config` | `(out_ptr: i32, out_cap: i32) -> i32` | Copy the calling mod's config.toml verbatim as UTF-8, at most min(out_cap, len) bytes and never splitting a multi-byte character; 0 = no config (module has none, or the buffer is too small). The host never parses it; each guest owns its format (zdtd contract, so the parachute mod's on_enable reads it unchanged) |
 
 Guest hooks are accepted with either an `i32` result (our ABI) or `void`
 (zdtd contract) for `on_enable`, `on_tick`, and `on_shutdown`. The optional

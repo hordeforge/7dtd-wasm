@@ -25,6 +25,21 @@ Codename: Quarantine (7dtd-wasm).
 - The acceptance image build ignores its own directory (`.dockerignore`),
   so recorded run logs no longer enter the build context or bust the cache.
 
+### Fixed
+
+- The `config` host import cut its copy at `min(out_cap, len)` bytes, which
+  could land inside a multi-byte UTF-8 character and hand the guest bytes it
+  decodes as U+FFFD. The cut now stops on a character boundary
+  (`Utf8Prefix`), and `docs/ABI.md` states the boundary.
+- Manifest and `config.toml` reads decoded the bytes in this class instead of
+  through `File.ReadAllText`, whose reader silently switches encoding on a
+  UTF-16 or UTF-32 BOM: a non-UTF-8 file now fails its load with a reason
+  instead of loading, and a UTF-8 BOM is stripped explicitly.
+- `ModId.IsValid` accepts U+FFFD, so a module folder whose name is not valid
+  UTF-8 (legal on Linux) produced an id that no longer re-encodes to its own
+  directory and the module silently never loaded. Replacement characters are
+  rejected like the other invisible characters.
+
 ## [0.3.1] - 2026-09-21
 
 ### Removed

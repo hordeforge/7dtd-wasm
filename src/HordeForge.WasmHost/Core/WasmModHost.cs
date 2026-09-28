@@ -516,7 +516,11 @@ namespace HordeForge.WasmHost.Core
                 // has none, or the buffer is too small - the guest checks
                 // the returned length). The host never parses it; each guest
                 // owns its format. Mirrors zdtd's config import exactly so
-                // the parachute mod's on_enable reads it unchanged.
+                // the parachute mod's on_enable reads it unchanged. The cut
+                // is made at a UTF-8 character boundary (Utf8Prefix), so a
+                // guest that sized its buffer too small for the last
+                // character of a value gets a short buffer, never a
+                // truncated multi-byte sequence it would decode as U+FFFD.
                 if (outCap <= 0)
                 {
                     return 0;
@@ -526,7 +530,15 @@ namespace HordeForge.WasmHost.Core
                     return 0;
                 }
                 byte[] bytes = Encoding.UTF8.GetBytes(content);
-                int copy = Math.Min(bytes.Length, outCap);
+                int copy = Utf8Prefix.Length(bytes, outCap);
+                if (copy == 0)
+                {
+                    // The buffer cannot even hold the first character, so
+                    // there is no partial copy worth reporting: the guest
+                    // reads 0 and grows its buffer, as with any other
+                    // too-small config buffer.
+                    return 0;
+                }
                 Memory? memory = caller.GetMemory("memory");
                 if (memory == null)
                 {

@@ -13,7 +13,10 @@ namespace HordeForge.WasmHost.Registry
     /// Decoding is explicitly UTF-8 with an invalid-byte fallback that
     /// throws (TOML mandates UTF-8): a file in any other encoding fails
     /// its load with a clear reason instead of silently corrupting setting
-    /// values into U+FFFD before they are served to guests.
+    /// values into U+FFFD before they are served to guests. A leading
+    /// UTF-8 BOM is stripped, since the parser has no use for it; the
+    /// bytes are decoded here rather than through a reader that would
+    /// silently switch encodings on a UTF-16 or UTF-32 BOM.
     /// </summary>
     public static class ManifestFiles
     {
@@ -46,7 +49,18 @@ namespace HordeForge.WasmHost.Registry
                     failureReason = "the file is larger than " + MaxBytes + " bytes";
                     return false;
                 }
-                content = File.ReadAllText(path, StrictUtf8);
+                byte[] bytes = File.ReadAllBytes(path);
+                if (bytes.Length > MaxBytes)
+                {
+                    // The file grew between the stat and the read.
+                    failureReason = "the file is larger than " + MaxBytes + " bytes";
+                    return false;
+                }
+                content = StrictUtf8.GetString(bytes);
+                if (content.Length > 0 && content[0] == '\uFEFF')
+                {
+                    content = content.Substring(1);
+                }
                 return true;
             }
             catch (Exception ex)
