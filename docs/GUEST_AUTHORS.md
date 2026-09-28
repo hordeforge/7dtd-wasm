@@ -7,8 +7,12 @@ implementation is `samples/guest-hello`; the shared helpers live in
 ## Setup
 
 ```bash
-make samples   # builds every guest with the in-project rustup toolchain
+make toolchain  # once per clone: fills .cargo/ and .rustup/ with rustup stable
+make samples    # builds every guest with the in-project rustup toolchain
 ```
+
+`make toolchain` needs rustup on your PATH and installs the toolchain itself
+into the checkout, so nothing lands system-wide. CI runs the same target.
 
 Each guest crate:
 

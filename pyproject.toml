@@ -2,6 +2,11 @@
 # "make check-ci" (which fails loudly when a rule fires); CI installs
 # the same pinned version, so local and remote never disagree.
 #
+# required-version is the machine-readable half of that promise: a developer
+# on a different ruff gets a named error from ruff itself instead of a rule
+# set that quietly differs from CI's. It is the one version declaration here,
+# so bumping it is also bumping what ci.yml installs.
+#
 # Rule groups are enabled only where the tree already passes them:
 # PL (pylint) still has findings (module-global counters in
 # doccheck.py), PT assumes pytest conventions while these tests run
@@ -15,6 +20,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+required-version = "==0.16.4"
 src = ["tools"]
 
 [tool.ruff.format]

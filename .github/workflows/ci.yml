@@ -22,16 +22,15 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      # The Makefile defaults CARGO to the in-project rustup toolchain, which
-      # is gitignored and absent here; the runner's own cargo is used instead.
-      CARGO: cargo
     steps:
       # Actions pinned by full commit SHA (tag in comment) so a moved tag or a
       # compromised major-version release cannot inject code into the pipeline.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
+          # global.json is the machine-readable declaration of the SDK the
+          # tree builds against; this is the same 8.0 feature band, spelled
+          # out so the runner resolves it without reading the manifest.
           dotnet-version: "8.0.x"
           # Every project restores from a committed, SHA512-hashed
           # packages.lock.json, so the cache key is exact: a package bump
@@ -41,20 +40,15 @@ jobs:
           cache: true
           cache-dependency-path: "**/packages.lock.json"
       # The Makefile pins RUSTUP_HOME and CARGO_HOME inside the checkout, so a
-      # developer host installs no Rust system-wide, and those assignments win
-      # over the environment. Honour that layout rather than working around
-      # it: populate the in-project rustup home using the runner's own rustup,
-      # so make sees exactly what it expects. The guests are wasm32-wasip1,
-      # and the workspace [lints] in samples/Cargo.toml deny every default
-      # rustc warning plus clippy's default set, which is what makes this
-      # compile+clippy run the guest lint gate (samples-check).
+      # developer host installs no Rust system-wide. "make toolchain" runs the
+      # same two rustup commands CI ran by hand, against that same in-project
+      # home, so there is one copy of the guest toolchain steps and a locally
+      # built guest comes off the same stable toolchain with the same
+      # wasm32-wasip1 target and clippy. The workspace [lints] in
+      # samples/Cargo.toml deny every default rustc warning plus clippy's
+      # default set, which is what makes samples-check a lint gate.
       - name: Install the guest toolchain into the in-project rustup home
-        env:
-          RUSTUP_HOME: ${{ github.workspace }}/.rustup
-          CARGO_HOME: ${{ github.workspace }}/.cargo
-        run: |
-          rustup toolchain install stable --profile minimal --target wasm32-wasip1 --component clippy
-          rustup default stable
+        run: make toolchain
       # Pinned to the same ruff version developers run locally via
       # "ruff check tools" so local and CI never disagree on rule sets.
       - name: Install ruff (pinned)

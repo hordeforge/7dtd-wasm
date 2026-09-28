@@ -65,7 +65,8 @@ the guest's own memory; the host reads them only within the given range and
 never holds a reference across calls.
 
 The Rust toolchain lives inside the repo (`.cargo/`, `.rustup/`) so nothing
-is installed system-wide. The tracked `samples/.cargo/config.toml` pins
+is installed system-wide; `make toolchain` populates it and CI calls the same
+target. The tracked `samples/.cargo/config.toml` pins
 `--max-memory=33554432` (32 MiB) and a 1 MiB stack for every guest, which
 keeps modules inside the host caps by construction in a fresh checkout and
 in CI, not only on a host that already has a toolchain config.

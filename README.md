@@ -129,11 +129,28 @@ library per platform. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```bash
 make build          # host + tests
-make fixtures       # compile guest fixtures
 make test           # run the sandbox test suite
 make bridge-check   # verify the game API targets on your server install
 make dist           # stage the modlet under dist/ (plus a CycloneDX SBOM)
 ```
+
+`make build` and `make test` are all a new contributor needs: they want a .NET
+8 SDK (pinned by `global.json`) and Python 3, and the sandbox suite runs
+against the guest fixtures already committed under `tests/fixtures`. The
+remaining targets need more of a machine, and `make help` names what each one
+is missing before it fails:
+
+| Target | Needs |
+|---|---|
+| `make fixtures` | `make toolchain` (the in-project rustup), zig, and the `zdtd-server` checkout as a sibling |
+| `make samples` / `make samples-check` | `make toolchain` |
+| `make boss` / `make boss-zig` | zig |
+| `make dist` | everything `make fixtures` needs, plus a .NET 8 SDK and Python 3 |
+
+`make toolchain` populates `.cargo/` and `.rustup/` inside the checkout using
+rustup from your PATH, so no Rust is installed system-wide; CI runs the same
+target. `make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'` runs one
+test or class while you work.
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
 with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the
@@ -143,10 +160,11 @@ server console. The staged native engine (`Native/libwasmtime.so`,
 Windows; macOS has no dedicated server). The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
-The Makefile drives a POSIX shell (GNU make plus `sh`): `cargo`/`rustup` for
-the Rust guests, `zig` for the C and Zig guests, and Python 3 for the tools
-gate, resolved as `python3` or as `python` where that is the interpreter
-name. `GAME_DIR` defaults to the Steam library root of the platform
+The Makefile drives a POSIX shell (GNU make plus `sh`): the in-project
+`cargo` (installed by `make toolchain`) for the Rust guests, `zig` for the C
+and Zig guests, and Python 3 for the tools gate, resolved as `python3` or as
+`python` where that is the interpreter name. `GAME_DIR` defaults to the
+Steam library root of the platform
 (`C:\Program Files (x86)\Steam\steamapps\common` on Windows,
 `$HOME/.local/share/Steam/steamapps/common` elsewhere); pass
 `GAME_DIR=/path/to/install` when Steam lives elsewhere. CI exercises Linux

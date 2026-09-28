@@ -16,6 +16,45 @@ PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/nul
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
 
+# The in-project toolchain is gitignored, so a fresh clone has no cargo at
+# $(CARGO) and every guest target would fail with a bare "No such file or
+# directory" from sh. These two guards turn that into a named instruction.
+# The host suite runs on the committed fixtures without either tool, so the
+# error says so rather than sending a new contributor looking for a tool
+# they do not need yet.
+define require_cargo
+	@test -x "$(CARGO)" || { \
+	  echo "make: the guest toolchain is missing ($(CARGO) not found)."; \
+	  echo "  The Rust guests build with an in-project toolchain (.cargo/, .rustup/)"; \
+	  echo "  so nothing is installed system-wide. Populate it with: make toolchain"; \
+	  echo "  The host suite does not need it: 'make build' and 'make test' work as they are."; \
+	  exit 1; }
+endef
+define require_zig
+	@command -v $(ZIG) >/dev/null 2>&1 || { \
+	  echo "make: zig not found on PATH ($(ZIG))."; \
+	  echo "  The C and Zig guests are compiled with zig; install it from https://ziglang.org/download/"; \
+	  echo "  or point the Makefile at it with: make ZIG=/path/to/zig <target>"; \
+	  echo "  Every other target, including 'make test', runs without it."; \
+	  exit 1; }
+endef
+# ruff is the tools lint and format gate, pinned by required-version in
+# pyproject.toml so a local run cannot drift from CI. Missing or mismatched is
+# a setup problem, not a code problem, and says so before the gate runs.
+define require_ruff
+	@command -v ruff >/dev/null 2>&1 || { \
+	  echo "make: ruff not found on PATH."; \
+	  echo "  The tools gate needs ruff $(RUFF_VERSION) (the version ci.yml installs)."; \
+	  echo "  Install it into a project-local environment, e.g. uv: uv tool install ruff==$(RUFF_VERSION)"; \
+	  echo "  'make build' and 'make test' do not need it."; \
+	  exit 1; }
+	@ruff --version | grep -q '$(RUFF_VERSION)' || { \
+	  echo "make: ruff $(ruff --version | cut -d' ' -f2) is installed, but this gate is pinned to $(RUFF_VERSION)"; \
+	  echo "  (pyproject.toml required-version, the version ci.yml installs)."; \
+	  echo "  Install the pinned one: uv tool install ruff==$(RUFF_VERSION)"; \
+	  exit 1; }
+endef
+
 # NuGet restore mode for the dotnet targets below. Plain builds stay
 # unlocked so dependency bumps regenerate packages.lock.json; "make
 # check" flips this to true so a manifest that drifts from its
@@ -68,6 +107,19 @@ endif
 # Dedicated server install used for the net48 bridge build and target check.
 GAME_DIR ?= $(STEAM_ROOT)/7 Days to Die Dedicated Server
 
+# Sibling checkout holding the unmodified zdtd plugins (fps_bot, parachute)
+# that are committed under tests/fixtures and staged by "make dist". It is a
+# separate repository, so a clone of this one alone cannot rebuild them.
+ZDTD_SERVER ?= $(abspath $(CURDIR)/../zdtd-server)
+RUSTUP ?= rustup
+
+# The ruff the tools gate is pinned to, read from pyproject.toml so the
+# declaration lives in one place: the same file ruff reads, the same version
+# the preflight below checks for, and the same one ci.yml installs.
+# Recursively expanded (=) like WASMTIME_VERSION, so the read happens only in
+# the targets that gate on it.
+RUFF_VERSION = $(shell $(PYTHON) -c "import re; print(re.search(r'required-version = \"==(.+?)\"', open('pyproject.toml').read()).group(1))")
+
 SLN = HordeForge.WasmHost.sln
 
 # Wasmtime NuGet version as resolved into the committed lock file, so the
@@ -79,12 +131,16 @@ SLN = HordeForge.WasmHost.sln
 # those targets outright when the lock file has not been restored yet.
 WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
-.PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
+.PHONY: help build test toolchain samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
 
 help:
 	@echo "Targets:"
 	@echo "  make build          build the host library and test suite (net8)"
 	@echo "  make test           run the host test suite"
+	@echo "  make test TEST_FILTER=<expr>"
+	@echo "                      run only the tests matching a VSTest filter, e.g."
+	@echo "                      TEST_FILTER='FullyQualifiedName~WasmModHostTests'"
+	@echo "  make toolchain      populate the in-project rustup toolchain (.cargo/, .rustup/)"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
 	@echo "  make samples-check  guest lint gate (rustc + clippy denied)"
 	@echo "  make boss           compile the C guest (samples/guest-boss) with zig"
@@ -94,20 +150,47 @@ help:
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
-	@echo "  make check          docs gate + sbom tests + tools lint + guest lint gate + build + test + bridge-check"
+	@echo "  make check          docs gate + sbom tests + tools lint + guest lint gate + build + test + bridge + bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
+	@echo "  make clean          remove build output, staged fixtures and dist/"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
+	@echo "  ZDTD_SERVER=...     zdtd-server checkout holding the plugins fixtures and dist copy"
+	@echo
+	@echo "The host library needs only a .NET 8 SDK and Python 3. The Rust guests"
+	@echo "need 'make toolchain', the C and Zig guests need zig, and the fixtures"
+	@echo "and dist targets need the ZDTD_SERVER checkout. 'make test' runs on the"
+	@echo "committed fixtures and needs none of the three."
 
 build:
 	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED)
 
+# The edit-test loop. TEST_FILTER is a VSTest filter expression, so a single
+# test or class runs without touching anything else:
+#   make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'
+#   make test TEST_FILTER='Name~FuelExhausted'
 test:
-	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED)
+	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",)
+
+# Populate the in-project rustup toolchain. RUSTUP_HOME and CARGO_HOME are
+# exported at the top of this file, so this installs nothing system-wide and
+# leaves no state outside the checkout. The commands are the ones CI runs
+# against its own checkout, so a guest built locally and a guest built in CI
+# come off the same stable toolchain with the same target and clippy.
+toolchain:
+	@command -v rustup >/dev/null 2>&1 || { \
+	  echo "make: rustup not found on PATH."; \
+	  echo "  Install it from https://rustup.rs (the toolchain itself lands in ./.rustup),"; \
+	  echo "  then run 'make toolchain' again. Point at an existing one with RUSTUP=/path/to/rustup."; \
+	  exit 1; }
+	$(RUSTUP) toolchain install stable --profile minimal --target wasm32-wasip1 --component clippy
+	$(RUSTUP) default stable
+	@echo "Guest toolchain ready in $(CARGO_HOME) (nothing installed system-wide)."
 
 # Compile guests from inside samples/ on purpose: cargo discovers
 # config by walking up from the current directory, and the workspace
 # [lints] in samples/Cargo.toml deny every default rustc warning.
 samples:
+	$(call require_cargo)
 	cd samples && $(CARGO) build --release --target wasm32-wasip1
 
 # Guest lint gate: a plain build already fails on any default rustc
@@ -115,6 +198,7 @@ samples:
 # (workspace [lints] clippy all = "deny"). This keeps both gates in make
 # check so guest code cannot regress silently between fixture rebuilds.
 samples-check:
+	$(call require_cargo)
 	cd samples && $(CARGO) build --release --target wasm32-wasip1
 	cd samples && $(CARGO) clippy --release --target wasm32-wasip1
 
@@ -122,6 +206,7 @@ samples-check:
 # (preview 1). -nostdlib keeps it free of WASI libc imports; --max-memory
 # declares the 32 MiB maximum the host requires.
 boss:
+	$(call require_zig)
 	mkdir -p samples/target
 	$(ZIG) cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
 	  -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
@@ -132,12 +217,20 @@ boss:
 # Like the C guest, the module is emitted straight into samples/target/
 # so no build artifact lands inside a guest source directory.
 boss-zig:
+	$(call require_zig)
 	mkdir -p samples/target
 	cd samples/guest-boss-zig && $(ZIG) build-exe src/main.zig \
 	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \
 	  --max-memory=33554432 -femit-bin=../target/guest-boss-zig.wasm
 
 fixtures: samples boss boss-zig
+	@test -f "$(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm" -a -f "$(ZDTD_SERVER)/mods/parachute/parachute.wasm" || { \
+	  echo "make: the unmodified zdtd plugins are missing under $(ZDTD_SERVER)/mods."; \
+	  echo "  'make fixtures' and 'make dist' copy them in as real-world fixtures,"; \
+	  echo "  so they need the zdtd-server checkout as a sibling of this repository."; \
+	  echo "  Clone it next to this one, or point at it: make ZDTD_SERVER=/path/to/zdtd-server fixtures"; \
+	  echo "  The committed fixtures under tests/fixtures are enough to run 'make test'."; \
+	  exit 1; }
 	mkdir -p tests/fixtures
 	cp samples/target/wasm32-wasip1/release/guest_trap.wasm     tests/fixtures/trap.wasm
 	cp samples/target/wasm32-wasip1/release/guest_fuel.wasm     tests/fixtures/fuel.wasm
@@ -149,11 +242,11 @@ fixtures: samples boss boss-zig
 	cp samples/target/guest-boss-zig.wasm                       tests/fixtures/boss-zig.wasm
 	# The unmodified zdtd fps_bot plugin (workspace sibling), committed as a
 	# fixture so the compatibility surface is tested against the real module.
-	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
+	cp $(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
 	# The unmodified zdtd parachute mod (sense v4 + glide + config); its
 	# config.toml is staged so the zdtd.config import test serves the real file.
-	cp ../zdtd-server/mods/parachute/parachute.wasm             tests/fixtures/parachute.wasm
-	cp ../zdtd-server/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
+	cp $(ZDTD_SERVER)/mods/parachute/parachute.wasm             tests/fixtures/parachute.wasm
+	cp $(ZDTD_SERVER)/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
 
 bridge:
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED)
@@ -185,14 +278,14 @@ dist: build fixtures bridge
 	cp samples/guest-boss-zig/wasm-mod.toml dist/Mods/Wasm/boss-zig/
 	# The unmodified zdtd fps_bot plugin (workspace sibling); the shared
 	# wasm.toml must raise limits.max_memory_bytes for it to load.
-	cp ../zdtd-server/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
+	cp $(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
 	cp samples/zdtd-fps-bot/wasm-mod.toml dist/Mods/Wasm/fps-bot/
 	# The unmodified zdtd parachute mod: module + its own config.toml (served
 	# to the guest verbatim via the zdtd.config import). Needs the same raised
 	# memory cap; deploy tuning lives in config.toml, not the manifest.
 	mkdir -p dist/Mods/Wasm/parachute
-	cp ../zdtd-server/mods/parachute/parachute.wasm dist/Mods/Wasm/parachute/module.wasm
-	cp ../zdtd-server/mods/parachute/config.toml dist/Mods/Wasm/parachute/
+	cp $(ZDTD_SERVER)/mods/parachute/parachute.wasm dist/Mods/Wasm/parachute/module.wasm
+	cp $(ZDTD_SERVER)/mods/parachute/config.toml dist/Mods/Wasm/parachute/
 	cp samples/parachute/wasm-mod.toml dist/Mods/Wasm/parachute/
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	# SBOM: CycloneDX inventory built from the committed lock files, so
@@ -215,6 +308,7 @@ check-ci:
 	$(PYTHON) tools/versioncheck.py
 	$(PYTHON) tools/apicheck.py
 	$(PYTHON) -m unittest discover -s tools
+	$(call require_ruff)
 	ruff check tools
 	ruff format --check tools
 	$(MAKE) samples-check

@@ -28,12 +28,15 @@ welcome; contributions that weaken it are not.
 ## Change flow
 
 ```bash
-make fixtures     # if you touched samples/ or guests
+make toolchain     # once per clone: fills .cargo/ and .rustup/ (no system-wide Rust)
+make test          # host suite must stay green
+make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'   # one test or class
 make samples-check # guest lint gate: rustc + clippy warnings are build errors
-make test         # host suite must stay green
-make bridge       # net48 bridge against GAME_DIR
-make bridge-check # game targets must pass after any game update
-make check        # docs gate + sbom tests + guest lint + build + test + bridge
+make fixtures      # if you touched samples/ or guests; also needs zig and ZDTD_SERVER
+make bridge        # net48 bridge against GAME_DIR
+make bridge-check  # game targets must pass after any game update
+make check         # docs gate + sbom tests + tools lint + guest lint + build + test + bridge + bridge-check
+make check-ci      # the same gate minus bridge and bridge-check (no game install needed)
 
 # Dependency changes: bump the PackageReference, then regenerate every
 # committed packages.lock.json with a plain (unlocked) restore; "make
@@ -41,6 +44,11 @@ make check        # docs gate + sbom tests + guest lint + build + test + bridge
 dotnet build HordeForge.WasmHost.sln   # refresh all packages.lock.json
 python3 tools/sbom.py                  # preview the CycloneDX SBOM make dist ships
 ```
+
+`make check-ci` is the full gate for anything that does not touch the game
+bridge, and it is what CI runs, so it is the shortest honest answer to "is my
+change shippable?". `make check` adds the two targets that need a dedicated
+server install. `make help` lists every target and what it needs.
 
 Every change lands with its tests and its docs updated in the same commit.
 Compiler, analyzer, and rustc lint warnings fail the build (warnings are

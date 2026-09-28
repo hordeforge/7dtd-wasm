@@ -58,24 +58,36 @@ class NugetComponentsTest(unittest.TestCase):
     def test_every_component_carries_its_spdx_license(self):
         lock = write(
             pathlib.Path(tempfile.mkdtemp()) / "packages.lock.json",
-            json.dumps({"dependencies": {"net8.0": {
-                "Wasmtime": {"type": "Direct", "resolved": "44.0.0"},
-                "xunit": {"type": "Direct", "resolved": "2.9.3"},
-            }}}),
+            json.dumps(
+                {
+                    "dependencies": {
+                        "net8.0": {
+                            "Wasmtime": {"type": "Direct", "resolved": "44.0.0"},
+                            "xunit": {"type": "Direct", "resolved": "2.9.3"},
+                        }
+                    }
+                }
+            ),
         )
-        licenses = {c["name"]: c["licenses"]
-                    for c in sbom.nuget_components(lock)}
+        licenses = {c["name"]: c["licenses"] for c in sbom.nuget_components(lock)}
         self.assertEqual(
-            licenses["Wasmtime"], [{"license": {"id": "Apache-2.0 WITH LLVM-exception"}}],
+            licenses["Wasmtime"],
+            [{"license": {"id": "Apache-2.0 WITH LLVM-exception"}}],
         )
         self.assertEqual(licenses["xunit"], [{"license": {"id": "Apache-2.0"}}])
 
     def test_unrecorded_license_fails_loudly(self):
         lock = write(
             pathlib.Path(tempfile.mkdtemp()) / "packages.lock.json",
-            json.dumps({"dependencies": {"net8.0": {
-                "Newtonsoft.Json": {"type": "Transitive", "resolved": "13.0.3"},
-            }}}),
+            json.dumps(
+                {
+                    "dependencies": {
+                        "net8.0": {
+                            "Newtonsoft.Json": {"type": "Transitive", "resolved": "13.0.3"},
+                        }
+                    }
+                }
+            ),
         )
         with self.assertRaises(SystemExit) as caught:
             sbom.nuget_components(lock)
@@ -157,14 +169,21 @@ class BuildBomTest(unittest.TestCase):
         """evidence/ is a frozen playtest record, not a shipped artifact."""
         root = pathlib.Path(tempfile.mkdtemp())
         write(root / "src" / "M" / "ModInfo.xml", '<xml><Version value="0.1.0" /></xml>')
-        write(root / "src" / "M" / "packages.lock.json",
-              json.dumps({"dependencies": {"net8.0": {
-                  "Wasmtime": {"type": "Direct", "resolved": "44.0.0"}}}}))
-        write(root / "evidence" / "playtest-1" / "client" / "packages.lock.json",
-              json.dumps({"dependencies": {"net8.0": {
-                  "xunit": {"type": "Direct", "resolved": "2.9.3"}}}}))
-        self.assertEqual([c["purl"] for c in sbom.build_bom(root)["components"]],
-                         ["pkg:nuget/wasmtime@44.0.0"])
+        write(
+            root / "src" / "M" / "packages.lock.json",
+            json.dumps(
+                {"dependencies": {"net8.0": {"Wasmtime": {"type": "Direct", "resolved": "44.0.0"}}}}
+            ),
+        )
+        write(
+            root / "evidence" / "playtest-1" / "client" / "packages.lock.json",
+            json.dumps(
+                {"dependencies": {"net8.0": {"xunit": {"type": "Direct", "resolved": "2.9.3"}}}}
+            ),
+        )
+        self.assertEqual(
+            [c["purl"] for c in sbom.build_bom(root)["components"]], ["pkg:nuget/wasmtime@44.0.0"]
+        )
 
     def test_is_deterministic_and_valid_json(self):
         root = pathlib.Path(tempfile.mkdtemp())

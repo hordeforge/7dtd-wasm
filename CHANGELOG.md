@@ -17,6 +17,14 @@ Codename: Quarantine (7dtd-wasm).
   chat-rejection line) go through a per-source rate cap, with the dropped
   totals in `wasm status`. They were bounded only by the guest's fuel
   budget and could flood the server log.
+- `make toolchain`: populates the in-project rustup toolchain (`.cargo/`,
+  `.rustup/`) from rustup on PATH, so a fresh clone has one documented way to
+  get a working guest build. CI runs the same target instead of its own copy
+  of the rustup commands.
+- `make test TEST_FILTER=<expr>`: run a single test or class through the
+  documented target rather than the whole suite.
+- `global.json` declaring the .NET 8 SDK the tree builds against, matching
+  what CI installs.
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
 - `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the
@@ -84,6 +92,20 @@ Codename: Quarantine (7dtd-wasm).
   gained `--root`.
 
 ### Fixed
+
+- The guest, fixture and dist targets failed on a clean clone with a bare
+  `sh: .cargo/bin/cargo: No such file or directory` or a `cp: cannot stat`,
+  because the in-project toolchain, zig and the sibling `zdtd-server`
+  checkout were each an undocumented prerequisite. Each target now names the
+  missing piece and the command that provides it, and the path to the
+  sibling checkout is overridable with `ZDTD_SERVER=...`.
+- `make help` listed neither `make clean` nor the guest toolchain step, and
+  described `make check` without the bridge build it runs.
+- `make check-ci` failed on a clean clone: `tools/` had never been formatted
+  with the ruff the gate pins, so `ruff format --check` refused six files.
+  They are formatted now, and `pyproject.toml` declares
+  `required-version = "==0.16.4"` so a developer's ruff has to be the one CI
+  installs rather than whatever happens to be on PATH.
 
 - The `config` host import cut its copy at `min(out_cap, len)` bytes, which
   could land inside a multi-byte UTF-8 character and hand the guest bytes it
