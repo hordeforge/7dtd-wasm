@@ -10,6 +10,7 @@ Checks that shipped text follows the workspace rules:
 Exit code is non-zero when any check fails, so CI and "make check" can gate.
 """
 
+import argparse
 import pathlib
 import re
 import sys
@@ -45,6 +46,11 @@ warnings = 0
 text_files = []
 
 
+def emit(message: str) -> None:
+    """Diagnostics go to stderr so stdout stays free of gate output."""
+    print(message, file=sys.stderr)
+
+
 def line_errors(line: str) -> list[str]:
     """Rule hits for one line: em dash, AI attribution. Pure for tests."""
     hits = []
@@ -72,13 +78,13 @@ def is_todo_violation(line: str) -> bool:
     return TODO_BARE.match(line) is not None
 
 
-def walk():
-    for path in ROOT.rglob("*"):
+def walk(root: pathlib.Path):
+    for path in root.rglob("*"):
         if not path.is_file():
             continue
         if any(
             part in SKIP_DIRS or (part.startswith(".") and part != ".gitignore")
-            for part in path.relative_to(ROOT).parts
+            for part in path.relative_to(root).parts
         ):
             continue
         # "makefile" sits in the name check, not the suffix set: a file
@@ -113,17 +119,17 @@ def check_markdown(path):
     for lineno, line in enumerate(text.splitlines(), 1):
         for hit in line_errors(line):
             errors += 1
-            print(f"{path}:{lineno}: {hit}")
+            emit(f"{path}:{lineno}: {hit}")
         # Internal links must resolve to an existing file.
         for target in LINK.findall(line):
             if link_target_broken(path, target):
                 errors += 1
-                print(f"{path}:{lineno}: broken link -> {target}")
+                emit(f"{path}:{lineno}: broken link -> {target}")
     # TODO list items must use the checkbox format.
     for lineno, line in enumerate(text.splitlines(), 1):
         if is_todo_violation(line):
             errors += 1
-            print(f"{path}:{lineno}: TODO item must use '- [ ]' checkbox format")
+            emit(f"{path}:{lineno}: TODO item must use '- [ ]' checkbox format")
 
 
 def check_plain_text():
@@ -133,16 +139,27 @@ def check_plain_text():
         for lineno, line in enumerate(text.splitlines(), 1):
             if EM_DASH.search(line):
                 errors += 1
-                print(f"{path}:{lineno}: em dash found")
+                emit(f"{path}:{lineno}: em dash found")
 
 
-def main():
-    walk()
+def main(argv: list[str] | None = None) -> int:
+    global errors, warnings, text_files
+    parser = argparse.ArgumentParser(
+        prog="doccheck.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--root", type=pathlib.Path, default=ROOT,
+                        help="repository to scan (default: the tool's own repo)")
+    args = parser.parse_args(argv)
+
+    errors, warnings, text_files = 0, 0, []
+    walk(args.root)
     check_plain_text()
     if errors:
-        print(f"doccheck: {errors} error(s) found")
+        emit(f"doccheck: {errors} error(s) found")
         return 1
-    print("doccheck: ok")
+    emit("doccheck: ok")
     return 0
 
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Unit tests for tools/doccheck.py. Run: python3 -m unittest discover -s tools"""
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -73,6 +75,36 @@ class TodoViolationTest(unittest.TestCase):
     def test_plain_bullets_pass(self):
         self.assertFalse(doccheck.is_todo_violation("- just a bullet"))
         self.assertFalse(doccheck.is_todo_violation("TODO without bullet"))
+
+
+class MainTest(unittest.TestCase):
+    """The gate reports on stderr and leaves stdout empty for the caller."""
+
+    def run_main(self, root):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = doccheck.main(["--root", str(root)])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_clean_tree_exits_zero_with_empty_stdout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "notes.md").write_text("clean survivor notes\n",
+                                           encoding="utf-8")
+            code, out, err = self.run_main(root)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertIn("doccheck: ok", err)
+
+    def test_findings_go_to_stderr_and_exit_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "notes.md").write_text("bad \u2014 dash\n", encoding="utf-8")
+            code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("em dash found", err)
+        self.assertIn("doccheck:", err)
 
 
 if __name__ == "__main__":

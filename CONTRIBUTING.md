@@ -46,6 +46,20 @@ Every change lands with its tests and its docs updated in the same commit.
 Compiler, analyzer, and rustc lint warnings fail the build (warnings are
 errors repo-wide); a suppression needs a written reason next to it.
 
+## Repository tools
+
+`tools/doccheck.py`, `tools/versioncheck.py`, `tools/sbom.py` and
+`tools/targetcheck` share one command-line contract:
+
+- `--help` documents every flag; `--root` (where it applies) selects the
+  repository to work on and defaults to the tool's own checkout.
+- Machine-readable data goes to stdout (`sbom.py` prints the CycloneDX JSON
+  unless `--output` names a file), so `sbom.py | jq .` works.
+- Progress, diagnostics and summaries go to stderr; a caller piping stdout
+  never sees gate chatter mixed into the data.
+- Exit codes: 0 pass, 1 check failed, 2 usage error (unknown flag, too many
+  arguments, or no server install under `GAME_DIR`).
+
 ## Versioning and releases
 
 This is a 0.x experiment: the minor digit carries breaking changes, the

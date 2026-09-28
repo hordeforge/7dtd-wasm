@@ -15,14 +15,12 @@ release workflow enforces the same rule against vX.Y.Z tags).
 Exit code is non-zero when the declarations are missing or disagree.
 """
 
+import argparse
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-MODINFO = ROOT / "src" / "GameBridge" / "ModInfo.xml"
-CSPROJ = ROOT / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
-CHANGELOG = ROOT / "CHANGELOG.md"
 
 # <Version value="1.2.3" /> in the game modlet manifest.
 MODINFO_VERSION = re.compile(r"<Version\s+value=\"([^\"]+)\"")
@@ -54,28 +52,38 @@ def released_version(changelog: pathlib.Path) -> str:
     return match.group(1).strip()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="versioncheck.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--root", type=pathlib.Path, default=ROOT,
+                        help="repository to check (default: the tool's own repo)")
+    args = parser.parse_args(argv)
+
+    modinfo = args.root / "src" / "GameBridge" / "ModInfo.xml"
+    csproj = args.root / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
+    changelog = args.root / "CHANGELOG.md"
     try:
         versions = {
-            str(MODINFO.relative_to(ROOT)): read_version(MODINFO),
-            str(CSPROJ.relative_to(ROOT)): package_version(CSPROJ),
-            str(CHANGELOG.relative_to(ROOT)): released_version(CHANGELOG),
+            str(modinfo.relative_to(args.root)): read_version(modinfo),
+            str(csproj.relative_to(args.root)): package_version(csproj),
+            str(changelog.relative_to(args.root)): released_version(changelog),
         }
     except (OSError, ValueError) as error:
-        print(f"versioncheck: {error}")
+        print(f"versioncheck: {error}", file=sys.stderr)
         return 1
 
     for source, version in sorted(versions.items()):
-        print(f"versioncheck: {source} ships {version}")
+        print(f"versioncheck: {source} ships {version}", file=sys.stderr)
 
     unique = set(versions.values())
     if len(unique) != 1:
-        print(
-            "versioncheck: version declarations disagree; tag, artifact, "
-            "and changelog would describe different releases"
-        )
+        print("versioncheck: version declarations disagree; tag, artifact, "
+              "and changelog would describe different releases", file=sys.stderr)
         return 1
-    print("versioncheck: ok")
+    print("versioncheck: ok", file=sys.stderr)
     return 0
 
 

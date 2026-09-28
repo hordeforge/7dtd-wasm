@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """Dumps a 7dtd dedicated server telnet console session to a transcript file.
 
-Usage: telnet_session.py <host> <port> <password> <outfile> <cmd> [cmd...]
 Follows the workspace harness pattern (7dtd-server-container lib-env.sh):
 send the password line immediately, then each command, then read the reply.
 The server sends no banner, so the client must not wait for one. The game
 resets any session whose first line is not the configured password.
+
+The password comes from ZDT_TELNET_PASSWORD, or from a hidden prompt when
+the variable is unset; it is never taken from argv, which is world-readable
+in the process table.
 """
 
+import argparse
+import getpass
+import os
 import socket
 import sys
 import time
+
+PASSWORD_ENV = "ZDT_TELNET_PASSWORD"
 
 
 def drain(sock, window):
@@ -27,29 +35,43 @@ def drain(sock, window):
     return data
 
 
-def main():
-    host, port, password, outfile = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4]
-    commands = sys.argv[5:]
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="telnet_session.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("host")
+    parser.add_argument("port", type=int)
+    parser.add_argument("outfile")
+    parser.add_argument("commands", nargs="+", metavar="cmd")
+    args = parser.parse_args(argv)
+
+    password = os.environ.get(PASSWORD_ENV)
+    if not password:
+        password = getpass.getpass(f"telnet password ({PASSWORD_ENV}): ")
 
     transcript = []
-    sock = socket.create_connection((host, port), timeout=10)
+    sock = socket.create_connection((args.host, args.port), timeout=10)
     sock.settimeout(1.0)
 
     sock.sendall(password.encode() + b"\n")
     time.sleep(0.3)
 
-    for cmd in commands:
+    for cmd in args.commands:
         sock.sendall(cmd.encode() + b"\n")
         time.sleep(0.5)
         transcript.append(drain(sock, 1.5))
 
     sock.close()
-    with open(outfile, "wb") as f:
+    with open(args.outfile, "wb") as f:
         for chunk in transcript:
             f.write(chunk)
             f.write(b"\n---\n")
-    print(f"transcript written to {outfile} ({sum(len(c) for c in transcript)} bytes)")
+    print(f"transcript written to {args.outfile} "
+          f"({sum(len(c) for c in transcript)} bytes)", file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

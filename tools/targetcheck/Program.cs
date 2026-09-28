@@ -19,10 +19,42 @@ namespace TargetCheck
     /// </summary>
     internal static class Program
     {
+        private const string Usage =
+            "usage: targetcheck [GAME_DIR]\n" +
+            "\n" +
+            "Validates the Harmony targets and API surface the GameBridge mod\n" +
+            "depends on against a 7 Days to Die dedicated server install.\n" +
+            "\n" +
+            "Arguments:\n" +
+            "  GAME_DIR        install to inspect; defaults to the Steam path\n" +
+            "                  $HOME/.local/share/Steam/steamapps/common/7 Days to Die\n" +
+            "                  Dedicated Server (USERPROFILE on Windows)\n" +
+            "\n" +
+            "Options:\n" +
+            "  -h, --help      show this help and exit\n" +
+            "\n" +
+            "Exit codes:\n" +
+            "  0  every required target is present\n" +
+            "  1  at least one required target is missing\n" +
+            "  2  usage error, or no server install found under GAME_DIR\n" +
+            "\n" +
+            "The found-target report goes to stdout, failures to stderr.\n";
+
         private static int _failures;
 
         private static int Main(string[] args)
         {
+            if (args.Any(a => a == "-h" || a == "--help"))
+            {
+                Console.Write(Usage);
+                return 0;
+            }
+            if (args.Length > 1)
+            {
+                Console.Error.Write("targetcheck: expected at most one GAME_DIR argument\n" + Usage);
+                return 2;
+            }
+
             string? gameDir = args.Length > 0 ? args[0] : null;
             if (gameDir == null)
             {
@@ -31,7 +63,13 @@ namespace TargetCheck
                 // so the not-found message names a real path on both.
                 string? home = Environment.GetEnvironmentVariable("HOME") ??
                                Environment.GetEnvironmentVariable("USERPROFILE");
-                gameDir = Path.Combine(home ?? ".", ".local", "share", "Steam", "steamapps", "common", "7 Days to Die Dedicated Server");
+                if (home == null)
+                {
+                    Console.Error.WriteLine("targetcheck: neither HOME nor USERPROFILE is set, " +
+                                             "so the default game directory is unknown; pass GAME_DIR");
+                    return 2;
+                }
+                gameDir = Path.Combine(home, ".local", "share", "Steam", "steamapps", "common", "7 Days to Die Dedicated Server");
             }
 
             string managed = Path.Combine(gameDir, "7DaysToDieServer_Data", "Managed");
@@ -39,6 +77,8 @@ namespace TargetCheck
             if (!File.Exists(asmCSharp))
             {
                 Console.Error.WriteLine("FAIL: Assembly-CSharp.dll not found under " + managed);
+                Console.Error.WriteLine("targetcheck: pass the dedicated server install as GAME_DIR " +
+                                        "(make bridge-check GAME_DIR=...), or install the server first");
                 return 2;
             }
 
@@ -180,10 +220,10 @@ namespace TargetCheck
             Console.WriteLine();
             if (_failures == 0)
             {
-                Console.WriteLine("RESULT: all required targets present");
+                Console.Error.WriteLine("RESULT: all required targets present");
                 return 0;
             }
-            Console.WriteLine("RESULT: " + _failures + " required target(s) missing");
+            Console.Error.WriteLine("RESULT: " + _failures + " required target(s) missing");
             return 1;
         }
 
@@ -344,7 +384,7 @@ namespace TargetCheck
         private static void Fail(string what)
         {
             _failures++;
-            Console.WriteLine("  FAIL: " + what);
+            Console.Error.WriteLine("  FAIL: " + what);
         }
 
         /// <summary>

@@ -122,7 +122,8 @@ with no rebuild.
 docker build -t 7dtd-wasm-acceptance .   # downloads the game (~17 GB)
 bash run_acceptance.sh                    # starts the server with dist/Mods
 # wait for "StartGame done", then:
-python3 telnet_session.py 127.0.0.1 8081 wasmtest console.txt "wasm status" "wasm list" "version"
+ZDT_TELNET_PASSWORD=wasmtest \
+  python3 telnet_session.py 127.0.0.1 8081 console.txt "wasm status" "wasm list" "version"
 ```
 
 ## Earlier failed attempts (native)

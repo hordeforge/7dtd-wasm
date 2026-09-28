@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Unit tests for tools/versioncheck.py. Run: python3 -m unittest discover -s tools"""
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -66,6 +68,56 @@ class ReleasedVersionTest(unittest.TestCase):
         changelog = write(root / "CHANGELOG.md", "# Changelog\n\n## Unreleased\n")
         with self.assertRaises(ValueError):
             versioncheck.released_version(changelog)
+
+
+class MainTest(unittest.TestCase):
+    """The gate reports on stderr and leaves stdout empty for the caller."""
+
+    def write_repo(self, root, version="1.2.3"):
+        (root / "src" / "GameBridge").mkdir(parents=True)
+        (root / "src" / "HordeForge.WasmHost").mkdir(parents=True)
+        (root / "src" / "GameBridge" / "ModInfo.xml").write_text(
+            f'<xml><Version value="{version}" /></xml>\n', encoding="utf-8")
+        (root / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
+         ).write_text(f"<Project><Version>{version}</Version></Project>\n",
+                      encoding="utf-8")
+        (root / "CHANGELOG.md").write_text(
+            f"# Changelog\n\n## [{version}] - 2026-08-25\n\n- one\n",
+            encoding="utf-8")
+
+    def run_main(self, root):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = versioncheck.main(["--root", str(root)])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_agreeing_versions_exit_zero_with_empty_stdout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.write_repo(root)
+            code, out, err = self.run_main(root)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertIn("versioncheck: ok", err)
+
+    def test_disagreeing_versions_exit_one_on_stderr(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            self.write_repo(root, version="1.2.3")
+            (root / "CHANGELOG.md").write_text(
+                "# Changelog\n\n## [9.9.9] - 2026-08-25\n\n- one\n",
+                encoding="utf-8")
+            code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("disagree", err)
+
+    def test_missing_repository_exits_one_on_stderr(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out, err = self.run_main(pathlib.Path(tmp) / "absent")
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("versioncheck:", err)
 
 
 if __name__ == "__main__":

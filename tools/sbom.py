@@ -9,7 +9,8 @@ The output is a deterministic CycloneDX 1.6 JSON document covering every
 third-party component that ships with a dist, so consumers and vuln
 scanners get an exact inventory without re-resolving anything.
 
-Usage: sbom.py [-o OUT.json] [--root REPO_ROOT]
+The document goes to stdout unless --output names a file; status lines go
+to stderr, so `sbom.py | jq .` works.
 """
 
 import argparse
@@ -121,13 +122,16 @@ def build_bom(root: pathlib.Path) -> dict:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--root", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(
+        prog="sbom.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "-o", "--output", type=pathlib.Path, help="write JSON here instead of stdout"
-    )
+    parser.add_argument("--root", type=pathlib.Path,
+                        default=pathlib.Path(__file__).resolve().parent.parent,
+                        help="repository to inventory (default: the tool's own repo)")
+    parser.add_argument("-o", "--output", type=pathlib.Path, metavar="FILE",
+                        help="write JSON here instead of stdout")
     args = parser.parse_args(argv)
 
     bom = build_bom(args.root)
@@ -135,7 +139,8 @@ def main(argv: list[str]) -> int:
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(text, encoding="utf-8")
-        print(f"sbom: wrote {len(bom['components'])} components to {args.output}")
+        print(f"sbom: wrote {len(bom['components'])} components to {args.output}",
+              file=sys.stderr)
     else:
         print(text, end="")
     return 0
