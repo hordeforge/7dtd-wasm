@@ -34,22 +34,37 @@ CSPROJ_VERSION = re.compile(r"<Version>([^<]+)</Version>")
 CHANGELOG_SECTION = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 
 
+def read_declaration(path: pathlib.Path) -> str:
+    """One declaration's text, naming the file on a read or decode failure.
+
+    All three declarations are read the same way, so they are read the same
+    way here: a decode error names a byte offset and nothing else, and
+    without the file the operator cannot tell which declaration it came from.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise ValueError(f"cannot read {path}: {error}") from error
+    except UnicodeDecodeError as error:
+        raise ValueError(f"{path} is not valid UTF-8: {error}") from error
+
+
 def read_version(modinfo: pathlib.Path) -> str:
-    match = MODINFO_VERSION.search(modinfo.read_text(encoding="utf-8"))
+    match = MODINFO_VERSION.search(read_declaration(modinfo))
     if not match:
         raise ValueError(f'{modinfo}: no <Version value="..."> found')
     return match.group(1).strip()
 
 
 def package_version(csproj: pathlib.Path) -> str:
-    match = CSPROJ_VERSION.search(csproj.read_text(encoding="utf-8"))
+    match = CSPROJ_VERSION.search(read_declaration(csproj))
     if not match:
         raise ValueError(f"{csproj}: no <Version>...</Version> found")
     return match.group(1).strip()
 
 
 def released_version(changelog: pathlib.Path) -> str:
-    match = CHANGELOG_SECTION.search(changelog.read_text(encoding="utf-8"))
+    match = CHANGELOG_SECTION.search(read_declaration(changelog))
     if not match:
         raise ValueError(f"{changelog}: no '## [X.Y.Z]' release section found")
     return match.group(1).strip()
@@ -108,6 +123,8 @@ def main(argv: list[str] | None = None) -> int:
             str(changelog.relative_to(args.root)): released_version(changelog),
         }
     except (OSError, ValueError) as error:
+        # read_declaration names the file for a read or decode failure; the
+        # OSError here is the path itself failing to resolve.
         print(f"versioncheck: {error}", file=sys.stderr)
         return 1
 

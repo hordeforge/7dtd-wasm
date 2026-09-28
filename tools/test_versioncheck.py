@@ -171,6 +171,14 @@ class TagTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("disagree", err)
 
+    def test_unreadable_declaration_names_the_file(self):
+        """A decode error names a byte offset; the file has to be named too."""
+        (self.root / "CHANGELOG.md").write_bytes(b"\xff\xfe not utf-8\n")
+        code, _, err = self.run_main("v1.2.3")
+        self.assertEqual(code, 1)
+        self.assertIn("CHANGELOG.md is not valid UTF-8", err)
+        self.assertNotIn("Traceback", err)
+
 
 if __name__ == "__main__":
     unittest.main()

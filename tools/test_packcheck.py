@@ -180,6 +180,32 @@ class MainTest(unittest.TestCase):
         self.assertEqual(out, "")
         self.assertIn("is not a directory", err)
 
+    def test_malformed_manifest_is_a_finding_not_a_traceback(self):
+        root = complete_repo()
+        (root / packcheck.CSPROJ).write_text("<Project><PackageId>", encoding="utf-8")
+        code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("not well-formed XML", err)
+        self.assertNotIn("Traceback", err)
+
+    def test_empty_license_names_the_file(self):
+        root = complete_repo()
+        (root / packcheck.LICENSE).write_text("", encoding="utf-8")
+        code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("LICENSE is empty", err)
+        self.assertNotIn("Traceback", err)
+
+    def test_non_utf8_license_names_the_file(self):
+        root = complete_repo()
+        (root / packcheck.LICENSE).write_bytes(b"\xff\xfe not utf-8\n")
+        code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertIn("not valid UTF-8", err)
+        self.assertNotIn("Traceback", err)
+
 
 if __name__ == "__main__":
     unittest.main()

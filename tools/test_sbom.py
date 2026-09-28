@@ -172,6 +172,18 @@ version = "2.1.0"
         purls = [c["purl"] for c in sbom.cargo_components(lock)]
         self.assertEqual(purls, ["pkg:cargo/external-crate@2.1.0"])
 
+    def test_a_lock_entry_without_a_name_is_named_not_a_keyerror(self):
+        """An entry the inventory cannot describe must not raise a KeyError."""
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        lock = write(
+            tmp / "Cargo.lock",
+            'version = 1\n\n[[package]]\nsource = "registry+https://x"\n',
+        )
+        with self.assertRaises(SystemExit) as caught:
+            sbom.cargo_components(lock)
+        self.assertIn("no name/version", str(caught.exception))
+        self.assertIn("Cargo.lock", str(caught.exception))
+
 
 class BuildBomTest(unittest.TestCase):
     def test_end_to_end_shape_and_skips_build_output(self):
