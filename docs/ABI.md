@@ -51,8 +51,13 @@ docs/GAME_HOOKS.md), and a guest must not log it either: the server log is
 kept with the server data folder and quoted into bug reports.
 
 Strings are passed as `(pointer, length)` pairs into the **guest's own
-linear memory**; the host reads exactly `len` bytes starting at `ptr` and
-never touches guest memory beyond that range. For `get_setting`, the guest
+linear memory**; the host reads `len` bytes starting at `ptr` and never
+touches guest memory beyond that range. The length is guest-chosen, so it
+is capped: the host reads at most 64 KiB
+(`HordeForge.WasmHost.Abi.GuestStringLength.MaxBytes`) per import, and a
+longer length is cut there rather than read. A guest that writes a longer
+string gets its first 64 KiB, and the cut is host work the fuel budget
+would never have bounded. For `get_setting`, the guest
 provides the output buffer and the host writes at most `out_cap` bytes into
 it. No host pointer is ever handed to a guest.
 

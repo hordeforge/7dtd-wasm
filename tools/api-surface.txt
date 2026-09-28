@@ -27,6 +27,9 @@ src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string Im
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportTick = ""
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ZdtdHostModule = ""
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: type AbiConstants
+src/HordeForge.WasmHost/Abi/GuestStringLength.cs: GuestStringLength.public const int MaxBytes = 64 * 1024
+src/HordeForge.WasmHost/Abi/GuestStringLength.cs: GuestStringLength.public static int Clamp(int declared)
+src/HordeForge.WasmHost/Abi/GuestStringLength.cs: type GuestStringLength
 src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool SendChat(string message)
 src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool TryGetRawConfig(string modId, out string content)
 src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool TryGetSetting(string modId, string key, out string value)

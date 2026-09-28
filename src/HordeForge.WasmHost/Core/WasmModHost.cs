@@ -936,9 +936,19 @@ namespace HordeForge.WasmHost.Core
             return byteCount;
         }
 
+        /// <summary>
+        /// Reads a string the guest located in its own linear memory. The
+        /// length is guest-chosen and is clamped to
+        /// <see cref="GuestStringLength.MaxBytes"/> before the read: reading
+        /// what the guest asked for is host work outside the fuel budget, and
+        /// a guest that names its whole memory here, repeatedly, would have
+        /// the game process allocate and decode it while the chat and log
+        /// caps then discard the result.
+        /// </summary>
         private static string ReadGuestString(Caller caller, int ptr, int len)
         {
-            if (len <= 0)
+            len = GuestStringLength.Clamp(len);
+            if (len == 0)
             {
                 return string.Empty;
             }
