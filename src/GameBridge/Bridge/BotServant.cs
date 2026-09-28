@@ -38,8 +38,11 @@ namespace HordeForge.GameBridge.Bridge
 
         // Glider item tag (matches the parachute mod's items.xml patch and
         // preset.toml [rules.glide] item_tag). A worn item whose ItemClass
-        // carries this tag sets the sense v4 wearing_glider bit.
+        // carries this tag sets the sense v4 wearing_glider bit. The parsed
+        // tag set depends on nothing but the constant, so it is built once
+        // here instead of once per inspected item on every sense record.
         private const string GliderItemTag = "parachute";
+        private static readonly FastTags<TagGroup.Global> GliderTags = FastTags<TagGroup.Global>.Parse(GliderItemTag);
 
         // Buff applied to a player while the parachute mod's glide flag is
         // armed. Defined by the playtest parachute-items modlet (buffs.xml);
@@ -271,7 +274,14 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Armed glide flags by net id (ADR 0037); exposed for "wasm status".</summary>
         public IReadOnlyDictionary<int, bool> Glide => _glide;
 
-public int WriteSense(Span<byte> buffer)
+        /// <summary>
+        /// Serializes the current world snapshot into the calling guest's
+        /// buffer and returns the byte count, or 0 when there is no world
+        /// data or it does not fit. The snapshot, its records, and the
+        /// scratch id sets are pooled and refilled per call, so a sense
+        /// request at tick rate does not allocate.
+        /// </summary>
+        public int WriteSense(Span<byte> buffer)
         {
             EnsureSpawned();
             var game = GameManager.Instance;
@@ -288,7 +298,12 @@ public int WriteSense(Span<byte> buffer)
                     return 0;
                 }
                 snapshot.Clear();
-                snapshot.Tick = _tickProvider();
+                // One clock read for the whole snapshot: the header tick and
+                // every record's velocity must come from the same instant, or
+                // a tick boundary mid-scan would mix a new header with old
+                // per-entity deltas.
+                long tick = _tickProvider();
+                snapshot.Tick = tick;
                 snapshot.SelfNetId = 0;
                 snapshot.WorldTime = (long)game.World.GetWorldTime();
                 snapshot.BloodMoon = false;
@@ -315,12 +330,12 @@ public int WriteSense(Span<byte> buffer)
                     record.Z = e.position.z;
                     record.Hp = alive.Health;
                     record.Yaw = _botYaw.TryGetValue(e.entityId, out float yaw) ? yaw : 0f;
-                    record.Vy = VerticalVelocity(e.entityId, e.position, _tickProvider(), out UnityEngine.Vector3 prevPos);
+                    record.Vy = VerticalVelocity(e.entityId, e.position, tick, out UnityEngine.Vector3 prevPos, out int elapsedTicks);
                     record.Wearing = WearsGlider(alive);
                     record.TargetId = 0;
                     snapshot.Records.Add(record);
                     seen.Add(e.entityId);
-                    ClampGlideDescent(alive, record.Vy, e.position, prevPos);
+                    ClampGlideDescent(alive, record.Vy, e.position, prevPos, elapsedTicks);
                 }
                 PrunePositionHistory(seen);
             }
@@ -332,23 +347,18 @@ public int WriteSense(Span<byte> buffer)
             return SenseSnapshotWriter.Write(snapshot, buffer);
         }
 
-        /// <summary>
-        /// Current vertical velocity in blocks/s (negative = falling), derived
-        /// from the server-side position history. The stock dedicated server
-        /// does not populate `Entity.motion` for remote players (the client
-        /// owns its own local physics, ADR 0037), so the sense v4 `vy` field
-        /// is computed here from the per-tick position delta - the same
-        /// approach zdtd uses. The stored position only advances when the
-        /// game tick changes, so every module reading sense within one tick
-        /// sees the same vy. A teleport-scale jump is reported once (bounded
-        /// by the 10-tick delta cap) and never reads as a sustained fall.
-        /// </summary>
+        // Per-entity position history backing the sense v4 `vy` field, plus
+        // the id sets and lists the sense and spawn paths collect into. All
+        // pooled: every one of them runs at tick rate, so none may allocate
+        // per call (single main-loop thread by contract). The three id lists
+        // are separate buffers because a collection is walked while another
+        // could be refilled underneath it.
         private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
             new Dictionary<int, (long, UnityEngine.Vector3)>();
-
-        // Ids seen in the current sense scan, pooled like the snapshot
-        // records: pruning the position history must not allocate per tick.
         private readonly HashSet<int> _seenIds = new HashSet<int>();
+        private readonly List<int> _staleIds = new List<int>();
+        private readonly List<int> _deadIds = new List<int>();
+        private readonly List<int> _despawnIds = new List<int>();
 
         /// <summary>
         /// Drops position history for entities no longer in the world
@@ -377,12 +387,25 @@ public int WriteSense(Span<byte> buffer)
             }
         }
 
-        private readonly List<int> _staleIds = new List<int>();
-
-        private float VerticalVelocity(int netId, UnityEngine.Vector3 position, long tick, out UnityEngine.Vector3 prevPos)
+        /// <summary>
+        /// Current vertical velocity in blocks/s (negative = falling), derived
+        /// from the server-side position history. The stock dedicated server
+        /// does not populate `Entity.motion` for remote players (the client
+        /// owns its own local physics, ADR 0037), so the sense v4 `vy` field
+        /// is computed here from the per-tick position delta - the same
+        /// approach zdtd uses. The stored position only advances when the
+        /// game tick changes, so every module reading sense within one tick
+        /// sees the same vy. A teleport-scale jump is reported once (bounded
+        /// by the 10-tick delta cap) and never reads as a sustained fall.
+        /// <paramref name="elapsedTicks"/> is how many ticks the delta spans,
+        /// and 0 when it is unusable (first sighting, a gap wider than the
+        /// cap, or a repeat read inside one tick).
+        /// </summary>
+        private float VerticalVelocity(int netId, UnityEngine.Vector3 position, long tick, out UnityEngine.Vector3 prevPos, out int elapsedTicks)
         {
             bool known = _lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) last);
             prevPos = known ? last.Pos : position;
+            elapsedTicks = 0;
             float vy = 0f;
             if (known)
             {
@@ -390,6 +413,7 @@ public int WriteSense(Span<byte> buffer)
                 if (dtTicks > 0 && dtTicks <= 10)
                 {
                     // 20 TPS bridge tick; blocks per second.
+                    elapsedTicks = (int)dtTicks;
                     vy = (position.y - last.Pos.y) / (dtTicks * 0.05f);
                 }
             }
@@ -415,14 +439,25 @@ public int WriteSense(Span<byte> buffer)
         /// the visible glide on client-owned physics); the sense record keeps
         /// the real vy (the parachute mod arms on it). Best effort: only
         /// while the glide flag is armed, never for anyone else.
+        ///
+        /// The floor is anchored to the last observed position, so it may
+        /// only be applied when that observation is the previous tick. A
+        /// wider gap (a guest that stopped polling, a rate-capped import, a
+        /// first sighting) means the player may legitimately have fallen
+        /// further in the meantime; clamping to a one-tick floor there would
+        /// snap them back up by the whole gap.
         /// </summary>
-        private void ClampGlideDescent(EntityAlive alive, float vy, UnityEngine.Vector3 position, UnityEngine.Vector3 prevPos)
+        private void ClampGlideDescent(EntityAlive alive, float vy, UnityEngine.Vector3 position, UnityEngine.Vector3 prevPos, int elapsedTicks)
         {
             if (!_glide.TryGetValue(alive.entityId, out bool armed) || !armed)
             {
                 return;
             }
             if (vy >= -SinkVyMps)
+            {
+                return;
+            }
+            if (elapsedTicks != 1)
             {
                 return;
             }
@@ -465,7 +500,7 @@ public int WriteSense(Span<byte> buffer)
                         continue;
                     }
                     ItemClass itemClass = item.ItemClass;
-                    if (itemClass != null && itemClass.HasAnyTags(FastTags<TagGroup.Global>.Parse(GliderItemTag)))
+                    if (itemClass != null && itemClass.HasAnyTags(GliderTags))
                     {
                         return 1;
                     }
@@ -583,7 +618,8 @@ public int WriteSense(Span<byte> buffer)
             }
             // Removal during enumeration invalidates the enumerator, so
             // dead ids are collected first and removed after the loop.
-            var dead = new List<int>();
+            var dead = _deadIds;
+            dead.Clear();
             foreach (int id in _bots)
             {
                 Entity e = game.World.GetEntity(id);
@@ -618,7 +654,9 @@ public int WriteSense(Span<byte> buffer)
             {
                 // Despawn mutates _bots, so the ids are collected first and
                 // removed after the loop (see PruneDeadBots).
-                var ids = new List<int>(_bots);
+                var ids = _despawnIds;
+                ids.Clear();
+                ids.AddRange(_bots);
                 foreach (int id in ids)
                 {
                     Despawn(id);

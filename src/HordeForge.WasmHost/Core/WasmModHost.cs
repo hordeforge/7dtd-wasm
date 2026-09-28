@@ -47,12 +47,19 @@ namespace HordeForge.WasmHost.Core
         private readonly ReadOnlyCollection<string> _modIdsView;
         // One reusable result buffer for the Dispatch* methods: they run at
         // tick rate on the game main loop, so steady-state dispatch must not
-        // allocate. The returned list is owned by the host and is cleared
-        // and refilled by the next Dispatch* call; callers consume it (or
-        // copy out) before dispatching again. Safe because the host is
+        // allocate. The buffer is owned by the host and is cleared and
+        // refilled by the next Dispatch* call; callers consume it (or copy
+        // out) before dispatching again. Safe because the host is
         // single-threaded by contract and no guest import re-enters a
         // dispatch.
         private readonly List<ModRunResult> _results = new List<ModRunResult>();
+        // Live read-only view over _results, built once for the same reason
+        // as _modIdsView: the buffer must never escape as a mutable List
+        // behind an IReadOnlyList, or a caller could rewrite the host's
+        // dispatch results in place. The wrapper rejects writes and does not
+        // downcast back to the list, so the read-only contract callers
+        // compile against is the contract they get.
+        private readonly ReadOnlyCollection<ModRunResult> _resultsView;
         private string _currentJoinName = string.Empty;
 
         /// <summary>
@@ -83,6 +90,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineWasi();
             DefineHostApi();
             _modIdsView = new ReadOnlyCollection<string>(_modOrder);
+            _resultsView = new ReadOnlyCollection<ModRunResult>(_results);
         }
 
         /// <summary>
@@ -121,6 +129,14 @@ namespace HordeForge.WasmHost.Core
 
         /// <summary>Ids of the currently loaded mods, in load order.</summary>
         public IReadOnlyList<string> ModIds => _modIdsView;
+
+        /// <summary>
+        /// Largest module <see cref="LoadModule"/> accepts, in bytes. Exposed
+        /// so a host that reads the module file itself can refuse an oversize
+        /// file on its length instead of letting LoadModule reject it after
+        /// the whole file has already been read into memory.
+        /// </summary>
+        public int MaxModuleSizeBytes => _config.MaxModuleSizeBytes;
 
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick { get; private set; }
@@ -295,7 +311,8 @@ namespace HordeForge.WasmHost.Core
         /// Drives one game tick into every loaded mod and returns the per-mod
         /// results in load order. A misbehaving mod never stops the loop:
         /// its failure is reported in its result. The returned list is
-        /// host-owned and is replaced by the next Dispatch* call.
+        /// host-owned, rejects writes, and is replaced by the next
+        /// Dispatch* call.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchTick(long tick)
         {
@@ -319,7 +336,8 @@ namespace HordeForge.WasmHost.Core
         /// misbehaving handler never stops the others. The entity id is
         /// i32 on the wire (the on_player_join parameter), so it is taken
         /// as int and never narrowed silently. The returned list is
-        /// host-owned and is replaced by the next Dispatch* call.
+        /// host-owned, rejects writes, and is replaced by the next
+        /// Dispatch* call.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
         {
@@ -363,7 +381,7 @@ namespace HordeForge.WasmHost.Core
                     _results.Add(result.GetValueOrDefault());
                 }
             }
-            return _results;
+            return _resultsView;
         }
 
         private ulong? DeclaredMemoryMaximumBytes(Module module)

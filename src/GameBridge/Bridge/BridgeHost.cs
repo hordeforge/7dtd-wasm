@@ -349,6 +349,17 @@ namespace HordeForge.GameBridge.Bridge
             byte[] wasmBytes;
             try
             {
+                // The size cap is enforced on the file length, not on the
+                // array LoadModule receives: a module file is operator
+                // content, and reading one of unknown size only to reject it
+                // afterwards would slurp it into the server's heap first.
+                long length = new FileInfo(modulePath).Length;
+                if (length > host.MaxModuleSizeBytes)
+                {
+                    Log.Warning("[WasmHost] module " + id + " is " + length +
+                                " bytes, over the cap of " + host.MaxModuleSizeBytes + "; module skipped");
+                    return false;
+                }
                 wasmBytes = File.ReadAllBytes(modulePath);
             }
             catch (Exception ex)

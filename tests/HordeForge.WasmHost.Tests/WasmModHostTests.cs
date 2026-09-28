@@ -153,6 +153,19 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void MaxModuleSizeBytesReportsTheEnforcedCap()
+        {
+            // Embedders read the module file themselves; the cap has to be
+            // reachable so an oversize file is refused on its length instead
+            // of after the whole file is in memory.
+            var (host, _) = NewHost(config => config.MaxModuleSizeBytes = 1024);
+            using (host)
+            {
+                Assert.Equal(1024, host.MaxModuleSizeBytes);
+            }
+        }
+
+        [Fact]
         public void MemoryMaximumOverCapIsRejected()
         {
             var (host, _) = NewHost(); // default cap 32 MiB
@@ -1067,6 +1080,28 @@ greeting = ""hello""
 
                 host.DispatchPlayerJoin(174, "boss");
                 Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+            }
+        }
+
+        [Fact]
+        public void DispatchResultsRejectWrites()
+        {
+            // The Dispatch* results buffer is host-owned and reused, so it
+            // must not escape as a mutable List behind an IReadOnlyList: a
+            // caller that downcast and rewrote it would corrupt the next
+            // dispatch. The view is the same one ModIds uses.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                host.LoadModule("strings", Fixture("strings"));
+                host.DispatchInit();
+
+                IReadOnlyList<ModRunResult> results = host.DispatchTick(1);
+                Assert.Single(results);
+                var asList = Assert.IsAssignableFrom<IList<ModRunResult>>(results);
+                Assert.Throws<NotSupportedException>(() => asList.Clear());
+                Assert.False(results is List<ModRunResult>);
+                Assert.Single(host.DispatchTick(2));
             }
         }
     }

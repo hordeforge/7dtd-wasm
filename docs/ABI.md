@@ -99,7 +99,9 @@ and `sense` reports players, zombies, and our bots in the ZBS4 layout (v4:
 40-byte records with server-derived `vy` from the per-tick position history
 and the `wearing_glider` bit, ADR 0037). Only a net id that names a live
 player in the world can be armed, so a guest cannot steer an entity it does
-not own. `query` (cover/path) and
+not own. The descent clamp is anchored to the last observed position and
+applies only when that observation is the previous tick, so a gap in sense
+polling never snaps a player upward. `query` (cover/path) and
 `on_admin_command` console wiring are stage 3.
 
 Host-side bounds on the servant, enforced per calling module (the wasm fuel
