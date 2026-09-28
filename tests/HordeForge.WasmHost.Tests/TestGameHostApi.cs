@@ -33,8 +33,17 @@ namespace HordeForge.WasmHost.Tests
         /// <summary>When true, Log throws like a broken logging backend.</summary>
         public bool LogThrows { get; set; }
 
+        /// <summary>When true, TryQueueCommand refuses the command like a rate cap or a declined servant call.</summary>
+        public bool RejectQueues { get; set; }
+
         /// <summary>Mod ids that reached TryQueueCommand, in call order.</summary>
         public List<string> QueueSources { get; } = new List<string>();
+
+        /// <summary>Requests that reached TryQuery, in call order.</summary>
+        public List<string> QueryRequests { get; } = new List<string>();
+
+        /// <summary>Answers the zdtd query import, keyed by the request text; a request with no entry is unanswered.</summary>
+        public Dictionary<string, string> QueryAnswers { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public Dictionary<string, string> Settings { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
@@ -97,7 +106,7 @@ namespace HordeForge.WasmHost.Tests
         {
             QueueSources.Add(modId);
             QueuedCommands.Add(command);
-            return true;
+            return !RejectQueues;
         }
 
         public int WriteSenseSnapshot(string modId, Span<byte> buffer)
@@ -116,7 +125,8 @@ namespace HordeForge.WasmHost.Tests
 
         public string? TryQuery(string request)
         {
-            return null;
+            QueryRequests.Add(request);
+            return QueryAnswers.TryGetValue(request, out string? answer) ? answer : null;
         }
     }
 }

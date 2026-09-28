@@ -556,6 +556,16 @@ namespace HordeForge.WasmHost.Tests
             return Wasmtime.Module.ConvertText("(module (memory (export \"memory\") 1 1) " + funcs + ")");
         }
 
+        /// <summary>
+        /// The same module with host imports, which the text format requires
+        /// to be declared before the memory they can address.
+        /// </summary>
+        private static byte[] WatModuleWithImports(string imports, string funcs)
+        {
+            return Wasmtime.Module.ConvertText(
+                "(module " + imports + " (memory (export \"memory\") 1 1) " + funcs + ")");
+        }
+
         [Fact]
         public void RegistryTracksLoadUnloadAndDuplicates()
         {
@@ -1390,9 +1400,161 @@ greeting = ""hello""
             }
         }
 
-        [Fact]
-        public void ManifestDefaultsMatchNullManifest()
+        /// <summary>
+        /// Bytes the query guest parks in its answer buffer before calling
+        /// the import, so a test can tell an unwritten buffer from a written
+        /// one by logging the region back out.
+        /// </summary>
+        private const string QueryBufferFiller = "UNTOUCHEDBYHOST";
+
+        /// <summary>
+        /// A guest that calls the zdtd query import once per tick with
+        /// <paramref name="outCap"/>-byte buffer space and reports the status
+        /// the host returned as its own export status. It then reads the
+        /// answer region back through the log import, which is how a test
+        /// sees the bytes the host actually put in guest memory: the answer
+        /// itself when one was written, and the untouched filler when the
+        /// import reported a failure.
+        /// </summary>
+        private static byte[] QueryGuest(int outCap)
         {
+            return WatModuleWithImports(
+                "(import \"zdtd\" \"query\" (func $query (param i32 i32 i32 i32) (result i32)))" +
+                "(import \"zdtd\" \"log\" (func $log (param i32 i32 i32)))",
+                "(data (i32.const 0) \"cover 0 0 1 1\")" +
+                "(data (i32.const 64) \"" + QueryBufferFiller + "\")" +
+                "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                "(func (export \"on_tick\") (result i32) (local $status i32)" +
+                " (local.set $status (call $query (i32.const 0) (i32.const 13) (i32.const 64) (i32.const " + outCap + ")))" +
+                " (if (i32.gt_s (local.get $status) (i32.const 0))" +
+                "  (then (call $log (i32.const 1) (i32.const 64) (local.get $status)))" +
+                "  (else (call $log (i32.const 1) (i32.const 64) (i32.const 15))))" +
+                " (local.get $status))");
+        }
+
+        /// <summary>
+        /// The one line the query guest logged back: the answer it received,
+        /// or the filler proving the host left its buffer alone.
+        /// </summary>
+        private static string QueryGuestEcho(TestGameHostApi api)
+        {
+            return Assert.Single(api.Logs).Message;
+        }
+
+        [Fact]
+        public void QueryWithoutAnAnswerReachesTheGuestAsNoAnswer()
+        {
+            // The bridge answers no query today (stage 3, docs/ABI.md), and
+            // the brain falls back to plain movement on that verdict. A host
+            // that reported "buffer too small" or 0 instead would have the
+            // guest read an empty answer as a failed copy.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("asker", QueryGuest(64));
+                ModRunResult tick = host.DispatchTick(1).Single();
+
+                Assert.Equal(AbiConstants.QueryNoAnswer, tick.GuestStatus);
+                Assert.Equal(QueryBufferFiller, QueryGuestEcho(api));
+            }
+        }
+
+        [Fact]
+        public void QueryForwardsTheRequestAndCopiesTheAnswerIntoGuestMemory()
+        {
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.QueryAnswers["cover 0 0 1 1"] = "clear path";
+                host.LoadModule("asker", QueryGuest(64));
+                ModRunResult tick = host.DispatchTick(1).Single();
+
+                // The byte count of the UTF-8 answer, which is what the
+                // guest sizes its next read from.
+                Assert.Equal(10, tick.GuestStatus);
+                Assert.Equal("clear path", QueryGuestEcho(api));
+                // The request text is the host's own contract with the game
+                // side; a trimmed or decoded-differently request would ask
+                // about a different place.
+                Assert.Equal(new[] { "cover 0 0 1 1" }, api.QueryRequests);
+            }
+        }
+
+        [Theory]
+        // The answer is 10 bytes, so its length is the exact-fit boundary.
+        [InlineData(10, 10)]
+        [InlineData(64, 10)]
+        [InlineData(9, AbiConstants.QueryBufferTooSmall)]
+        [InlineData(0, AbiConstants.QueryBufferTooSmall)]
+        [InlineData(-1, AbiConstants.QueryBufferTooSmall)]
+        public void QueryBufferBoundaryDecidesBetweenAnAnswerAndATooSmallReport(int outCap, int expected)
+        {
+            // A guest that under-sized its buffer must be told so instead of
+            // being handed a silently truncated answer it would decode as a
+            // different place, and the half it did not get must not be
+            // written either: a stale byte from a previous, longer answer
+            // would read back as part of this one.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                api.QueryAnswers["cover 0 0 1 1"] = "clear path";
+                host.LoadModule("asker", QueryGuest(outCap));
+                ModRunResult tick = host.DispatchTick(1).Single();
+
+                Assert.Equal(expected, tick.GuestStatus);
+                Assert.Equal(expected > 0 ? "clear path" : QueryBufferFiller, QueryGuestEcho(api));
+            }
+        }
+
+        [Fact]
+        public void QueueRejectionReachesTheGuestAsRejected()
+        {
+            // The bridge refuses a SimCommand when the module is over its cap
+            // or the servant declines it, and the guest reads that as -1. A
+            // host that reported 0 for a refused command would have the brain
+            // believe its shot was accepted.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("commander", QueueGuest());
+                Assert.Equal(AbiConstants.QueueAccepted, host.DispatchTick(1).Single().GuestStatus);
+
+                api.RejectQueues = true;
+                Assert.Equal(AbiConstants.QueueRejected, host.DispatchTick(2).Single().GuestStatus);
+            }
+        }
+
+        [Fact]
+        public void QueueForwardsTheCommandWithTheCallingModId()
+        {
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("commander", QueueGuest());
+                Assert.True(host.DispatchTick(1).Single().Ok);
+
+                // Bridge-side rate caps and the servant's per-mod state are
+                // both keyed on this id.
+                Assert.Equal(new[] { "commander" }, api.QueueSources);
+                Assert.Equal(new[] { "bot shoot 1 2" }, api.QueuedCommands);
+            }
+        }
+
+        /// <summary>
+        /// A guest that hands a fixed SimCommand to the zdtd queue import on
+        /// every tick and reports the acceptance code the host returned.
+        /// </summary>
+        private static byte[] QueueGuest()
+        {
+            return WatModuleWithImports(
+                "(import \"zdtd\" \"queue\" (func $queue (param i32 i32) (result i32)))",
+                "(data (i32.const 0) \"bot shoot 1 2\")" +
+                "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                "(func (export \"on_tick\") (result i32) (call $queue (i32.const 0) (i32.const 13)))");
+        }
+
+        [Fact]
+        public void ManifestDefaultsMatchNullManifest()        {
             // Unknown fields are tolerated; an empty manifest behaves like
             // no manifest at all.
             var (host, _) = NewHost();
