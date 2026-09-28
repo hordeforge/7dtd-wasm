@@ -153,6 +153,12 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Fixed
 
+- `tests/HordeForge.WasmHost.Tests/LogShim.cs` was excluded from the test
+  compile by an explicit `<Compile Remove>`, so neither type in it was in the
+  suite: a second `Log` that `GameLogShim` already provides, and a
+  `SharedLogCollection` no test names. The file is gone, and so is the
+  exclusion. The csproj comment that called the file "redundant" now says
+  what the five source-linked bridge files and the one log shim are.
 - `WasmModHost.Dispatch` did not compile. The result was narrowed through a
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so

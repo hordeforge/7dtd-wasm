@@ -58,10 +58,11 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
 src/GameBridge/              (net48) the in-game mod
   ModApi.cs                  the game's entry point
   Bridge/                    host wiring and the game side of the host API:
-                              BridgeHost, GameHostApi, WasmSettingsProvider,
-                              NativeBootstrap, BotServant, plus the three
-                              classes that carry no game reference:
-                              GuestRateLimiter, SenseRecordPicker, WorldTime
+                              BridgeHost, GameHostApi, NativeBootstrap,
+                              BotServant, plus the five classes that carry
+                              no game reference: GuestRateLimiter,
+                              MonotonicTimer, SenseRecordPicker,
+                              WasmSettingsProvider, WorldTime
   Hooks/                     the Harmony patches
   Commands/                  the "wasm" console command
 
@@ -124,10 +125,11 @@ The placement rules the layout exists to enforce:
 - `GameBridge` is net48 because it references game assemblies, so the net8
   test project cannot reference it. A bridge class that carries no game
   reference but needs suite coverage is source-linked into the test
-  project, as `GuestRateLimiter`, `SenseRecordPicker` and `WorldTime` are.
+  project, as `GuestRateLimiter`, `MonotonicTimer`, `SenseRecordPicker`,
+  `WasmSettingsProvider` and `WorldTime` are.
   That is the only accepted way to cover bridge code from the host suite,
   and the list is explicit: a new game-reference-free bridge class is
-  listed in the test csproj beside those three, not discovered.
+  listed in the test csproj beside those five, not discovered.
 - New host code goes in the folder that owns the concern, not in the
   nearest existing file. New guest-facing surface goes under `Abi/` alone,
   because [docs/ABI.md](ABI.md) is canonical for it. A new sample guest is
