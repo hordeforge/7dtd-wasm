@@ -572,11 +572,10 @@ namespace HordeForge.GameBridge.Bridge
             // its config.toml, and its log attribution from the mod the host
             // is currently calling, and only the host knows which that is.
             ModRunResult? maybeResult = _host?.InitModule(id);
-            if (!maybeResult.HasValue)
+            if (maybeResult is not { } result)
             {
                 return;
             }
-            ModRunResult result = maybeResult.GetValueOrDefault();
             if (!result.Ok)
             {
                 Log.Warning("[WasmHost] on_enable of " + id + ": " + Describe(result));

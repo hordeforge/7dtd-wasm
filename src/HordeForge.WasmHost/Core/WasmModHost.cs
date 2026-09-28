@@ -509,7 +509,7 @@ namespace HordeForge.WasmHost.Core
                     ModRunResult? result = invoke(mod);
                     if (result.HasValue)
                     {
-                        results.Add(result.GetValueOrDefault());
+                        results.Add(result.Value);
                     }
                 }
             }

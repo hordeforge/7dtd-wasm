@@ -98,7 +98,7 @@ namespace HordeForge.WasmHost.Core
             {
                 return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
             }
-            ModRunResult result = Run("on_enable", () => _init());
+            ModRunResult result = Run("on_enable", _init);
             if (result.Ok)
             {
                 _enabled = true;
@@ -240,6 +240,12 @@ namespace HordeForge.WasmHost.Core
             return consumed;
         }
 
+        /// <summary>
+        /// <see cref="ConsumedFuel"/> for the failure path, where the store
+        /// that just trapped may refuse the read too. The counter is
+        /// best effort: the call already failed, and losing its fuel figure
+        /// must not replace one reported failure with an unhandled one.
+        /// </summary>
         private ulong ConsumedFuelSafely()
         {
             try
