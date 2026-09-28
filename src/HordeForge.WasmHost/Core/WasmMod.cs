@@ -75,13 +75,13 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public ModRunResult Init()
         {
-            return Run("on_enable", () => _init());
+            return Run("on_enable", _init);
         }
 
         /// <summary>Invokes the guest on_tick export; the tick number is read via the tick import.</summary>
         public ModRunResult Tick()
         {
-            return Run("on_tick", () => _tick());
+            return Run("on_tick", _tick);
         }
 
         /// <summary>Invokes the guest shutdown export when present.</summary>
@@ -91,7 +91,7 @@ namespace HordeForge.WasmHost.Core
             {
                 return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
             }
-            return Run("shutdown", () => _shutdown());
+            return Run("shutdown", _shutdown);
         }
 
         /// <summary>True when the guest exports the optional player-join handler.</summary>
@@ -162,6 +162,14 @@ namespace HordeForge.WasmHost.Core
             return null;
         }
 
+        /// <summary>
+        /// Arms the fuel budget, invokes the guest export, and turns the
+        /// outcome into a result, never throwing for a guest fault.
+        /// <paramref name="invoke"/> is the already-resolved export delegate
+        /// rather than a lambda wrapping it: on_tick runs once per module per
+        /// game tick, so a closure per call would be an allocation per module
+        /// per tick on the main loop, forever.
+        /// </summary>
         private ModRunResult Run(string callName, Func<int> invoke)
         {
             TotalCalls++;

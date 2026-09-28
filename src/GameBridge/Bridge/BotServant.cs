@@ -39,8 +39,9 @@ namespace HordeForge.GameBridge.Bridge
         // Widest tick gap a position delta is read across. A guest that
         // stopped polling (or a rate-capped import) leaves a wider gap, and
         // dividing by it would report a teleport as sustained velocity. A
-        // larger gap (the bot was unloaded, the server hitched) reports vy 0
-        // and leaves the stored position alone.
+        // larger gap (the bot was unloaded, the server hitched) is a
+        // teleport-scale move, not a fall, so it reports vy 0 and leaves the
+        // stored position alone.
         private const long MaxVelocityDeltaTicks = 10;
 
         // Damage of the pistol every bot carries (the brain's weapon id 0).
@@ -409,9 +410,14 @@ namespace HordeForge.GameBridge.Bridge
                         continue;
                     }
                     SenseSnapshotWriter.EntityRecord record = records[snapshot.Records.Count];
+                    // One membership probe feeds both the kind and the
+                    // is_self bit: the sense scan visits every live entity on
+                    // every request, and a second HashSet lookup per entity is
+                    // pure repeat work at tick rate.
+                    bool isBot = _bots.Contains(e.entityId);
                     record.NetId = e.entityId;
-                    record.Kind = Classify(e);
-                    record.IsSelf = _bots.Contains(e.entityId);
+                    record.Kind = Classify(e, isBot);
+                    record.IsSelf = isBot;
                     record.Alive = true;
                     record.X = e.position.x;
                     record.Y = e.position.y;
@@ -646,11 +652,13 @@ namespace HordeForge.GameBridge.Bridge
             return 0;
         }
 
-        private byte Classify(Entity e)
+        private byte Classify(Entity e, bool isBot)
         {
             // Our own bots are zombie-bodied entities; they must be reported
-            // as bots, not zombies, or the brain never drives them.
-            if (_bots.Contains(e.entityId))
+            // as bots, not zombies, or the brain never drives them. The
+            // membership answer comes from the caller, which already probed
+            // it for the record's is_self bit.
+            if (isBot)
             {
                 return SenseSnapshotWriter.KindBot;
             }

@@ -206,7 +206,12 @@ namespace HordeForge.GameBridge.Bridge
                 // the bridge keeps its own monotonic counter: the hook runs once
                 // per game tick (20 TPS), which is the same rhythm.
                 _tick++;
-                var ids = host.ModIds;
+                // Read on demand: ModIds hands out a fresh copy of the load
+                // order, and the tick hook runs 20 times a second for a value
+                // only a failing dispatch, a slow-dispatch warning, or the
+                // once-a-minute heartbeat ever prints. Taking it here instead
+                // would allocate two objects per tick for nothing.
+                IReadOnlyList<string>? ids = null;
                 long startedAt = Stopwatch.GetTimestamp();
                 IReadOnlyList<ModRunResult> results = host.DispatchTick(_tick);
                 double elapsedMs = (Stopwatch.GetTimestamp() - startedAt) * MillisecondsPerTimestampTick;
@@ -219,6 +224,7 @@ namespace HordeForge.GameBridge.Bridge
                         continue;
                     }
                     failures++;
+                    ids ??= host.ModIds;
                     string source = "tick/" + (result.ModId.Length > 0
                         ? result.ModId
                         : i < ids.Count ? ids[i] : "?");
@@ -239,6 +245,7 @@ namespace HordeForge.GameBridge.Bridge
                 _telemetry.Record(_tick, elapsedMs, failures);
                 if (_telemetry.IsSlow && DispatchSlowLimiter.TryWrite("tick", out _))
                 {
+                    ids ??= host.ModIds;
                     Log.Warning("[WasmHost] tick " + _tick + " dispatch took " +
                                 TickTelemetry.FormatMilliseconds(elapsedMs) + " for " + ids.Count +
                                 " module(s), over the " + TickTelemetry.FormatMilliseconds(TickTelemetry.SlowDispatchMs) +
@@ -246,6 +253,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 if (_telemetry.HeartbeatDue)
                 {
+                    ids ??= host.ModIds;
                     // Liveness plus cost once a minute: silence from this
                     // mod is otherwise ambiguous between a healthy host and
                     // a tick hook that stopped firing.
