@@ -7,10 +7,20 @@
 /// Module under which the host defines its game API functions.
 pub const HOST_MODULE: &str = "hordeforge";
 
-/// Guest export names. The host requires init and tick; shutdown is optional.
+/// Import module the host defines for zdtd-server plugins (the sibling
+/// fps_bot and its kin import this module with bare field names).
+pub const ZDTD_HOST_MODULE: &str = "zdtd";
+
+/// Guest export names. The host requires init and tick; the rest are
+/// optional.
 pub const EXPORT_INIT: &str = "on_enable";
 pub const EXPORT_TICK: &str = "on_tick";
 pub const EXPORT_SHUTDOWN: &str = "on_shutdown";
+/// Optional: `(entity_id: i32) -> i32`, read the name via
+/// [`join_player_name`].
+pub const EXPORT_PLAYER_JOIN: &str = "on_player_join";
+/// Optional: `(cmd_ptr, cmd_len, out_ptr, out_cap) -> i32` (zdtd surface).
+pub const EXPORT_ADMIN_COMMAND: &str = "on_admin_command";
 
 /// Status codes returned by guest exports. Zero always means ok.
 pub const STATUS_OK: i32 = 0;
@@ -31,6 +41,14 @@ pub const SETTING_BUFFER_TOO_SMALL: i32 = -2;
 pub const CHAT_OK: i32 = 0;
 pub const CHAT_REJECTED: i32 = -1;
 
+/// Status codes returned by the zdtd queue host import.
+pub const QUEUE_ACCEPTED: i32 = 0;
+pub const QUEUE_REJECTED: i32 = -1;
+
+/// Status codes returned by the zdtd query host import.
+pub const QUERY_NO_ANSWER: i32 = -1;
+pub const QUERY_BUFFER_TOO_SMALL: i32 = -2;
+
 // Host imports. Strings are passed as (pointer, length) pairs into the
 // guest's own linear memory; the host reads them and never touches guest
 // memory outside the given range. Prefer the safe wrappers below over
@@ -43,6 +61,25 @@ extern "C" {
     pub fn get_setting(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32;
     pub fn send_chat(ptr: i32, len: i32) -> i32;
     pub fn get_join_player_name(out_ptr: i32, out_cap: i32) -> i32;
+}
+
+// zdtd-server compatibility imports. The host defines the same surface so
+// plugins written against the sibling zdtd-server contract run unmodified
+// (docs/ABI.md); a Rust guest may use these directly to drive bots, read the
+// binary world snapshot, or read its own config.toml.
+#[link(wasm_import_module = "zdtd")]
+extern "C" {
+    // log and tick exist in both import modules with identical signatures
+    // (docs/ABI.md), and Rust has one value namespace, so the zdtd copies are
+    // spelled with an explicit link_name.
+    #[link_name = "log"]
+    pub fn zdtd_log(level: i32, ptr: i32, len: i32);
+    #[link_name = "tick"]
+    pub fn zdtd_tick() -> i64;
+    pub fn queue(ptr: i32, len: i32) -> i32;
+    pub fn sense(ptr: i32, len: i32, token: i32) -> i32;
+    pub fn query(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32;
+    pub fn config(out_ptr: i32, out_cap: i32) -> i32;
 }
 
 /// Guest-side scratch buffer for strings passed to the host. Mods are
@@ -149,4 +186,55 @@ pub fn join_player_name(out: &mut [u8]) -> Option<String> {
         return None;
     }
     Some(read_host_string(out.as_ptr() as i32, written))
+}
+
+/// Queues a text SimCommand through the zdtd import ("bot move 1 2 0",
+/// "glide <net_id> 1", ...). Returns true when the host accepted it.
+pub fn queue_command(command: &str) -> bool {
+    let (p, l) = scratch(command);
+    // SAFETY: scratch holds the full command for the duration of the call.
+    unsafe { queue(p, l) == QUEUE_ACCEPTED }
+}
+
+/// Fills `out` with the binary world snapshot ('ZBS4', see docs/ABI.md) and
+/// returns the bytes written, or 0 when there is no world data to report.
+pub fn sense_snapshot(out: &mut [u8]) -> usize {
+    // token 0 asks the host for a full snapshot with no delta base.
+    // SAFETY: the host writes at most out.len() bytes into the buffer.
+    let written = unsafe { sense(out.as_mut_ptr() as i32, out.len() as i32, 0) };
+    if written <= 0 {
+        return 0;
+    }
+    written as usize
+}
+
+/// Asks the host a text query ("cover x z tx tz", "path x z tx tz") and
+/// returns the answer, or None when the host has none or the response did
+/// not fit in `out`.
+pub fn query_text(request: &str, out: &mut [u8]) -> Option<String> {
+    let (rp, rl) = scratch(request);
+    // SAFETY: scratch holds the request; the host writes at most
+    // out.len() bytes into out.
+    let written = unsafe { query(rp, rl, out.as_mut_ptr() as i32, out.len() as i32) };
+    if written < 0 {
+        return None;
+    }
+    Some(read_host_string(out.as_ptr() as i32, written))
+}
+
+/// Own config.toml verbatim as UTF-8, read into `out`. The host never parses
+/// it: each guest owns its format. Returns the bytes read, or 0 when the mod
+/// ships no config file (the guest keeps its built-in defaults) or the buffer
+/// is too small to hold the first character.
+pub fn config_text(out: &mut [u8]) -> usize {
+    if out.is_empty() {
+        return 0;
+    }
+    // SAFETY: the host writes at most out.len() bytes into out, cutting only
+    // at a UTF-8 character boundary.
+    let written = unsafe { config(out.as_mut_ptr() as i32, out.len() as i32) };
+    if written <= 0 {
+        return 0;
+    }
+    written as usize
 }

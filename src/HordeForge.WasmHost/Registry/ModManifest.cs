@@ -58,9 +58,10 @@ namespace HordeForge.WasmHost.Registry
         public IReadOnlyDictionary<string, string> Settings { get; private set; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>
-        /// Parses a TOML manifest. Throws <see cref="WasmModLoadException"/>
-        /// on malformed TOML or out-of-range values so the caller can reject
-        /// the module with a clear reason.
+        /// Parses a TOML manifest. Throws <see cref="WasmManifestException"/>
+        /// (a <see cref="WasmModLoadException"/>) on malformed TOML or
+        /// out-of-range values so the caller can reject the module with a
+        /// clear reason.
         /// </summary>
         public static ModManifest ParseToml(string toml, string modId)
         {
@@ -84,7 +85,7 @@ namespace HordeForge.WasmHost.Registry
             }
             catch (FormatException ex)
             {
-                throw new WasmModLoadException(modId, "invalid wasm-mod.toml manifest: " + ex.Message, ex);
+                throw new WasmManifestException(modId, "invalid wasm-mod.toml manifest: " + ex.Message, ex);
             }
         }
 

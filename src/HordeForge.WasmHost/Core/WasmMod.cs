@@ -181,7 +181,8 @@ namespace HordeForge.WasmHost.Core
                         ModRunStatus.Error,
                         "export " + callName + " returned status " + status,
                         string.Empty,
-                        consumed);
+                        consumed,
+                        status);
                 }
                 return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, consumed);
             }

@@ -7,8 +7,12 @@ namespace HordeForge.WasmHost
     /// rejected memory maximum, missing or wrongly-signed exports, or
     /// instantiation failure. The host stays healthy; only the affected
     /// module is refused.
+    ///
+    /// Not sealed: <see cref="WasmManifestException"/> is a subtype, so a
+    /// consumer can tell a broken manifest from a refused module while
+    /// catching this type alone.
     /// </summary>
-    public sealed class WasmModLoadException : Exception
+    public class WasmModLoadException : Exception
     {
         /// <summary>Creates a load failure for the given mod id.</summary>
         public WasmModLoadException(string modId, string message)

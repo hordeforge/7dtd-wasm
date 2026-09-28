@@ -88,9 +88,20 @@ pub extern "C" fn on_shutdown() -> i32 {
 | `abi::get_setting_str(key, &mut out)` | Read a setting, `Option<String>` |
 | `abi::send_chat_str(s)` | Send a global chat message, returns status |
 | `abi::join_player_name(&mut out)` | Joining player's name, `Option<String>`; only valid inside `on_player_join` |
+| `abi::queue_command(s)` | Queue a zdtd text SimCommand ("bot move ...", "glide ..."); true when accepted |
+| `abi::sense_snapshot(&mut out)` | Fill the binary 'ZBS4' world snapshot, returns bytes written (0 when no world data) |
+| `abi::query_text(req, &mut out)` | Ask a text query ("cover ...", "path ..."), `Option<String>` |
+| `abi::config_text(&mut out)` | Own `config.toml` verbatim, returns bytes read (0 when the mod ships none) |
 
 The raw imports (`abi::tick`, `abi::get_world_time`, ...) stay available for
 guests that want them; the wrappers above are the safe path.
+
+The last four helpers drive the `zdtd` import module, the compatibility
+surface the host defines so sibling zdtd-server plugins run unmodified (see
+[ABI.md](ABI.md)). The export name constants (`abi::EXPORT_INIT`,
+`abi::EXPORT_TICK`, `abi::EXPORT_SHUTDOWN`, `abi::EXPORT_PLAYER_JOIN`,
+`abi::EXPORT_ADMIN_COMMAND`) are exported for guests that build their
+`#[export_name]` attributes from the SDK rather than spelling the strings.
 
 ## Player join events
 

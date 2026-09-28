@@ -87,6 +87,15 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>Status codes returned by guest exports. Zero always means ok.</summary>
         public const int StatusOk = 0;
 
+        /// <summary>
+        /// Guest export status: the hook exists but does nothing (the guest
+        /// deliberately did not implement the event).
+        /// </summary>
+        public const int StatusNotImplemented = 1;
+
+        /// <summary>Guest export status: the hook ran and failed internally.</summary>
+        public const int StatusInternalError = 2;
+
         /// <summary>Status codes returned by the get_setting host import.</summary>
         /// <summary>The requested setting key does not exist.</summary>
         public const int SettingNotFound = -1;

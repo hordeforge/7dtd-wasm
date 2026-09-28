@@ -37,7 +37,7 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("\"\\uDE00\"")]          // low surrogate with no leading high
         public void LoneSurrogateEscapesAreRejected(string value)
         {
-            Assert.Throws<WasmModLoadException>(
+            Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[settings]\nboss_name = " + value, "test"));
         }
 
@@ -86,7 +86,7 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void UnterminatedQuotedKeyIsRejected()
         {
-            Assert.Throws<WasmModLoadException>(
+            Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[settings]\n\"boss_name = \"maci\"", "test"));
         }
     }

@@ -213,6 +213,45 @@ Limits live on `WasmHostConfig` (fuel per call, memory ceiling, module
 size cap) and are validated when the host is constructed. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ABI.md](docs/ABI.md).
 
+Failure outcomes are typed, so nothing needs message matching:
+
+```csharp
+using HordeForge.WasmHost;                  // exception types
+using HordeForge.WasmHost.Abi;              // AbiConstants
+using HordeForge.WasmHost.Registry;         // ModManifest
+
+try
+{
+    ModManifest manifest = ModManifest.ParseToml(File.ReadAllText(manifestToml), id);
+    using WasmMod mod = host.LoadModule(id, File.ReadAllBytes(moduleWasm), manifest);
+}
+catch (WasmManifestException ex)            // broken wasm-mod.toml; ModId is the mod
+{
+    Console.WriteLine($"{ex.ModId}: manifest is invalid ({ex.Message})");
+}
+catch (ManifestReadException ex)            // missing, oversize, or non-UTF-8 file
+{
+    Console.WriteLine($"{ex.Path}: {ex.Reason}");
+}
+catch (WasmModLoadException ex)             // the module itself was refused
+{
+    Console.WriteLine($"{ex.ModId}: {ex.Message}");
+}
+
+foreach (ModRunResult result in host.DispatchTick(gameTick))
+{
+    if (result.Status == ModRunStatus.Error && result.GuestStatus == AbiConstants.StatusNotImplemented)
+    {
+        // The guest declines this event on purpose; not a failure to alert on.
+    }
+}
+```
+
+`ManifestReadException` and `WasmManifestException` both derive from types
+the surrounding code already catches (`InvalidOperationException` and
+`WasmModLoadException` respectively), so the finer-grained catches are
+optional.
+
 ## Safety model
 
 The threat model is "the guest is malicious." Guests cannot read or write

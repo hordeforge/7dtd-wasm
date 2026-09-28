@@ -93,9 +93,21 @@ namespace HordeForge.WasmHost.Tests
         public void ReadRequiredThrowsWithReason()
         {
             string missing = Path.Combine(_base, "nope.toml");
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            InvalidOperationException ex = Assert.ThrowsAny<InvalidOperationException>(
                 () => ManifestFiles.ReadRequired(missing));
             Assert.Contains("the file does not exist", ex.Message);
+        }
+
+        [Fact]
+        public void ReadRequiredFailureCarriesPathAndReason()
+        {
+            // A consumer classifies the failure from the properties, not from
+            // the message text; InvalidOperationException stays the base so
+            // existing catch sites keep working.
+            string missing = Path.Combine(_base, "gone.toml");
+            var ex = Assert.Throws<ManifestReadException>(() => ManifestFiles.ReadRequired(missing));
+            Assert.Equal(missing, ex.Path);
+            Assert.Equal("the file does not exist", ex.Reason);
         }
 
         [Fact]

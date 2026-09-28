@@ -633,7 +633,7 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void ManifestFuelAboveCeilingIsRejected()
         {
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[limits]\nfuel_per_call = 99999999999\n", "x"));
             Assert.Contains("ceiling", ex.Message);
         }
@@ -641,7 +641,7 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void DeeplyNestedTomlManifestIsRejectedCleanly()
         {
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("future = " + new string('[', 100_000) + new string(']', 100_000) + "\n", "bad"));
             Assert.Contains("nesting", ex.Message);
         }
@@ -735,7 +735,7 @@ greeting = ""hello""
         [InlineData("[limits\nfuel_per_call = 1\n")]
         public void MalformedTomlManifestIsRejected(string toml)
         {
-            Assert.Throws<WasmModLoadException>(() => ModManifest.ParseToml(toml, "bad"));
+            Assert.Throws<WasmManifestException>(() => ModManifest.ParseToml(toml, "bad"));
         }
 
         [Fact]
@@ -1067,10 +1067,10 @@ greeting = ""hello""
         {
             // A truncated \uXXX escape must reject the manifest with the
             // normal load error, not crash with an unexpected exception.
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("name = \"\\u123\"", "bad"));
             Assert.Contains("unicode", ex.Message);
-            Assert.Throws<WasmModLoadException>(
+            Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("name = \"\\u12\"", "bad"));
         }
 
@@ -1086,7 +1086,7 @@ greeting = ""hello""
         {
             // "[abc" without the closing bracket must be rejected, not
             // silently parsed as the string "ab".
-            Assert.Throws<WasmModLoadException>(
+            Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("future = [abc\n", "bad"));
         }
 
@@ -1103,7 +1103,7 @@ greeting = ""hello""
         {
             // A repeated key inside one table must reject the manifest
             // instead of silently letting the last value win.
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[limits]\nfuel_per_call = 1\nfuel_per_call = 2\n", "bad"));
             Assert.Contains("duplicate key", ex.Message);
         }
@@ -1112,7 +1112,7 @@ greeting = ""hello""
         public void TomlDuplicateTableIsRejected()
         {
             // Redefining [limits] to smuggle in a second value must reject.
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[limits]\nfuel_per_call = 1\n[limits]\nmax_memory_bytes = 2\n", "bad"));
             Assert.Contains("more than once", ex.Message);
         }
@@ -1135,7 +1135,7 @@ greeting = ""hello""
             // limit was silently dropped.
             ModManifest m = ModManifest.ParseToml("[ limits ]\nfuel_per_call = 5000\n", "x");
             Assert.Equal(5000UL, m.FuelPerCall);
-            Assert.Throws<WasmModLoadException>(
+            Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[limits.]\nfuel_per_call = 1\n", "bad"));
         }
 
@@ -1155,7 +1155,7 @@ greeting = ""hello""
             // A [header] path that collides with an existing scalar value
             // must reject instead of silently replacing it; here the silent
             // replace would drop the operator's fuel limit entirely.
-            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[limits]\nfuel_per_call = 100\n[limits.fuel_per_call]\ndeep = true\n", "bad"));
             Assert.Contains("redefines", ex.Message);
         }
@@ -1244,6 +1244,40 @@ greeting = ""hello""
 
                 host.DispatchPlayerJoin(174, "boss");
                 Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
+            }
+        }
+
+        [Fact]
+        public void NonZeroGuestStatusIsProgrammatic()
+        {
+            // A guest that returns "not implemented" (1) must be
+            // distinguishable from "internal error" (2) without matching the
+            // message text, so the raw code rides on the result.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 1)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 2)");
+                host.LoadModule("statusmod", wasm);
+
+                ModRunResult init = host.DispatchInit().Single();
+                Assert.Equal(ModRunStatus.Error, init.Status);
+                Assert.Equal(AbiConstants.StatusNotImplemented, init.GuestStatus);
+
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.Equal(AbiConstants.StatusInternalError, tick.GuestStatus);
+            }
+
+            var (okHost, _) = NewHost();
+            using (okHost)
+            {
+                okHost.LoadModule("okmod", WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)"));
+                ModRunResult ok = okHost.DispatchTick(1).Single();
+                Assert.True(ok.Ok);
+                Assert.Equal(AbiConstants.StatusOk, ok.GuestStatus);
             }
         }
 

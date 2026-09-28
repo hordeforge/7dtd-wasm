@@ -1,3 +1,5 @@
+using HordeForge.WasmHost.Abi;
+
 namespace HordeForge.WasmHost.Core
 {
     /// <summary>
@@ -10,12 +12,24 @@ namespace HordeForge.WasmHost.Core
     {
         /// <summary>Creates a structured call result attributed to a mod.</summary>
         public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
+            : this(modId, status, message, details, fuelConsumed, AbiConstants.StatusOk)
+        {
+        }
+
+        /// <summary>
+        /// Creates a structured call result that also carries the status code
+        /// the guest export returned, so a caller can tell a guest's "not
+        /// implemented" (1) from its "internal error" (2) without parsing
+        /// <see cref="Message"/>.
+        /// </summary>
+        public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed, int guestStatus)
         {
             ModId = modId ?? string.Empty;
             Status = status;
             Message = message ?? string.Empty;
             Details = details ?? string.Empty;
             FuelConsumed = fuelConsumed;
+            GuestStatus = guestStatus;
         }
 
         /// <summary>
@@ -39,6 +53,18 @@ namespace HordeForge.WasmHost.Core
 
         /// <summary>Instructions consumed from the per-call fuel budget.</summary>
         public ulong FuelConsumed { get; }
+
+        /// <summary>
+        /// Status code the guest export returned (0 ok, 1 not implemented,
+        /// 2 internal error, see <see cref="Abi.AbiConstants.StatusOk"/> and
+        /// docs/ABI.md). <see cref="AbiConstants.StatusOk"/> for every outcome
+        /// that did not complete a guest call (traps, fuel exhaustion, host
+        /// errors) and for the no-handler results. Meaningful only when
+        /// <see cref="Status"/> is <see cref="ModRunStatus.Error"/> with a
+        /// non-ok guest return code; check it instead of matching
+        /// <see cref="Message"/> text.
+        /// </summary>
+        public int GuestStatus { get; }
 
         /// <summary>True when the call completed successfully (Status == Ok).</summary>
         public bool Ok => Status == ModRunStatus.Ok;

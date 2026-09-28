@@ -73,15 +73,16 @@ namespace HordeForge.WasmHost.Registry
         }
 
         /// <summary>
-        /// Reads a manifest file behind the shared size bound; throws so the
-        /// caller's existing error paths (skip the module, keep defaults)
-        /// handle it uniformly.
+        /// Reads a manifest file behind the shared size bound; throws
+        /// <see cref="ManifestReadException"/> (carrying the path and the
+        /// reason) so the caller's existing error paths (skip the module,
+        /// keep defaults) handle it uniformly.
         /// </summary>
         public static string ReadRequired(string path)
         {
             if (!TryRead(path, out string content, out string failureReason))
             {
-                throw new InvalidOperationException(path + " is unreadable: " + failureReason);
+                throw new ManifestReadException(path, failureReason);
             }
             return content;
         }

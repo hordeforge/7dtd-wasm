@@ -33,6 +33,24 @@ Codename: Quarantine (7dtd-wasm).
   several threads at once, asserting no mod is skipped or duplicated in a
   tick, that the settings import never answers with another mod's value, and
   that the registry and the load order agree afterwards.
+- `ModRunResult.GuestStatus`: the status code the guest export returned
+  (0 ok, 1 not implemented, 2 internal error), so a consumer tells those
+  apart without matching `ModRunResult.Message` text. A new constructor
+  overload takes the code; the existing one reports `StatusOk`.
+- `AbiConstants.StatusNotImplemented` and `AbiConstants.StatusInternalError`,
+  the guest return codes `docs/ABI.md` and the guest SDK already define.
+- `ManifestReadException` (an `InvalidOperationException`) with `Path` and
+  `Reason`, thrown by `ManifestFiles.ReadRequired` instead of a
+  concatenation-only message.
+- `WasmManifestException`, a `WasmModLoadException` subtype thrown by
+  `ModManifest.ParseToml`, so a malformed manifest is distinguishable from a
+  refused module. `WasmModLoadException` is no longer sealed.
+- `guest-common`: the `zdtd` import surface (`queue`, `sense`, `query`,
+  `config`) with safe wrappers `queue_command`, `sense_snapshot`,
+  `query_text`, and `config_text`, plus the `on_player_join` and
+  `on_admin_command` export-name constants and the queue and query status
+  codes. A Rust guest no longer hand-declares the externs documented in
+  docs/ABI.md.
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
 - `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the
