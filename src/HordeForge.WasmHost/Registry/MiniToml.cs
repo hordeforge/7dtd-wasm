@@ -230,7 +230,14 @@ namespace HordeForge.WasmHost.Registry
             string body = text.Substring(1, text.Length - 2);
             if (quote == '\'')
             {
-                return body; // literal string, no escapes
+                // Literal string: no escapes, but the same Unicode rule
+                // applies to its raw content.
+                var literal = new StringBuilder(body.Length);
+                for (int i = 0; i < body.Length; i++)
+                {
+                    i += AppendLiteral(literal, body, i, lineNumber) - 1;
+                }
+                return literal.ToString();
             }
             var sb = new StringBuilder();
             // Tracks an escaped high surrogate waiting for its low half:
@@ -244,7 +251,7 @@ namespace HordeForge.WasmHost.Registry
                 if (c != '\\')
                 {
                     UnicodeEscapes.EndPendingHighOrThrow(ref pendingHigh);
-                    sb.Append(c);
+                    i += AppendLiteral(sb, body, i, lineNumber) - 1;
                     continue;
                 }
                 if (++i >= body.Length)
@@ -280,6 +287,34 @@ namespace HordeForge.WasmHost.Registry
             }
             UnicodeEscapes.EndPendingHighOrThrow(ref pendingHigh);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Appends one unescaped character of string content, plus the low
+        /// surrogate a high one must be followed by, and returns how many
+        /// characters it consumed. A lone surrogate has no UTF-8 form, so
+        /// accepting one would hand the guest a string that cannot
+        /// round-trip the ABI; raw content and <c>\uXXXX</c> escapes are
+        /// held to the same rule.
+        /// </summary>
+        private static int AppendLiteral(StringBuilder sb, string body, int index, int lineNumber)
+        {
+            char c = body[index];
+            if (char.IsHighSurrogate(c))
+            {
+                if (index + 1 >= body.Length || !char.IsLowSurrogate(body[index + 1]))
+                {
+                    throw new FormatException("line " + lineNumber + ": high surrogate in a string is not followed by a low surrogate");
+                }
+                sb.Append(c).Append(body[index + 1]);
+                return 2;
+            }
+            if (char.IsLowSurrogate(c))
+            {
+                throw new FormatException("line " + lineNumber + ": low surrogate in a string without a preceding high surrogate");
+            }
+            sb.Append(c);
+            return 1;
         }
 
         private static TomlArray ParseArray(string text, int lineNumber, int depth)

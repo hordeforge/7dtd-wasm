@@ -40,6 +40,19 @@ Codename: Quarantine (7dtd-wasm).
   with `--update`. A member's body is not surface, so an implementation
   change does not touch the baseline. This is the guard that was missing
   when `WasmModHost.TryInit` came off the surface in the 0.3.1 patch slot.
+- Seeded fuzz harnesses for the manifest parser (`ModManifest.ParseToml`)
+  and the guest-text entry points (`TextSanitizer.Clean`, `ModId.IsValid`),
+  run by `make test`. They assert the load contract, a per-input time
+  budget, manifest determinism, and sanitizer idempotence rather than only
+  "did not crash". `HORDEFORGE_FUZZ_SEED` and `HORDEFORGE_FUZZ_ITERATIONS`
+  reseed and lengthen a run; every failure prints its replay command.
+
+### Fixed
+
+- A raw lone surrogate in a manifest string (basic or literal) reached the
+  settings table instead of being rejected, while the `\uXXXX` form already
+  was. Such a value has no UTF-8 form and cannot round-trip the guest
+  string ABI.
 
 ### Changed
 

@@ -54,6 +54,29 @@ Every change lands with its tests and its docs updated in the same commit.
 Compiler, analyzer, and rustc lint warnings fail the build (warnings are
 errors repo-wide); a suppression needs a written reason next to it.
 
+## Fuzzing
+
+The untrusted-input surfaces (the manifest parser, and the guest-text
+validators) have seeded randomized harnesses in the test project, so
+`make test` is also the fuzz gate. There is no native fuzzing engine in
+the .NET toolchain here, so a harness is a property test over a mutation
+pass, and the assertions are the contract the host depends on: only
+`WasmModLoadException` may leave the manifest parser, one input stays
+inside a wall-clock budget, a parse is deterministic, and sanitized text
+keeps its length and its kept characters.
+
+```bash
+# Longer soak, different input sequence. Both are also how a crash is
+# replayed: every failure prints the seed and the exact input.
+HORDEFORGE_FUZZ_ITERATIONS=100000 make test
+HORDEFORGE_FUZZ_SEED=1234 make test
+```
+
+A new untrusted-input parser gets a harness in the same change: seed it
+with the files the project actually ships, assert the exception type the
+caller handles, and pin every input the harness found with a plain test
+next to the parser.
+
 ## Repository tools
 
 `tools/doccheck.py`, `tools/versioncheck.py`, `tools/apicheck.py`,

@@ -96,6 +96,10 @@ dotted keys are not supported. The parser is dependency-free (`MiniToml`,
 ADR 0007) and rejects anything outside this subset with a specific error;
 the bridge skips the module and logs the reason.
 
+Strings must be well-formed Unicode: a lone surrogate, raw or written as a
+`\uXXXX` escape, is rejected, because it has no UTF-8 form and could not
+round-trip the guest string ABI.
+
 ## Settings resolution
 
 `get_setting(key, out, cap)` (host import, docs/ABI.md) resolves in this

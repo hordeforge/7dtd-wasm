@@ -8,7 +8,8 @@ namespace HordeForge.WasmHost.Registry
     /// The grammar requires strings to be valid Unicode: a lone
     /// surrogate has no UTF-8 form, so it could never round-trip the guest
     /// string ABI without silent corruption. The decoder tracks an escaped
-    /// high surrogate waiting for its low half and rejects anything else.
+    /// high surrogate waiting for its low half and rejects anything else;
+    /// raw (unescaped) content is held to the same rule by MiniToml.
     /// </summary>
     internal static class UnicodeEscapes
     {
