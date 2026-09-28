@@ -29,6 +29,31 @@ namespace HordeForge.GameBridge.Commands
             "the host is not started; see the server log for why the start was refused";
 
         /// <summary>
+        /// Admin level the game's own server commands declare. The game
+        /// reads this through <c>ConsoleCmdAbstract.get_DefaultPermission
+        /// Level</c>: a command that declares a level is added to the admin
+        /// permission table at that level when the operator has not set one
+        /// explicitly, and a player may run it only when their own level
+        /// reaches it (<c>AdminTools.CommandAllowedFor</c>, which
+        /// <c>ConnectionManager.ServerConsoleCommand</c> checks on every
+        /// in-game command). The inherited default is 0, which is the
+        /// permission level of a player who holds no admin rights, so
+        /// without this override any connected player could type
+        /// <c>wasm load</c>, <c>wasm reload</c>, or <c>wasm unload</c> and
+        /// have guest code compiled into the server process, enabled, or
+        /// disabled, on a public server.
+        ///
+        /// The whole command is gated, not only the three that touch guest
+        /// code: the game checks one permission per command, so gating the
+        /// subcommands that change what runs would leave the subcommands
+        /// that report what is running open to the same players. An operator
+        /// who wants a lower level for this one command sets it in
+        /// serverconfig.xml's admin permissions, which the game honors in
+        /// preference to this default.
+        /// </summary>
+        private const int AdminPermissionLevel = 1000;
+
+        /// <summary>
         /// One line per subcommand, description included: the game's
         /// "help wasm" and "wasm help" print the same block, so an operator
         /// who learned the syntax from one has it in the other.
@@ -51,6 +76,15 @@ namespace HordeForge.GameBridge.Commands
         public override string getDescription()
         {
             return "Manage the WebAssembly mod host";
+        }
+
+        /// <summary>
+        /// Admin level the game requires before a player may run this
+        /// command; see <see cref="AdminPermissionLevel"/>.
+        /// </summary>
+        public override int get_DefaultPermissionLevel()
+        {
+            return AdminPermissionLevel;
         }
 
         public override string getHelp()

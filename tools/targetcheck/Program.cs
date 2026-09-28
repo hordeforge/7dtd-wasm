@@ -211,6 +211,11 @@ namespace TargetCheck
                 CheckMethod(md, t, "getCommands", "string[]()", isStatic: false);
                 CheckMethod(md, t, "getDescription", "string()", isStatic: false);
                 CheckMethod(md, t, "getHelp", "string()", isStatic: false);
+                // The permission level the game reads to decide which players
+                // may run CmdWasm at all. The base returns 0, so dropping the
+                // override would silently reopen load/reload/unload to every
+                // connected player rather than fail the build.
+                CheckMethod(md, t, "get_DefaultPermissionLevel", "int()", isStatic: false);
                 CheckMethod(md, t, "Execute", "void(List`1<string>, CommandSenderInfo)", isStatic: false);
             });
 

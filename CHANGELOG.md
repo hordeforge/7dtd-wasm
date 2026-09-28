@@ -216,6 +216,18 @@ operator, embedder, and guest author.
   engine held their memory until finalization. Both now report the failure
   and release the mod, and a host constructor that fails while defining the
   host API releases the engine and linker it already built.
+- `wasm` required no admin rights. The game reads
+  `ConsoleCmdAbstract.get_DefaultPermissionLevel` to decide which players may
+  run a command, and the inherited base value is 0, the level of a player
+  who holds no admin rights, so any connected player could type `wasm load`,
+  `wasm reload <id>`, or `wasm unload <id>` in game and have the bridge
+  compile guest modules into the server process, start them, or stop them.
+  `CmdWasm` now declares the admin level 1000 that the game's own server
+  commands declare, so the game refuses it below admin and an operator who
+  wants a different level for this one command sets it in the server's admin
+  permissions, which the game honors in preference to the default.
+  `tools/targetcheck` gates on the member so a game update that drops it
+  fails the check rather than reopening the command.
 - A per-mod `max_memory_bytes` above the effective cap is ignored by design
   (a manifest can only tighten), and nothing said so: a module the operator
   believed was capped tighter than the host cap ran under the host cap

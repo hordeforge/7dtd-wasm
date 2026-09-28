@@ -128,6 +128,14 @@ argument past the ones a subcommand takes, print the same usage list rather
 than falling through to the status report, so a typo does not read like a
 successful command.
 
+`wasm` is an admin command. `CmdWasm` declares the same admin level (1000)
+the game's own server commands do, so the game refuses it to a player whose
+own level does not reach it, on telnet and in game alike. That covers the
+whole command rather than only the three subcommands that change what runs,
+because the game checks one permission per command; an operator who wants a
+different level for this one command sets it in the server's admin
+permissions, which the game honors in preference to the declared default.
+
 Each subcommand says what it did, at the console the operator typed it in:
 
 - `wasm list` prints the loaded module ids, one per line, so the next
