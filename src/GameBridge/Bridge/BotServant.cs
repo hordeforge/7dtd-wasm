@@ -139,7 +139,17 @@ namespace HordeForge.GameBridge.Bridge
         // spawning persistently fails (entity cap reached, shutdown in
         // progress) would retry and warn at sense rate.
         private const int TopUpIntervalMs = 1000;
-        private int _lastTopUpMs = int.MinValue;
+
+        // Last top-up millisecond per module, so the throttle is a module's
+        // own. A single shared stamp let whichever module polled sense first
+        // in a window suppress every other module's top-up: a second module
+        // that asked for "bot count 8" had its request dropped as a
+        // duplicate for as long as the first module kept polling, so its
+        // floor never took effect. Entries are dropped with the module's
+        // other state in ReleaseModule, so the table tracks loaded modules
+        // rather than every id ever seen.
+        private readonly Dictionary<string, int> _lastTopUpMs =
+            new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>
         /// Creates the servant. <paramref name="tickProvider"/> supplies the
@@ -806,14 +816,16 @@ namespace HordeForge.GameBridge.Bridge
             // TopUpIntervalMs) and idempotent, so calling it per sense
             // request costs nothing in steady state. Unchecked int
             // subtraction stays correct across TickCount wraparound (same
-            // reasoning as GuestRateLimiter). Only the calling module's bots
-            // are topped up: one module's floor is not another module's.
+            // reasoning as GuestRateLimiter). The stamp is the calling
+            // module's own: only the calling module's bots are topped up, so
+            // one module's pass must not answer another module's request.
             int nowMs = _clockMs();
-            if (_lastTopUpMs != int.MinValue && nowMs - _lastTopUpMs < TopUpIntervalMs)
+            if (_lastTopUpMs.TryGetValue(modId, out int lastTopUpMs) &&
+                nowMs - lastTopUpMs < TopUpIntervalMs)
             {
                 return;
             }
-            _lastTopUpMs = nowMs;
+            _lastTopUpMs[modId] = nowMs;
             // Spawn defensively: the world is not ready to host entities
             // during world creation (the game's own EAIManager can NRE), so
             // every attempt is guarded inside SpawnOne and a partially failed
@@ -959,6 +971,7 @@ namespace HordeForge.GameBridge.Bridge
         {
             IReadOnlyList<int> released = _botOwners.Release(modId);
             _countFloors.Remove(modId);
+            _lastTopUpMs.Remove(modId);
             if (released.Count == 0)
             {
                 return;

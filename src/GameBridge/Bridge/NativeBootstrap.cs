@@ -130,12 +130,25 @@ namespace HordeForge.GameBridge.Bridge
         [DllImport("libc", EntryPoint = "dlclose")]
         private static extern int dlclose(IntPtr handle);
 
+        /// <summary>
+        /// Prepends <paramref name="directory"/> to a search-path variable,
+        /// once. A second call with the same directory is a no-op, so a
+        /// repeated Prepare does not stack the entry; the check compares
+        /// whole path entries, so a different directory that merely contains
+        /// this one as a substring is not mistaken for it.
+        /// </summary>
         private static void PrependToPathVariable(string variable, string directory)
         {
             string current = Environment.GetEnvironmentVariable(variable);
-            if (current != null && current.IndexOf(directory, StringComparison.Ordinal) >= 0)
+            if (current != null)
             {
-                return;
+                foreach (string entry in current.Split(Path.PathSeparator))
+                {
+                    if (string.Equals(entry, directory, StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+                }
             }
             char sep = Path.PathSeparator;
             Environment.SetEnvironmentVariable(variable, directory + (string.IsNullOrEmpty(current) ? string.Empty : sep + current));

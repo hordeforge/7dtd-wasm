@@ -33,6 +33,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Func<int, int, int, int, int>? _onAdminCommand;
         private bool _disposed;
         private bool _enabled;
+        private bool _shutdownRun;
 
         /// <summary>Stopwatch ticks converted to milliseconds.</summary>
         private static readonly double MillisecondsPerTimestampTick = 1000.0 / Stopwatch.Frequency;
@@ -161,15 +162,40 @@ namespace HordeForge.WasmHost.Core
             return Run("on_tick", _tick);
         }
 
-        /// <summary>Invokes the guest shutdown export when present.</summary>
+        /// <summary>
+        /// Invokes the guest shutdown export when present.
+        ///
+        /// Runs at most once per load generation, the mirror of the
+        /// <see cref="Init"/> latch: a goodbye that runs twice is a guest
+        /// side effect that happens twice (a brain dropping its last
+        /// SimCommand, a mod releasing a file it already released). The host
+        /// unloads and disposes a mod exactly once each, so this only
+        /// matters for an embedder driving the public <see cref="WasmMod"/>
+        /// surface, which is why the latch lives here rather than at the
+        /// call sites. A repeated call reports Ok without calling the guest,
+        /// the same verdict a mod that exports no shutdown export gets.
+        /// </summary>
         public ModRunResult Shutdown()
         {
             if (_shutdown == null)
             {
                 return Ok(0UL);
             }
+            if (Volatile.Read(ref _shutdownRun))
+            {
+                return Ok(0UL);
+            }
+            // Latched before the call, not after: a guest that traps on its
+            // way out still had its shutdown start, and a retry would replay
+            // the part that already ran. The enable latch does not need this
+            // because a failed enable is retried on purpose; a goodbye is
+            // not retried.
+            Volatile.Write(ref _shutdownRun, true);
             return Run("shutdown", _shutdown);
         }
+
+        /// <summary>True once the shutdown export has been called for this generation.</summary>
+        public bool ShutdownRun => Volatile.Read(ref _shutdownRun);
 
         /// <summary>True when the guest exports the optional player-join handler.</summary>
         public bool HasPlayerJoinHandler

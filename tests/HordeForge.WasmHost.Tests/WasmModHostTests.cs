@@ -87,6 +87,60 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void RepeatedShutdownRunsTheGoodbyeOnlyOnce()
+        {
+            // The mirror of the enable latch: a goodbye that runs twice
+            // replays the guest side effects it already performed. An embedder
+            // driving the public WasmMod surface can reach that (a shutdown
+            // then a host Dispose, or a shutdown the embedder retries after a
+            // failure), and the guest has no way to make the second run
+            // harmless.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                WasmMod mod = host.LoadModule("strings", Fixture("strings"));
+                Assert.True(mod.Shutdown().Ok);
+                Assert.True(mod.Shutdown().Ok);
+                Assert.True(mod.ShutdownRun);
+                Assert.Single(api.Logs, l => l.Message.Contains("strings fixture shutdown"));
+            }
+        }
+
+        [Fact]
+        public void TrappingShutdownIsNotReplayedOnRetry()
+        {
+            // Unlike a failed enable, a failed goodbye is latched: the guest
+            // already ran the part of it that traps, and re-running would
+            // replay that part.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmMod mod = host.LoadModule("trapshutdown", WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                    "(func (export \"on_shutdown\") (result i32) unreachable)"));
+                Assert.Equal(ModRunStatus.Trap, mod.Shutdown().Status);
+                Assert.Equal(ModRunStatus.Ok, mod.Shutdown().Status);
+            }
+        }
+
+        [Fact]
+        public void ReloadedGenerationSaysGoodbyeAgain()
+        {
+            // The shutdown latch is per generation, like the enable latch: a
+            // reloaded instance must still receive its own goodbye.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                byte[] bytes = Fixture("strings");
+                host.LoadModule("strings", bytes);
+                host.Unload("strings");
+                host.LoadModule("strings", bytes).Shutdown();
+                Assert.Equal(2, api.Logs.Count(l => l.Message.Contains("strings fixture shutdown")));
+            }
+        }
+
+        [Fact]
         public void FailedEnableIsRetryable()
         {
             // A guest that cannot enable must stay retryable: latching the

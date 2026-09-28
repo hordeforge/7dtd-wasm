@@ -72,6 +72,15 @@ log to say why.
 | `on_player_join` | `(entity_id: i32) -> i32` | no | Called when a player spawns into the world; fetch the name via the `get_join_player_name` import |
 | `on_admin_command` | `(cmd_ptr: i32, cmd_len: i32, out_ptr: i32, out_cap: i32) -> i32` | no | Console command handler (zdtd plugin surface). Resolved and signature-checked at load, but not yet dispatched: the console wiring is stage 3, so today a guest that exports it is simply never called |
 
+`on_enable` and `on_shutdown` each run at most once per loaded
+generation, whichever way the host is driven: a second enable, a retried
+goodbye, and a second shutdown after a failing one all report success
+without calling the guest again. Both latches are per load, so `wasm
+reload` gives the fresh instance a fresh pair. A guest that wants its
+setup repeated must put it in `on_tick`, and one that wants a cleanup
+guaranteed must make it idempotent itself: the host cannot know which
+parts of a failed goodbye already ran.
+
 An optional export that is present must have exactly this signature
 (`on_enable`, `on_tick` and `on_shutdown` may return void for zdtd-style
 plugins); any other shape is rejected at load time rather than silently
