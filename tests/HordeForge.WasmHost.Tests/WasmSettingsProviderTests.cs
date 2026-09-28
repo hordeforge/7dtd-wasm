@@ -7,9 +7,14 @@ using Xunit;
 namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
-    /// The shared Mods/Wasm/wasm.toml settings cache: a guest reads the
-    /// values, the cache re-reads when the file changes, and a file it
-    /// cannot parse does not get re-parsed on every probe.
+    /// get_setting resolution against the shared Mods/Wasm/wasm.toml: a mod's
+    /// own [settings] first, the shared file second, not found third. The
+    /// file read happens on the game main loop and a guest can loop on
+    /// get_setting within its fuel budget, so the reload is both
+    /// mtime-and-length gated and probe-throttled, a broken file keeps
+    /// serving the last good values, and the failure is reported once per
+    /// change instead of once per miss. The clock is injected so the
+    /// throttle is a function of the driver's time, not of wall time.
     /// </summary>
     public sealed class WasmSettingsProviderTests : IDisposable
     {
@@ -17,6 +22,9 @@ namespace HordeForge.WasmHost.Tests
         private readonly string _base;
         private readonly string _shared;
         private int _nowMs;
+
+        /// <summary>Base for the synthetic mtimes, far from the real clock.</summary>
+        private static readonly DateTime SharedEpoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         public WasmSettingsProviderTests()
         {
@@ -45,6 +53,18 @@ namespace HordeForge.WasmHost.Tests
         private void WriteShared(string text)
         {
             File.WriteAllText(_shared, text);
+        }
+
+        /// <summary>
+        /// Writes the shared file with an explicit last write time, for the
+        /// cases where the test needs the file's identity rather than the
+        /// clock's: a rewrite under a pinned or older timestamp than the
+        /// write before it.
+        /// </summary>
+        private void WriteSharedAt(string text, DateTime mtime)
+        {
+            File.WriteAllText(_shared, text);
+            File.SetLastWriteTimeUtc(_shared, mtime);
         }
 
         private void AdvancePastProbeThrottle()
@@ -218,6 +238,171 @@ namespace HordeForge.WasmHost.Tests
             var provider = NewProvider();
             Assert.False(provider.TryGetSetting("mod", "key", out string value));
             Assert.Equal(string.Empty, value);
+        }
+
+        [Fact]
+        public void AModWithoutItsOwnManifestFallsBackToShared()
+        {
+            WriteShared("[settings]\ngreeting = \"shared\"\n");
+            var provider = NewProvider();
+            // LoadModule registers every id, manifest or not: a null
+            // manifest must fall through to shared rather than shadow it.
+            provider.UpdateMod("mod", null);
+
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("shared", value);
+        }
+
+        [Fact]
+        public void AKeyRemovedFromTheSharedFileStopsResolving()
+        {
+            // A key that disappears must become a miss, not keep serving the
+            // value from the previous read: that is how an operator retires
+            // a setting for a running server.
+            WriteShared("[settings]\ngreeting = \"first\"\nfarewell = \"bye\"\n");
+            var provider = NewProvider();
+            Assert.True(provider.TryGetSetting("mod", "farewell", out _));
+
+            WriteShared("[settings]\ngreeting = \"first\"\n");
+            AdvancePastProbeThrottle();
+            Assert.False(provider.TryGetSetting("mod", "farewell", out string value));
+            Assert.Equal(string.Empty, value);
+        }
+
+        [Fact]
+        public void ProbesAreThrottledSoAGuestMissLoopCostsNoDiskReads()
+        {
+            WriteShared("[settings]\ngreeting = \"first\"\n");
+            var provider = NewProvider();
+            for (int i = 0; i < 50; i++)
+            {
+                provider.TryGetSetting("mod", "missing", out _);
+            }
+
+            // An edit inside the interval is not yet visible: the throttle
+            // is what keeps a fuel-budgeted miss loop off the filesystem.
+            WriteShared("[settings]\ngreeting = \"second\"\n");
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("first", value);
+        }
+
+        [Fact]
+        public void TheThrottleSurvivesAClockWraparound()
+        {
+            // Environment.TickCount is an int and wraps; the comparison is
+            // unchecked subtraction, so a wrapped clock must not read as a
+            // huge negative interval and suppress every later reload. The
+            // step crosses the wrap and is longer than the probe interval.
+            WriteShared("[settings]\ngreeting = \"first\"\n");
+            _nowMs = int.MaxValue - 1000;
+            var provider = NewProvider();
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("first", value);
+
+            _nowMs += 2000;
+            WriteShared("[settings]\ngreeting = \"second\"\n");
+            Assert.True(provider.TryGetSetting("mod", "greeting", out value));
+            Assert.Equal("second", value);
+        }
+
+        [Fact]
+        public void ABrokenSharedFileIsReportedOncePerChange()
+        {
+            WriteShared("[settings]\ngreeting = \"good\"\n");
+            var provider = NewProvider();
+            provider.TryGetSetting("mod", "greeting", out _);
+
+            WriteSharedAt("[limits\n", SharedEpoch.AddYears(1));
+            AdvancePastProbeThrottle();
+            for (int i = 0; i < 20; i++)
+            {
+                provider.TryGetSetting("mod", "missing", out _);
+                AdvancePastProbeThrottle();
+            }
+
+            // A guest looping on get_setting must not turn one operator
+            // mistake into a log flood.
+            Assert.Single(Log.Captured);
+            Assert.Contains("cannot reload", Log.Captured[0]);
+            Assert.Contains("serving previous shared settings", Log.Captured[0]);
+
+            // But a second, different broken save is a second operator
+            // mistake: suppressing it would hide the fact that the file is
+            // still not loading, so the operator would not know to recheck.
+            WriteSharedAt("also broken = = =\n", SharedEpoch.AddYears(2));
+            AdvancePastProbeThrottle();
+            provider.TryGetSetting("mod", "missing", out _);
+            Assert.Equal(2, Log.Captured.Count);
+        }
+
+        [Fact]
+        public void ABrokenFileIsCleansedBeforeItReachesTheLog()
+        {
+            // Parser diagnostics quote raw file text, so a manifest holding
+            // control characters could otherwise forge log lines here.
+            WriteShared("[settings]\ngreeting = \"good\"\n");
+            var provider = NewProvider();
+            provider.TryGetSetting("mod", "greeting", out _);
+
+            WriteSharedAt("k = \"a\nb\"\n", SharedEpoch.AddYears(1));
+            AdvancePastProbeThrottle();
+            provider.TryGetSetting("mod", "greeting", out _);
+
+            Assert.Single(Log.Captured);
+            Assert.DoesNotContain("\n", Log.Captured[0].Replace("\r", string.Empty));
+        }
+
+        [Fact]
+        public void FixingTheFileRestoresItWithoutARestart()
+        {
+            WriteShared("[settings]\ngreeting = \"good\"\n");
+            var provider = NewProvider();
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("good", value);
+
+            WriteSharedAt("[limits\n", SharedEpoch.AddYears(1));
+            AdvancePastProbeThrottle();
+            provider.TryGetSetting("mod", "greeting", out _);
+
+            // The failed mtime was never applied, so the fixed file is read
+            // on the strength of its content. The repair keeps the broken
+            // file's mtime deliberately: on a filesystem with coarse
+            // timestamps an operator's quick edit can land in the same
+            // second, and skipping it as "already seen" would leave the
+            // server serving stale settings with no way back short of a
+            // restart.
+            WriteSharedAt("[settings]\ngreeting = \"fixed\"\n", SharedEpoch.AddYears(1));
+            AdvancePastProbeThrottle();
+            Assert.True(provider.TryGetSetting("mod", "greeting", out value));
+            Assert.Equal("fixed", value);
+        }
+
+        [Fact]
+        public void ASharedFileWrittenAfterStartupIsFound()
+        {
+            // The bridge reads wasm.toml before any mod loads; an operator
+            // who creates the file afterwards must not need a restart.
+            var provider = NewProvider();
+            Assert.False(provider.TryGetSetting("mod", "greeting", out _));
+
+            WriteShared("[settings]\ngreeting = \"late\"\n");
+            AdvancePastProbeThrottle();
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("late", value);
+        }
+
+        [Fact]
+        public void SharedLimitsDoNotBecomeGuestSettings()
+        {
+            // [limits] is a closed table the host binds; a guest reading
+            // limits.fuel_per_call must not be handed a host cap as its own
+            // configuration.
+            WriteShared("[limits]\nfuel_per_call = 1234\n[settings]\ngreeting = \"hi\"\n");
+            var provider = NewProvider();
+
+            Assert.False(provider.TryGetSetting("mod", "fuel_per_call", out _));
+            Assert.True(provider.TryGetSetting("mod", "greeting", out string value));
+            Assert.Equal("hi", value);
         }
     }
 }

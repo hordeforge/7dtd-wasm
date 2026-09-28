@@ -150,8 +150,12 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void RecordCountTooLargeForIntArithmeticReportsNoData()
         {
-            // A count whose int-serialized size wraps negative would pass a
-            // narrower fits check and then write past the buffer.
+            // 60M records is 2.4 GB serialized, past int.MaxValue: a count
+            // whose size was computed in int would wrap negative, pass a
+            // narrower fits check, and write past the end of the caller's
+            // buffer. The size is summed in long, so the snapshot is
+            // refused instead. The list holds one shared record, so the cost
+            // is the pointer array, not 60M objects.
             var snapshot = new SenseSnapshotWriter.Snapshot();
             var record = new SenseSnapshotWriter.EntityRecord { NetId = 1 };
             for (int i = 0; i < 60_000_000; i++)
@@ -160,7 +164,85 @@ namespace HordeForge.WasmHost.Tests
             }
             var buffer = new byte[SenseSnapshotWriter.HeaderSize];
             Assert.Equal(0, SenseSnapshotWriter.Write(snapshot, buffer));
-            Assert.Equal(0, buffer[SenseSnapshotWriter.HeaderSize - 1]);
+            // Refused before any write: the header magic is still untouched.
+            Assert.Equal(0u, ReadU32(buffer, 0));
+        }
+
+        [Fact]
+        public void ExactFitIsComputedOverRecordsAndBothEventKinds()
+        {
+            // The wire order is records, then damage events, then bot-info
+            // events, and the fits check has to add up all three; a size
+            // formula that counted only the records would report "no data"
+            // for a buffer that holds the whole snapshot, and one that
+            // counted only events would write records past the end.
+            var snapshot = new SenseSnapshotWriter.Snapshot();
+            for (int i = 0; i < 3; i++)
+            {
+                snapshot.Records.Add(new SenseSnapshotWriter.EntityRecord { NetId = i });
+            }
+            snapshot.Damage.Add(new SenseSnapshotWriter.DamageEvent { Attacker = 1, Victim = 2, Amount = 3f });
+            snapshot.BotInfo.Add(new SenseSnapshotWriter.BotInfoEvent { NetId = 4, WeaponId = 5 });
+            int needed = SenseSnapshotWriter.HeaderSize
+                         + 3 * SenseSnapshotWriter.RecordSize
+                         + 2 * SenseSnapshotWriter.EventSize;
+
+            Assert.Equal(needed, SenseSnapshotWriter.Write(snapshot, new byte[needed]));
+            Assert.Equal(0, SenseSnapshotWriter.Write(snapshot, new byte[needed - 1]));
+
+            // The events follow the records, in the documented order, so a
+            // plugin reading the stream sees them where its own parser
+            // expects them.
+            var buffer = new byte[needed];
+            SenseSnapshotWriter.Write(snapshot, buffer);
+            int firstRecord = SenseSnapshotWriter.HeaderSize;
+            int firstEvent = firstRecord + 3 * SenseSnapshotWriter.RecordSize;
+            Assert.Equal(3u, ReadU32(buffer, 4));
+            Assert.Equal(0u, ReadU32(buffer, firstRecord + 0));
+            Assert.Equal(1u, ReadU32(buffer, firstRecord + SenseSnapshotWriter.RecordSize + 0));
+            Assert.Equal(2u, ReadU32(buffer, firstRecord + 2 * SenseSnapshotWriter.RecordSize + 0));
+            Assert.Equal(SenseSnapshotWriter.KindEventDamage, buffer[firstEvent + 0]);
+            Assert.Equal(1u, ReadU32(buffer, firstEvent + 4));
+            Assert.Equal(2u, ReadU32(buffer, firstEvent + 8));
+            Assert.Equal(FloatBits(3f), ReadU32(buffer, firstEvent + 12));
+            Assert.Equal(SenseSnapshotWriter.KindEventBotInfo, buffer[firstEvent + SenseSnapshotWriter.EventSize + 0]);
+            Assert.Equal(5, buffer[firstEvent + SenseSnapshotWriter.EventSize + 1]);
+            Assert.Equal(4u, ReadU32(buffer, firstEvent + SenseSnapshotWriter.EventSize + 4));
+        }
+
+        [Fact]
+        public void EmptySnapshotFitsAHeaderOnlyBufferAndNothingLess()
+        {
+            // The zero-record case is the lower end of the same fits check:
+            // it must still refuse a buffer one byte short of the header.
+            var snapshot = new SenseSnapshotWriter.Snapshot();
+            Assert.Equal(SenseSnapshotWriter.HeaderSize,
+                SenseSnapshotWriter.Write(snapshot, new byte[SenseSnapshotWriter.HeaderSize]));
+            Assert.Equal(0, SenseSnapshotWriter.Write(snapshot, new byte[SenseSnapshotWriter.HeaderSize - 1]));
+        }
+
+        [Fact]
+        public void ClearDropsEveryRecordAndEvent()
+        {
+            // The bridge reuses one snapshot per mod for the life of the
+            // server; a Clear that left any list populated would append the
+            // next tick's world onto the previous one, and the fits check
+            // would then report "no data" forever.
+            var snapshot = new SenseSnapshotWriter.Snapshot { Tick = 5 };
+            snapshot.Records.Add(new SenseSnapshotWriter.EntityRecord { NetId = 1 });
+            snapshot.Damage.Add(new SenseSnapshotWriter.DamageEvent { Attacker = 1, Victim = 2 });
+            snapshot.BotInfo.Add(new SenseSnapshotWriter.BotInfoEvent { NetId = 3 });
+
+            snapshot.Clear();
+
+            Assert.Empty(snapshot.Records);
+            Assert.Empty(snapshot.Damage);
+            Assert.Empty(snapshot.BotInfo);
+            // The header fields are the caller's, not the snapshot's.
+            Assert.Equal(5, snapshot.Tick);
+            int written = SenseSnapshotWriter.Write(snapshot, new byte[SenseSnapshotWriter.HeaderSize]);
+            Assert.Equal(SenseSnapshotWriter.HeaderSize, written);
+            Assert.Equal(0u, ReadU32(new byte[SenseSnapshotWriter.HeaderSize], 4));
         }
 
         [Fact]
