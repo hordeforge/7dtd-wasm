@@ -140,6 +140,33 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void ForgetSourceGivesTheNextGenerationAFullBudget()
+        {
+            // A module reloaded inside the second the old one saturated its
+            // cap must not start throttled, and its drop total must not
+            // outlive it in "wasm status".
+            var limiter = new GuestRateLimiter(1, () => 0);
+            Assert.True(limiter.TryWrite("mod", out _));
+            Assert.False(limiter.TryWrite("mod", out long dropped));
+            Assert.Equal(1, dropped);
+            limiter.ForgetSource("mod");
+            Assert.True(limiter.TryWrite("mod", out dropped));
+            Assert.Equal(0, dropped);
+            Assert.Equal(string.Empty, limiter.DescribeDropped("lines"));
+        }
+
+        [Fact]
+        public void ForgetSourceLeavesOtherSourcesAlone()
+        {
+            var limiter = new GuestRateLimiter(1, () => 0);
+            Assert.True(limiter.TryWrite("stays", out _));
+            Assert.False(limiter.TryWrite("stays", out _));
+            limiter.ForgetSource("other");
+            Assert.False(limiter.TryWrite("stays", out _));
+            Assert.Equal("lines dropped: stays=2", limiter.DescribeDropped("lines"));
+        }
+
+        [Fact]
         public void WindowResetsAfterOneSecond()
         {
             int nowMs = 1000;

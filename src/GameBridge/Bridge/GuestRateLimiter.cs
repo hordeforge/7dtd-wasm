@@ -220,6 +220,19 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
+        /// Drops the window for one source, so a module that is unloaded
+        /// leaves no window behind and a module loaded again under the same
+        /// id starts its first second with a full budget instead of
+        /// resuming the previous generation's window and drop count. The
+        /// shared tags ("chat", "world_time") are not module ids and are
+        /// never passed here.
+        /// </summary>
+        public void ForgetSource(string source)
+        {
+            _windows.Remove(source);
+        }
+
+        /// <summary>
         /// Drops windows for sources that have gone quiet, so the table
         /// tracks live sources rather than every id ever seen. The caller
         /// owns the threshold and the cadence. Unchecked int subtraction

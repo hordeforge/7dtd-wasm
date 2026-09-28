@@ -37,12 +37,21 @@ namespace HordeForge.GameBridge.Bridge
         // Clock behind the probe throttle; see ProbeIntervalMs.
         private readonly Func<int> _clockMs;
         private readonly SettingsTable _table = new SettingsTable();
+        // Identity of the shared file the table currently holds: its last
+        // write time and its length. Both, because mtime alone is not a
+        // version: a file replaced by a restore or a copy that carries the
+        // original timestamp keeps the old mtime forever, and the change
+        // would never reach a guest. A length that moved alongside an
+        // unchanged mtime is a rewrite the mtime did not report.
         private DateTime _sharedMtime = DateTime.MinValue;
-        // mtime of the last reload attempt that failed and was logged, so a
-        // broken wasm.toml is reported once per change instead of on every
-        // get_setting miss.
-        private DateTime _loggedFailureMtime = DateTime.MinValue;
-        private bool _loggedFailureValid;
+        private long _sharedLength = -1;
+        // Identity of the file whose last reload failed. The previous
+        // settings keep serving, but the file is not read and parsed again
+        // until it changes: without this a broken wasm.toml is re-parsed
+        // on every probe, forever, from the get_setting path.
+        private DateTime _failedMtime = DateTime.MinValue;
+        private long _failedLength = -1;
+        private bool _failedValid;
 
         // Minimum interval between shared-file probes. A guest can loop on
         // get_setting misses within its fuel budget; without the throttle
@@ -104,6 +113,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             _lastProbeMs = nowMs;
             DateTime attemptedMtime = DateTime.MinValue;
+            long attemptedLength = -1;
             bool attempted = false;
             try
             {
@@ -111,12 +121,22 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     _table.ClearShared();
                     _sharedMtime = DateTime.MinValue;
-                    _loggedFailureValid = false;
+                    _sharedLength = -1;
+                    _failedValid = false;
                     return;
                 }
-                attemptedMtime = File.GetLastWriteTimeUtc(_sharedPath);
+                var info = new FileInfo(_sharedPath);
+                attemptedMtime = info.LastWriteTimeUtc;
+                attemptedLength = info.Length;
                 attempted = true;
-                if (attemptedMtime == _sharedMtime)
+                if (attemptedMtime == _sharedMtime && attemptedLength == _sharedLength)
+                {
+                    return;
+                }
+                // Already read this exact file and it did not parse. Serving
+                // the previous settings again is the documented behavior; a
+                // fixed save moves the identity and is retried.
+                if (_failedValid && attemptedMtime == _failedMtime && attemptedLength == _failedLength)
                 {
                     return;
                 }
@@ -124,23 +144,30 @@ namespace HordeForge.GameBridge.Bridge
                 ModManifest shared = ModManifest.ParseToml(text, "shared");
                 _table.UpdateShared(shared.Settings);
                 _sharedMtime = attemptedMtime;
-                _loggedFailureValid = false;
+                _sharedLength = attemptedLength;
+                _failedValid = false;
             }
             catch (Exception ex)
             {
                 // Keep the previous shared settings on any read error, but
                 // say so once per file change: silently serving stale values
                 // would hide operator mistakes from the log entirely. The
-                // mtime stays unapplied, so a later fixed save re-reads.
-                if (!attempted || !_loggedFailureValid || attemptedMtime != _loggedFailureMtime)
+                // failed identity is remembered so an unchanged broken file
+                // is not re-read and re-parsed on every probe, while a
+                // later fixed save still re-reads.
+                if (!attempted || !_failedValid || attemptedMtime != _failedMtime || attemptedLength != _failedLength)
                 {
                     // Parser diagnostics quote raw file text; clean them like
                     // guest log output so control characters cannot forge log
                     // lines.
                     Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + TextSanitizer.Clean(ex.Message) +
                                 "; serving previous shared settings");
-                    _loggedFailureMtime = attemptedMtime;
-                    _loggedFailureValid = true;
+                }
+                if (attempted)
+                {
+                    _failedMtime = attemptedMtime;
+                    _failedLength = attemptedLength;
+                    _failedValid = true;
                 }
             }
         }

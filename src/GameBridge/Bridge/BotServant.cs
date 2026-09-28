@@ -444,8 +444,21 @@ namespace HordeForge.GameBridge.Bridge
                     if (e is EntityAlive alive && !alive.IsDead())
                     {
                         candidates.Add(e.entityId);
+                        // Membership for the history and glide prunes is
+                        // "alive in the world", so it is collected here,
+                        // before the record window trims the candidate list.
+                        // Collected after the trim it would name only the
+                        // reported entities, and both prunes would then
+                        // discard state for every live entity the snapshot
+                        // does not carry.
+                        seen.Add(e.entityId);
                     }
                 }
+                // Ahead of the record pass, not after it: a glide flag left
+                // behind by a player who left would otherwise clamp the
+                // descent of whatever entity the game has since given that
+                // net id for the length of one scan.
+                PruneGlideFlags();
                 SenseRecordPicker.SelectLowest(candidates, MaxSenseRecords);
                 for (int i = 0; i < candidates.Count; i++)
                 {
@@ -477,11 +490,9 @@ namespace HordeForge.GameBridge.Bridge
                     record.Wearing = WearsGlider(alive);
                     record.TargetId = 0;
                     snapshot.Records.Add(record);
-                    seen.Add(e.entityId);
                     ClampGlideDescent(alive, record.Vy, e.position, prevPos, elapsedTicks);
                 }
                 PrunePositionHistory(seen);
-                PruneGlideFlags();
             }
             catch (Exception ex)
             {

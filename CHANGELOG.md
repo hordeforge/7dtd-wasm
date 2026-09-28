@@ -185,6 +185,27 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 - `WasmModHost.ShutdownFailures` handed out the live list behind an
   `IReadOnlyList`, one downcast away from a caller rewriting host state.
   It returns a read-only copy, like `ModIds` and the dispatch results.
+- The sense position history was pruned against the ids the snapshot
+  reported, not against the live entity set, so any entity outside the
+  41-record window lost its history on every scan and its `vy` and glide
+  descent clamp read as a first sighting. The prune now runs against the
+  alive set collected before the window is trimmed, and the glide-flag
+  prune runs ahead of the record pass rather than after it, so a flag
+  left by a player who left cannot clamp a reused net id for a scan.
+- The shared `wasm.toml` settings cache keyed freshness on the last write
+  time alone, so a rewrite that carried the original timestamp (a
+  restore, a copy that preserves times) was never re-read and the old
+  settings served for the life of the server. Freshness is now the write
+  time and the file length. A `wasm.toml` that fails to parse is also no
+  longer re-read and re-parsed on every 500 ms probe: it is reported once
+  and the previous settings keep serving until the file changes.
+- A per-module rate cap window outlived its module, so a module reloaded
+  inside the second the old one saturated a cap resumed throttled and
+  with the previous generation's drop count in `wasm status`. Unload and
+  reload now drop the module's log, SimCommand, and sense windows.
+- The per-mod `config.toml` fallback cached a read failure as a permanent
+  "this mod has no config". Only a definitive absence is cached; a file
+  that is locked, oversize, or mid-write is retried on the next call.
 - `make check` failed on a clean tree. `tools/api-surface.txt` predated
   `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
   `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three

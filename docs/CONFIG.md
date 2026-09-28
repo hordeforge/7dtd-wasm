@@ -60,7 +60,13 @@ The per-mod `config.toml` is the zdtd self-contained-config convention
 guest owns its format, and a missing file means the guest keeps its
 built-in defaults. The unmodified zdtd parachute mod reads its deploy
 tuning (`deploy_vy_threshold`, `deploy_delay_ticks`, ...) from this file
-at `on_enable`.
+at `on_enable`. The file's contents are cached per mod id from load, so
+the host reads it once rather than per `zdtd.config` call, and
+`wasm reload <id>` is what picks up an edited file. A module loaded
+outside the normal scan resolves the same file on its first config
+import; only a file that is present but unreadable (locked, oversize,
+mid-write) is retried, so a transient IO error is not remembered as
+"this mod has no config" for the life of the server.
 
 ## wasm-mod.toml (per mod)
 
@@ -135,6 +141,14 @@ order, per calling mod:
 1. the mod's own `[settings]` from its `wasm-mod.toml`
 2. shared `[settings]` from `wasm.toml` (re-read when the file changes)
 3. not found (-1), so the guest can fall back to its code default
+
+The shared file is polled on the 500 ms probe interval a guest's
+`get_setting` traffic is throttled to, and a change is recognized by the
+file's last write time *and* its length, so a rewrite that carries the
+old timestamp (a restore, a copy that preserves times) still reaches
+guests. A `wasm.toml` that does not parse is reported once and the
+previous shared settings keep serving; it is not re-read and re-parsed
+on every probe, and a later fixed save is picked up.
 
 The host tracks the calling mod per call, so two mods can use the same
 setting key with different values.

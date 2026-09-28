@@ -21,6 +21,10 @@ namespace HordeForge.GameBridge.Bridge
     {
         private readonly WasmSettingsProvider _settings;
         private readonly BotServant _servant;
+        // Prefix the host composes its per-module log source tag from, kept
+        // here so a module's log window can be dropped on the same unload
+        // that drops its config; see ForgetModule.
+        private readonly string _logSourcePrefix;
         // Per-mod raw config (config.toml) cache, registered at module load
         // and invalidated on reload; a guest looping on the config import
         // must not stat the disk at call rate.
@@ -36,12 +40,15 @@ namespace HordeForge.GameBridge.Bridge
         /// clock every cap below measures its one-second window against
         /// (BridgeHost.ClockMs is the process default), so a driver that
         /// steps its own time caps and releases output on that time instead
-        /// of on wall time.
+        /// of on wall time. <paramref name="logSourcePrefix"/> is the
+        /// host's own prefix, the same value WasmModHost prepends to a mod
+        /// id to form a log source tag.
         /// </summary>
-        public GameHostApi(WasmSettingsProvider settings, BotServant servant, Func<int>? clockMs = null)
+        public GameHostApi(WasmSettingsProvider settings, BotServant servant, string logSourcePrefix, Func<int>? clockMs = null)
         {
             _settings = settings;
             _servant = servant;
+            _logSourcePrefix = logSourcePrefix;
             Func<int> clock = clockMs ?? (() => Environment.TickCount);
             // Each limiter carries its own cap from construction; the
             // per-purpose constants cannot drift from their call sites.
@@ -187,6 +194,23 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
+        /// Drops every per-module cap window belonging to one module id:
+        /// its log, SimCommand, and sense windows, and its dropped totals
+        /// in "wasm status". Called on unload and before reload, so a fresh
+        /// load generation starts with a full budget instead of inheriting
+        /// the previous generation's window (a module reloaded inside the
+        /// same second the old one saturated its cap would be throttled
+        /// before it emitted a line). The shared tags ("chat",
+        /// "world_time") are not module ids and are left alone.
+        /// </summary>
+        public void ForgetModule(string modId)
+        {
+            LogLimiter.ForgetSource(_logSourcePrefix + "/" + modId);
+            CommandLimiter.ForgetSource(modId);
+            SenseLimiter.ForgetSource(modId);
+        }
+
+        /// <summary>
         /// Serves the calling mod's config.toml verbatim (the zdtd config
         /// import). The host never parses it: each guest owns its format.
         /// Returns false when the mod has no config file, so the guest keeps
@@ -222,17 +246,18 @@ namespace HordeForge.GameBridge.Bridge
                 if (ManifestFiles.TryRead(path, out string raw, out string failureReason))
                 {
                     content = raw;
+                    _rawConfigs[modId] = content;
+                    return true;
                 }
-                else
-                {
-                    // The file exists but could not be served. The guest reads
-                    // 0 ("no config") either way, so dropping the reason here
-                    // would leave the mod running on defaults with nothing in
-                    // the log to explain why.
-                    ReportConfigReadFailure(modId, failureReason);
-                }
-                _rawConfigs[modId] = content;
-                return content.Length > 0;
+                // The file exists but could not be served. The guest reads
+                // 0 ("no config") either way, so dropping the reason here
+                // would leave the mod running on defaults with nothing in
+                // the log to explain why. Nothing is cached on this path:
+                // a file that is locked, oversize, or mid-write is retried
+                // on the next call instead of being remembered as absent
+                // for the life of the server.
+                ReportConfigReadFailure(modId, failureReason);
+                return false;
             }
         }
 

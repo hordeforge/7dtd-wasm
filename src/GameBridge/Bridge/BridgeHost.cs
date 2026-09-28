@@ -191,7 +191,7 @@ namespace HordeForge.GameBridge.Bridge
                     return;
                 }
                 _servant = new BotServant(() => _tick, () => ClockMs());
-                _gameApi = new GameHostApi(_settings, _servant, () => ClockMs());
+                _gameApi = new GameHostApi(_settings, _servant, config.LogSourcePrefix, () => ClockMs());
                 try
                 {
                     _host = new WasmModHost(_gameApi, config);
@@ -451,15 +451,17 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Drops every piece of per-module bridge state for an id that is no
-        /// longer loaded: its settings, its cached raw config, and the bots
-        /// it owned. Reload and unload both go through here, so a module can
-        /// never be left with settings but without config, or keep a share of
-        /// the bot budget it no longer owns.
+        /// longer loaded: its settings, its cached raw config, its rate cap
+        /// windows, and the bots it owned. Reload and unload both go through
+        /// here, so a module can never be left with settings but without
+        /// config, can never resume a previous generation's throttle, and
+        /// cannot keep a share of the bot budget it no longer owns.
         /// </summary>
         private static void ReleaseModuleState(string id)
         {
             _settings?.RemoveMod(id);
             _gameApi?.UnregisterConfig(id);
+            _gameApi?.ForgetModule(id);
             _servant?.ReleaseModule(id);
         }
 
@@ -704,9 +706,9 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " + Describe(shutdown));
                 }
-                // The outgoing instance's bots leave the world with it, so
-                // the reloaded module starts from an empty share of the bot
-                // budget and cannot inherit the old one's bodies.
+                // The outgoing instance's state leaves with it, so the reloaded
+                // module starts from an empty share of the bot budget and the
+                // cap budget, and cannot inherit the old one's bodies.
                 ReleaseModuleState(id);
                 if (!TryLoadFromDisk(host, id))
                 {

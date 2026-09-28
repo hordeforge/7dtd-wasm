@@ -22,15 +22,17 @@
     <None Include="../fixtures/*.toml" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- GuestRateLimiter, SenseRecordPicker, and WorldTime are bridge code
-       with no game references; link the files so the caps, the sense record
-       pick, and the world-clock conversion are covered on net8. The net48
-       bridge itself builds against the dedicated install (make bridge), not
-       here. -->
+  <!-- GuestRateLimiter, SenseRecordPicker, WorldTime, and
+       WasmSettingsProvider are bridge code with no game references; link the
+       files so the caps, the sense record pick, the world-clock conversion,
+       and the shared settings file cache are covered on net8. GameLogShim
+       stands in for the game's global Log. The net48 bridge itself builds
+       against the dedicated install (make bridge), not here. -->
   <ItemGroup>
     <Compile Include="../../src/GameBridge/Bridge/GuestRateLimiter.cs" Link="GuestRateLimiter.cs" />
     <Compile Include="../../src/GameBridge/Bridge/SenseRecordPicker.cs" Link="SenseRecordPicker.cs" />
     <Compile Include="../../src/GameBridge/Bridge/WorldTime.cs" Link="WorldTime.cs" />
+    <Compile Include="../../src/GameBridge/Bridge/WasmSettingsProvider.cs" Link="WasmSettingsProvider.cs" />
   </ItemGroup>
 
 </Project>
