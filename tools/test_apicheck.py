@@ -3,6 +3,7 @@
 
 import contextlib
 import io
+import os
 import pathlib
 import sys
 import tempfile
@@ -196,6 +197,31 @@ class GateTest(unittest.TestCase):
     def test_missing_library_is_a_usage_error(self):
         root = pathlib.Path(tempfile.mkdtemp())
         self.assertEqual(run(root)[0], 2)
+
+    def test_non_utf8_source_names_the_file(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        path = write_library(root)
+        path.write_bytes(b"\xff\xfe not utf-8\n")
+        code, stderr = run(root)
+        self.assertEqual(code, 1)
+        self.assertIn("Sample.cs is not valid UTF-8", stderr)
+        self.assertNotIn("Traceback", stderr)
+
+    def test_unreadable_baseline_is_a_finding_not_a_traceback(self):
+        if os.geteuid() == 0:
+            self.skipTest("root ignores the read permission bit")
+        root = pathlib.Path(tempfile.mkdtemp())
+        write_library(root)
+        self.assertEqual(run(root, "--update")[0], 0)
+        baseline = root / apicheck.BASELINE
+        baseline.chmod(0o000)
+        try:
+            code, stderr = run(root)
+        finally:
+            baseline.chmod(0o644)
+        self.assertEqual(code, 1)
+        self.assertIn("cannot read or write", stderr)
+        self.assertNotIn("Traceback", stderr)
 
 
 if __name__ == "__main__":

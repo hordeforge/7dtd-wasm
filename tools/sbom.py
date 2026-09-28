@@ -160,19 +160,32 @@ def cargo_members(samples_dir: pathlib.Path) -> set[str]:
 
 
 def cargo_components(cargo_lock: pathlib.Path) -> list[dict]:
-    """Components from Cargo.lock, excluding first-party workspace crates."""
+    """Components from Cargo.lock, excluding first-party workspace crates.
+
+    A lock entry with no name or version cannot be inventoried, and reading
+    the missing key raises a KeyError from inside this tool, which names a
+    line here and not the entry the operator has to fix. Both are checked and
+    the entry is quoted instead.
+    """
     data = load_toml(cargo_lock)
     members = cargo_members(cargo_lock.parent)
     comps = []
-    for pkg in data.get("package", []):
-        if pkg["name"] in members:
+    for index, pkg in enumerate(data.get("package", [])):
+        name = pkg.get("name")
+        version = pkg.get("version")
+        if not name or not version:
+            raise SystemExit(
+                f"sbom: {cargo_lock}: package entry {index} names no "
+                f"name/version ({pkg!r}); regenerate the lock file"
+            )
+        if name in members:
             continue
         comps.append(
             {
                 "type": "library",
-                "name": pkg["name"],
-                "version": pkg["version"],
-                "purl": f"pkg:cargo/{pkg['name']}@{pkg['version']}",
+                "name": name,
+                "version": version,
+                "purl": f"pkg:cargo/{name}@{version}",
             }
         )
     return comps

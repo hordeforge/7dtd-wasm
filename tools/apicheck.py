@@ -131,6 +131,17 @@ def normalize(text: str) -> str:
     return strip_constructor_initializer(re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text)))
 
 
+class SurfaceError(Exception):
+    """A source file could not be read, so the surface is not trustworthy.
+
+    Reading it with errors="replace" would quietly mangle the source text the
+    signatures are read from, and skipping the file would drop its public
+    members from the diff. Either way the gate reports a difference that has
+    nothing to do with the change under review, so an unreadable file is named
+    and the run stops.
+    """
+
+
 def source_files(root: pathlib.Path) -> list[pathlib.Path]:
     library = root / LIBRARY
     return sorted(
@@ -138,6 +149,18 @@ def source_files(root: pathlib.Path) -> list[pathlib.Path]:
         for path in library.rglob("*.cs")
         if not {"bin", "obj"} & set(path.relative_to(library).parts)
     )
+
+
+def read_source(path: pathlib.Path) -> str:
+    """One source file's text, named on any read or decode failure."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise SurfaceError(f"cannot read {path}: {error}") from error
+    except UnicodeDecodeError as error:
+        raise SurfaceError(
+            f"{path} is not valid UTF-8: {error}; the compiler would reject it too"
+        ) from error
 
 
 def surface(root: pathlib.Path) -> list[str]:
@@ -151,7 +174,7 @@ def surface(root: pathlib.Path) -> list[str]:
     entries: set[str] = set()
     for path in source_files(root):
         relative = path.relative_to(root).as_posix()
-        text = strip_noise(path.read_text(encoding="utf-8"))
+        text = strip_noise(read_source(path))
         depth = 0
         # A type name is remembered until the brace that opens its body, which
         # is the next line under this repository's brace style.
@@ -265,21 +288,34 @@ def main(argv: list[str] | None = None) -> int:
         print(f"apicheck: {library} does not exist", file=sys.stderr)
         return 2
 
-    current = surface(args.root)
-    if args.update:
-        baseline.parent.mkdir(parents=True, exist_ok=True)
-        baseline.write_text("\n".join(current) + "\n", encoding="utf-8")
-        print(f"apicheck: wrote {len(current)} entries to {BASELINE}", file=sys.stderr)
-        return 0
+    try:
+        current = surface(args.root)
+        if args.update:
+            # Written whole or not at all: a partial write would replace a
+            # good baseline with a truncated one, and the next run would read
+            # the removals the truncation invented as real API breaks.
+            written = "\n".join(current) + "\n"
+            baseline.parent.mkdir(parents=True, exist_ok=True)
+            baseline.write_text(written, encoding="utf-8")
+            print(f"apicheck: wrote {len(current)} entries to {BASELINE}", file=sys.stderr)
+            return 0
 
-    if not baseline.is_file():
-        print(
-            f"apicheck: {BASELINE} is missing; run apicheck.py --update "
-            "and review the diff it writes",
-            file=sys.stderr,
-        )
+        if not baseline.is_file():
+            print(
+                f"apicheck: {BASELINE} is missing; run apicheck.py --update "
+                "and review the diff it writes",
+                file=sys.stderr,
+            )
+            return 1
+        expected = baseline.read_text(encoding="utf-8").splitlines()
+    except SurfaceError as error:
+        print(f"apicheck: {error}", file=sys.stderr)
         return 1
-    expected = baseline.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        # A baseline that exists but cannot be read or rewritten is a failed
+        # check, not a usage error: without it there is nothing to compare.
+        print(f"apicheck: cannot read or write {BASELINE}: {error}", file=sys.stderr)
+        return 1
     removed, added = diff(expected, current)
     if not removed and not added:
         print(f"apicheck: {len(current)} public entries match {BASELINE}", file=sys.stderr)

@@ -43,11 +43,27 @@ NOTICES = pathlib.Path("THIRD-PARTY-NOTICES.md")
 SHIPPED_FRAMEWORKS = ("netstandard2.0", "net8.0")
 
 
+class GateError(Exception):
+    """An input the gate reads could not be used at all.
+
+    A malformed manifest or an unreadable LICENSE is a finding, not a crash:
+    the traceback names a line inside this tool and leaves the operator
+    guessing which file is at fault, where the named message says both what
+    to fix and that the package metadata is unverified.
+    """
+
+
 def project(root: pathlib.Path) -> ET.Element:
     """Parse the library manifest and return its root element."""
     # The manifest is a file in this repository, not a guest-supplied
     # document, so it needs no hardened parser.
-    return ET.parse(root / CSPROJ).getroot()  # noqa: S314
+    path = root / CSPROJ
+    try:
+        return ET.parse(path).getroot()  # noqa: S314
+    except ET.ParseError as error:
+        raise GateError(f"{CSPROJ} is not well-formed XML: {error}") from error
+    except OSError as error:
+        raise GateError(f"cannot read {CSPROJ}: {error}") from error
 
 
 def declared_property(root: ET.Element, name: str) -> str | None:
@@ -69,8 +85,22 @@ def packed_files(root: ET.Element) -> set[str]:
 
 
 def license_id(root: pathlib.Path) -> str:
-    """SPDX id of the repository license, read from the LICENSE header."""
-    first = (root / LICENSE).read_text(encoding="utf-8").splitlines()[0].strip()
+    """SPDX id of the repository license, read from the LICENSE header.
+
+    An empty or blank LICENSE has no header line to read. Indexing the first
+    line without checking turns that into an IndexError from inside the gate;
+    naming the file instead reports the finding the gate exists to raise.
+    """
+    path = root / LICENSE
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise GateError(f"cannot read {LICENSE}: {error}") from error
+    except UnicodeDecodeError as error:
+        raise GateError(f"{LICENSE} is not valid UTF-8: {error}") from error
+    first = next((line.strip() for line in lines if line.strip()), "")
+    if not first:
+        raise GateError(f"{LICENSE} is empty, so the license the package declares cannot be confirmed")
     return first.removesuffix(" License")
 
 
@@ -154,10 +184,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         findings = check(args.root)
-    except OSError as error:
-        # A readable repository whose manifest is gone is a failed check, not
-        # a usage error: the path it names is the finding.
-        print(f"packcheck: cannot read the manifest: {error}", file=sys.stderr)
+    except (GateError, OSError) as error:
+        # A readable repository whose manifest or license cannot be used is a
+        # failed check, not a usage error: the path it names is the finding.
+        print(f"packcheck: {error}", file=sys.stderr)
         return 1
 
     for finding in findings:
