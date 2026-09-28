@@ -318,10 +318,27 @@ namespace HordeForge.WasmHost.Registry
         /// accepting one would hand the guest a string that cannot
         /// round-trip the ABI; raw content and <c>\uXXXX</c> escapes are
         /// held to the same rule.
+        ///
+        /// TOML admits no raw control character in a quoted string other
+        /// than the tab (U+0000..U+0008, U+000A..U+001F, U+007F must be
+        /// escaped), and this parser has no multi-line string form, so a
+        /// raw one is always a stray byte rather than a line break that
+        /// belongs to the value. The C1 range is rejected with them: the
+        /// host already treats it as a control range (TextSanitizer,
+        /// ModId), and a NEL or a CSI is a line break or an escape
+        /// sequence to whatever renders the text. Either would travel the
+        /// guest string ABI inside a setting value, and from there into a
+        /// log line or a chat message, forging the split the log
+        /// sanitizer exists to prevent.
         /// </summary>
         private static int AppendLiteral(StringBuilder sb, string body, int index, int lineNumber)
         {
             char c = body[index];
+            if (c != '\t' && (c < ' ' || (c >= '\x7f' && c <= '\x9f')))
+            {
+                throw new FormatException("line " + lineNumber + ": raw control character U+" +
+                    ((int)c).ToString("X4", CultureInfo.InvariantCulture) + " in a string (only the tab may appear unescaped)");
+            }
             if (char.IsHighSurrogate(c))
             {
                 if (index + 1 >= body.Length || !char.IsLowSurrogate(body[index + 1]))

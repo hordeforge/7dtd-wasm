@@ -89,5 +89,30 @@ namespace HordeForge.WasmHost.Tests
             Assert.Throws<WasmManifestException>(
                 () => ModManifest.ParseToml("[settings]\n\"boss_name = \"maci\"", "test"));
         }
+
+        [Theory]
+        [InlineData("\"\r\"")]         // a stray CR rides through
+        [InlineData("\"a\rb\"")]       // CR in the middle of the value
+        [InlineData("\"\u0000\"")]     // NUL
+        [InlineData("\"a\u001bb\"")]   // ESC, which a terminal decodes
+        [InlineData("\"\u0085\"")]     // NEL, a line break to some renderers
+        [InlineData("\"\u007f\"")]     // DEL
+        [InlineData("'a\rb'")]         // raw CR in a literal string
+        public void RawControlCharactersInStringsAreRejected(string value)
+        {
+            // TOML allows no raw control character in a quoted string other
+            // than the tab. One that got through would reach the guest
+            // inside a setting value and, from there, a log line or a chat
+            // message the host quotes it into.
+            Assert.Throws<WasmManifestException>(
+                () => ModManifest.ParseToml("[settings]\nboss_name = " + value, "test"));
+        }
+
+        [Fact]
+        public void RawTabAndEscapedControlsSurvive()
+        {
+            ModManifest manifest = ModManifest.ParseToml("[settings]\nboss_name = \"a\tb\\nc\\rd\"", "test");
+            Assert.Equal("a\tb\nc\rd", manifest.Settings["boss_name"]);
+        }
     }
 }

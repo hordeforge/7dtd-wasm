@@ -184,6 +184,12 @@ operator, embedder, and guest author.
 
 ### Fixed
 
+- A quoted string in `wasm.toml` or `wasm-mod.toml` accepted raw control
+  characters, so a stray CR, NUL, ESC, NEL, or DEL rode the guest string ABI
+  inside a setting value and, from there, into a log line or a chat message
+  the host quotes the value into. TOML allows no raw control character in a
+  string but the tab, so the parser rejects the rest, C1 included, and names
+  the code point.
 - `BotServant.ReleaseModule` rewrote the bot, yaw, floor, and ownership
   tables without taking the servant gate, while every other public entry
   point on the servant takes it. It is reachable from a module unload and

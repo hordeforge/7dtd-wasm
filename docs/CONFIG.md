@@ -148,7 +148,9 @@ cannot be read aborts the bridge start as described above.
 
 Strings must be well-formed Unicode: a lone surrogate, raw or written as a
 `\uXXXX` escape, is rejected, because it has no UTF-8 form and could not
-round-trip the guest string ABI.
+round-trip the guest string ABI. A raw control character in a quoted string
+is rejected for the same reason; the tab is the only one TOML allows
+unescaped, so write the others as `\n`, `\r`, `\t`, or `\uXXXX`.
 
 ## Settings resolution
 
