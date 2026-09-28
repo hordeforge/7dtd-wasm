@@ -60,7 +60,11 @@ namespace HordeForge.GameBridge.Commands
 
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
         {
-            string sub = _params.Count > 0 ? _params[0].ToLowerInvariant() : "status";
+            // Cleaned once, here: the subcommand is operator-typed text that
+            // reaches the console and the telnet mirror, and both reply paths
+            // that echo it (the argument-count rejection and the unknown-
+            // subcommand report) must not carry a raw control character.
+            string sub = TextSanitizer.Clean(_params.Count > 0 ? _params[0].ToLowerInvariant() : "status");
             // An argument past the subcommand's own is dropped by every
             // case below, so "wasm reload trap 3" and "wasm list now" would
             // both read as a call that did what was asked. Only reload and

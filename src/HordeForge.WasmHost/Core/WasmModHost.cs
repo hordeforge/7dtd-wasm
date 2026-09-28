@@ -743,7 +743,7 @@ namespace HordeForge.WasmHost.Core
                     // module runs on host defaults for the life of the server
                     // with an empty log. The adjacent catch reports the same
                     // class of host-side failure the same way.
-                    _api.Log(LogSource(), AbiConstants.LogError, "config failed: guest has no exported memory named 'memory'");
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: guest has no exported memory named 'memory'");
                     return 0;
                 }
                 try
@@ -776,7 +776,7 @@ namespace HordeForge.WasmHost.Core
                     // Same reason the catch below reports: 0 reads as "empty
                     // world" to the guest, so a miscompiled module would sense
                     // nothing forever with nothing to explain it.
-                    _api.Log(LogSource(), AbiConstants.LogError, "sense failed: guest has no exported memory named 'memory'");
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: guest has no exported memory named 'memory'");
                     return 0;
                 }
                 try

@@ -894,15 +894,26 @@ namespace HordeForge.GameBridge.Bridge
                 _bots.Add(e.entityId);
                 // The world owns the id now; tracking it makes it the
                 // calling module's bot, and no other module may drive it.
-                _botOwners.Add(modId, e.entityId);
+                if (!_botOwners.Add(modId, e.entityId))
+                {
+                    // The world reissued an id the registry already tracks, so
+                    // the count of owned bots cannot advance and the round
+                    // would keep spawning until the cap. Untrack the entry
+                    // this spawn just added, or the id is listed twice and
+                    // pruned twice; the next pass sees the same condition and
+                    // stops there again.
+                    _bots.Remove(e.entityId);
+                    WarnCapped("bot/spawn", "world reissued tracked entity id " + e.entityId + "; bot not tracked");
+                    return false;
+                }
                 // Invariant, fixed-point: the default float format follows the
                 // server's locale (a comma decimal separator there makes the
                 // three coordinates unreadable) and its precision grows with
                 // the magnitude, so the same spawn prints different bytes on
                 // two machines and a replayed run cannot be diffed against
                 // the one that diverged.
-                Log.Out("[WasmHost] bot spawned entity " + e.entityId + " for " + modId +
-                        " at " + FormatCoord(pos.x) + "," + FormatCoord(pos.y) + "," + FormatCoord(pos.z));
+                WriteCapped("bot/spawn", "bot spawned entity " + e.entityId + " for " + modId +
+                            " at " + FormatCoord(pos.x) + "," + FormatCoord(pos.y) + "," + FormatCoord(pos.z));
                 return true;
             }
             catch (Exception ex)
@@ -1032,11 +1043,11 @@ namespace HordeForge.GameBridge.Bridge
             }
             if (kept > 0)
             {
-                Log.Warning("[WasmHost] released " + (released.Count - kept) + " of " + released.Count +
+                WriteCapped("bot/release", "released " + (released.Count - kept) + " of " + released.Count +
                             " bot(s) owned by " + modId + "; " + kept + " could not be despawned");
                 return;
             }
-            Log.Out("[WasmHost] released " + released.Count + " bot(s) owned by " + modId);
+            WriteCapped("bot/release", "released " + released.Count + " bot(s) owned by " + modId);
         }
 
         // Every bot verb that parses arguments takes the command text
@@ -1130,7 +1141,10 @@ namespace HordeForge.GameBridge.Bridge
                         // nobody can prune, move, or despawn again.
                         _bots.Add(entityId);
                         _botOwners.Add(modId, entityId);
-                        Log.Warning("[WasmHost] bot despawn of " + entityId + " failed: " + ex.Message +
+                        // Capped like the sibling release path: a brain
+                        // repeating the verb against a world that refuses to
+                        // despawn would otherwise write one line per command.
+                        WarnCapped("bot/despawn", "bot despawn of " + entityId + " failed: " + ex.Message +
                                     "; bot stays in the world");
                         return;
                     }

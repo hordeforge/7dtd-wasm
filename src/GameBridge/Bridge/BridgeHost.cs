@@ -127,9 +127,6 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>Slow-dispatch warnings allowed per second.</summary>
         private const int DispatchSlowLogsPerSecond = 1;
 
-        /// <summary>How often a suppressed line count is logged per source.</summary>
-        private const int SuppressedLogEvery = 100;
-
         // Wall-clock cost of the per-tick dispatch: guest counters say how
         // often a mod failed, never how much of the game frame it ate.
         private static readonly TickTelemetry _telemetry = new TickTelemetry();
@@ -287,7 +284,7 @@ namespace HordeForge.GameBridge.Bridge
                         Log.Warning("[WasmHost] tick " + _tick + " mod " + TextSanitizer.Clean(modName) + ": " +
                                    Describe(result));
                     }
-                    else if (dropped % SuppressedLogEvery == 1)
+                    else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
                     {
                         // A mod failing every tick would otherwise be silent
                         // after the cap, leaving only a per-tick count in
