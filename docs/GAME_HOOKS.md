@@ -32,17 +32,24 @@ into a one-minute window by `HordeForge.WasmHost.Core.TickTelemetry`:
 | Signal | Level | When |
 |---|---|---|
 | heartbeat | `Out` | every 1200 ticks (60 s at 20 TPS): tick number, module count, last/avg/max dispatch cost, failure and slow-tick totals |
-| slow dispatch | `Warning` | a dispatch over 25 ms, half a 20 TPS frame; capped at one per second, `tick` failure logs are capped separately |
-| tick failure | `Warning` | a guest that trapped, exhausted fuel, or errored on `on_tick`, naming the tick and the mod |
+| slow dispatch | `Warning` | a dispatch over 25 ms, half a 20 TPS frame, naming the guest whose last call cost the most; capped at one per second, `tick` failure logs are capped separately |
+| tick failure | `Warning` | a guest that trapped, exhausted fuel, or errored on `on_tick`, naming the tick, the mod, and the fuel the call consumed |
+| join failure | `Warning` | a guest whose `on_player_join` trapped, exhausted fuel, or errored |
 | shutdown summary | `Out` | totals for the whole run when the host stops |
+
+Per-guest cost is measured on every call (`WasmMod.LastCallMs`), so the
+slow-dispatch warning names the guest that spent the frame rather than only
+the total. It is read on the warning path, which is capped at one per
+second, never on the tick rate.
 
 Silence from the bridge is therefore a fault, not the healthy state: a
 missing heartbeat means the tick hook stopped firing. The same summary is
 printed by `wasm status` on demand, alongside the per-module call, trap,
-and fuel counters and the limits in force (fuel per call, memory ceiling,
-module size cap, guest stdio), read back from the running host and logged
-at start. Guests that spam are rate capped; the running drop
-totals surface in `wasm status` and every 100th dropped line is logged.
+fuel-exhausted, error, and total-fuel counters and the limits in force (fuel
+per call, memory ceiling, module size cap, guest stdio), read back from the
+running host and logged at start. Guests that spam are rate capped; the
+running drop totals surface in `wasm status` and every 100th dropped line is
+logged.
 
 ## Verified game API surface (V3.1.0, via tools/targetcheck)
 

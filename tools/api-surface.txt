@@ -131,6 +131,7 @@ src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult? OnPlayerJo
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool Enabled
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasAdminCommandHandler { get; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasPlayerJoinHandler { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public double LastCallMs
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long ErrorCalls
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long FuelExhaustedCalls
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long InitTick { get; }

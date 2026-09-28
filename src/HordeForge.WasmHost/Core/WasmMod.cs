@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using HordeForge.WasmHost.Abi;
 using Wasmtime;
@@ -32,6 +33,9 @@ namespace HordeForge.WasmHost.Core
         private readonly Func<int, int, int, int, int>? _onAdminCommand;
         private bool _disposed;
         private bool _enabled;
+
+        /// <summary>Stopwatch ticks converted to milliseconds.</summary>
+        private static readonly double MillisecondsPerTimestampTick = 1000.0 / Stopwatch.Frequency;
 
         internal WasmMod(string id, Module module, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
@@ -84,6 +88,21 @@ namespace HordeForge.WasmHost.Core
         private long _fuelExhaustedCalls;
         private long _errorCalls;
         private long _totalCalls;
+
+        // Wall-clock cost of the most recent call, as the bit pattern of a
+        // double, so it can be read and written atomically from the calling
+        // thread and the status thread at once. Fuel bounds the guest, but
+        // only the clock says what a call cost the game frame, and the
+        // aggregate dispatch cost reported by the embedder says nothing
+        // about which guest produced it.
+        private long _lastCallMs;
+
+        /// <summary>
+        /// Milliseconds of wall clock the most recent call to this guest took,
+        /// successful or not, 0 before the first call. Read at the moment a
+        /// dispatch runs long, it names the guest that spent the frame.
+        /// </summary>
+        public double LastCallMs => BitConverter.Int64BitsToDouble(Interlocked.Read(ref _lastCallMs));
 
         /// <summary>
         /// Total fuel consumed across all calls so far. Held as a long so it
@@ -231,6 +250,7 @@ namespace HordeForge.WasmHost.Core
         private ModRunResult Run(string callName, Func<int> invoke)
         {
             Interlocked.Increment(ref _totalCalls);
+            long startedAt = Stopwatch.GetTimestamp();
             try
             {
                 // Inside the try: arming the budget touches the store, and a
@@ -238,6 +258,7 @@ namespace HordeForge.WasmHost.Core
                 // escaping Run and skipping the tick for every other module.
                 _store.Fuel = _fuelPerCall;
                 int status = invoke();
+                RecordCallCost(startedAt);
                 ulong consumed = ConsumedFuel();
                 if (status != AbiConstants.StatusOk)
                 {
@@ -254,9 +275,28 @@ namespace HordeForge.WasmHost.Core
             }
             catch (Exception ex)
             {
+                RecordCallCost(startedAt);
                 ulong consumed = ConsumedFuelSafely();
                 return ClassifyFailure(callName, ex, consumed);
             }
+        }
+
+        /// <summary>
+        /// Publishes the cost of the call that just ended, on the failure
+        /// path as well as the success one: a guest that traps or runs out of
+        /// fuel is the one whose cost an operator needs, and the clock is
+        /// already read, so the figure is free. The measurement is a plain
+        /// Stopwatch pair, two reads per guest call, on the same path that
+        /// already arms a fuel budget and re-reads the store.
+        /// </summary>
+        private void RecordCallCost(long startedAt)
+        {
+            double elapsedMs = (Stopwatch.GetTimestamp() - startedAt) * MillisecondsPerTimestampTick;
+            if (elapsedMs < 0.0)
+            {
+                elapsedMs = 0.0;
+            }
+            Interlocked.Exchange(ref _lastCallMs, BitConverter.DoubleToInt64Bits(elapsedMs));
         }
 
         /// <summary>Ok result with no message, for a call that ran clean.</summary>

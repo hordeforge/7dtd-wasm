@@ -669,9 +669,12 @@ namespace HordeForge.GameBridge.Bridge
         /// glider tag (sense v4 wearing_glider, zdtd ADR 0037). Mirrors zdtd's
         /// armor-slot tag scan; the tag name matches the parachute mod's
         /// items.xml patch. Defensive: an equipment read failure reports 0
-        /// rather than killing the snapshot.
+        /// rather than killing the snapshot, and says so through the same
+        /// capped path as every other sense failure, so a game patch that
+        /// breaks the read is a line in the log rather than a brain that
+        /// quietly stops seeing any glider.
         /// </summary>
-        private static byte WearsGlider(EntityAlive alive)
+        private byte WearsGlider(EntityAlive alive)
         {
             if (!(alive is EntityPlayer player))
             {
@@ -701,9 +704,14 @@ namespace HordeForge.GameBridge.Bridge
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Worn-state reads are best effort; never break the snapshot.
+                // Reported rather than dropped: the caller's own catch only
+                // fires when the whole snapshot fails, so a read that fails
+                // on every entity would otherwise report 0 for wearing_glider
+                // on every snapshot with nothing in the log to explain it.
+                WarnCapped("sense/worn", "worn-item read failed: " + ex.Message);
             }
             return 0;
         }

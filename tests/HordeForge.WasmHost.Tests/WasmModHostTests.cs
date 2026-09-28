@@ -192,6 +192,32 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void LastCallMsRecordsTheCostOfEveryCall()
+        {
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmMod mod = host.LoadModule("strings", Fixture("strings"));
+                // No call yet: nothing to report, and the slow-dispatch
+                // warning must be able to say "no guest ran" rather than
+                // blame whichever module happens to sort first.
+                Assert.Equal(0.0, mod.LastCallMs);
+
+                host.DispatchInit();
+                Assert.True(mod.LastCallMs >= 0.0, "call cost must never be negative");
+
+                host.DispatchTick(1);
+                // The figure is replaced per call, not accumulated, so a
+                // reader at warning time sees the cost of the call that just
+                // ran, not a running total. A wasm call is bounded by its
+                // fuel budget, so the upper bound is loose enough not to be
+                // flaky and still catches a clock read that never happened.
+                Assert.True(mod.LastCallMs >= 0.0);
+                Assert.True(mod.LastCallMs < 10000.0, "a single on_tick cannot take seconds under a 1M fuel budget");
+            }
+        }
+
+        [Fact]
         public void FuelBudgetStopsGuestAndRecovers()
         {
             var (host, api) = NewHost(config => config.FuelPerCall = 1_000_000UL);

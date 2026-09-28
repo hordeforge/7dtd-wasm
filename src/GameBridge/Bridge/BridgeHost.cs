@@ -286,9 +286,18 @@ namespace HordeForge.GameBridge.Bridge
                     }
                     failures++;
                     ids ??= host.ModIds;
-                    if (DispatchFailureLimiter.TryWrite(FailureSource(result, ids, i), out long dropped))
+                    string modName = FailureName(result, ids, i);
+                    if (DispatchFailureLimiter.TryWrite("tick/" + modName, out long dropped))
                     {
-                        Log.Out("[WasmHost] tick: " + Describe(result));
+                        // The mod id and the tick number are what turn a line
+                        // into a pivot point: without them "fuel exhausted
+                        // during on_tick" is unattributable in a log that
+                        // carries one such line per guest per second, and the
+                        // tick number is the only handle that lines this up
+                        // with the heartbeat and the per-mod counters in
+                        // "wasm status".
+                        Log.Warning("[WasmHost] tick " + _tick + " mod " + TextSanitizer.Clean(modName) + ": " +
+                                   Describe(result));
                     }
                     else if (dropped % SuppressedLogEvery == 1)
                     {
@@ -297,17 +306,22 @@ namespace HordeForge.GameBridge.Bridge
                         // "wasm status"; the running total says how far behind
                         // the log is.
                         Log.Out("[WasmHost] suppressed " + dropped + " tick failure log(s) from guest " +
-                                TextSanitizer.Clean(result.ModId));
+                                TextSanitizer.Clean(modName));
                     }
                 }
                 _telemetry.Record(_tick, elapsedMs, failures);
                 if (_telemetry.IsSlow && DispatchSlowLimiter.TryWrite("tick", out _))
                 {
                     ids ??= host.ModIds;
+                    // The aggregate cost says the frame was lost but not who
+                    // spent it, and the answer is a per-guest counter away.
+                    // The walk runs on the warning path only, which is capped
+                    // at one per second, so it never lands on the tick rate.
                     Log.Warning("[WasmHost] tick " + _tick + " dispatch took " +
                                 TickTelemetry.FormatMilliseconds(elapsedMs) + " for " + ids.Count +
                                 " module(s), over the " + TickTelemetry.FormatMilliseconds(TickTelemetry.SlowDispatchMs) +
-                                " budget; the game loop is losing time to guests");
+                                " budget" + SlowestGuest(ids, host) +
+                                "; the game loop is losing time to guests");
                 }
                 if (_telemetry.HeartbeatDue)
                 {
@@ -367,7 +381,13 @@ namespace HordeForge.GameBridge.Bridge
                         // Results are attributed by ModId (join dispatch calls
                         // only the mods that export the handler, so list index
                         // does not identify the module).
-                        Log.Out("[WasmHost] on_player_join " + TextSanitizer.Clean(result.ModId) + ": " + Describe(result));
+                        // Same level as a failed tick: a trapped or
+                        // fuel-starved join handler is a guest fault, not an
+                        // event the operator should have to go looking for.
+                        // Joins are not rate capped by tick rate, so this line
+                        // cannot flood.
+                        Log.Warning("[WasmHost] on_player_join " + TextSanitizer.Clean(result.ModId) + ": " +
+                                    Describe(result));
                     }
                 }
             }
@@ -389,9 +409,17 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     if (_host.TryGetMod(id, out var mod) && mod != null)
                     {
+                        // Every failure class the host counts, and the fuel
+                        // the guest actually spent: "errors" and the fuel
+                        // total were tracked per mod but never printed, so a
+                        // guest that burns its whole budget and reports
+                        // errors looked identical to one that traps.
                         lines.Add("  " + id + " (fuel/call " + mod.FuelPerCall +
                                   ", init tick " + mod.InitTick + ", calls " + mod.TotalCalls +
-                                  ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
+                                  ", fuel used " + mod.TotalFuelConsumed +
+                                  ", traps " + mod.TrapCalls +
+                                  ", fuel exhausted " + mod.FuelExhaustedCalls +
+                                  ", errors " + mod.ErrorCalls + ")");
                     }
                 }
                 if (_gameApi != null)
@@ -432,32 +460,65 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Rate-limiter source key for a failed tick. The result names its
+        /// The guest a failed tick result came from. The result names its
         /// mod; a result that does not falls back to the position in the
-        /// load order, which tick results do follow, so both the key and the
-        /// suppressed line name the same guest.
+        /// load order, which tick results do follow, so the rate-limiter
+        /// key, the failure line, and the suppressed line all name the
+        /// same guest.
         /// </summary>
-        private static string FailureSource(ModRunResult result, IReadOnlyList<string> ids, int index)
+        private static string FailureName(ModRunResult result, IReadOnlyList<string> ids, int index)
         {
             if (result.ModId.Length > 0)
             {
-                return "tick/" + result.ModId;
+                return result.ModId;
             }
-            return "tick/" + (index < ids.Count ? ids[index] : "?");
+            return index < ids.Count ? ids[index] : "?";
         }
 
         /// <summary>
-        /// A failed call's message and details, ready to log. Trap messages
-        /// and backtraces can embed guest-chosen strings (module and
-        /// function name sections); they pass through the same
+        /// Names the guest whose last call cost the most, for the slow
+        /// dispatch warning. Empty when nothing is loaded or no guest has
+        /// been called yet, in which case the warning stands on the
+        /// aggregate alone rather than blaming an arbitrary module.
+        /// </summary>
+        private static string SlowestGuest(IReadOnlyList<string> ids, WasmModHost host)
+        {
+            string worstId = string.Empty;
+            double worstMs = 0.0;
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (!host.TryGetMod(ids[i], out WasmMod? mod) || mod == null)
+                {
+                    continue;
+                }
+                double cost = mod.LastCallMs;
+                if (cost > worstMs)
+                {
+                    worstMs = cost;
+                    worstId = mod.Id;
+                }
+            }
+            return worstId.Length == 0
+                ? string.Empty
+                : "; slowest: " + TextSanitizer.Clean(worstId) + " at " + TickTelemetry.FormatMilliseconds(worstMs);
+        }
+
+        /// <summary>
+        /// A failed call's message, details, and fuel, ready to log. Trap
+        /// messages and backtraces can embed guest-chosen strings (module
+        /// and function name sections); they pass through the same
         /// control-character filter as guest log text so a hostile module
-        /// cannot forge server log lines.
+        /// cannot forge server log lines. The fuel figure is what tells a
+        /// guest that hit its budget apart from one that trapped early,
+        /// and it is on every failure path because the store still knows
+        /// the count after a trap.
         /// </summary>
         private static string Describe(ModRunResult result)
         {
             string details = result.Details;
             return TextSanitizer.Clean(result.Message) +
-                   (details.Length > 0 ? " (" + TextSanitizer.Clean(details) + ")" : "");
+                   (details.Length > 0 ? " (" + TextSanitizer.Clean(details) + ")" : "") +
+                   ", fuel " + result.FuelConsumed;
         }
 
         /// <summary>Appends the limiter's dropped summary when it has one.</summary>

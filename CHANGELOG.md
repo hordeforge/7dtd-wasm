@@ -13,6 +13,13 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Added
 
+- Per-guest dispatch cost: `WasmMod.LastCallMs` records what the most recent
+  call to a guest cost in wall clock, and the slow-dispatch warning names the
+  guest that spent the frame. The aggregate cost said the frame was lost, not
+  who spent it, so the warning could not be acted on without a profiler.
+- `wasm status` reports each module's `errors` count and total `fuel used`.
+  Both were tracked per guest and printed nowhere, so a guest that burns its
+  budget and reports errors read like one that traps.
 - A top-level key or section the manifest parser does not read is now named
   in the load log, per mod and for the shared `wasm.toml`
   (`ModManifest.IgnoredKeys`). Unknown keys stay tolerated so a manifest
@@ -152,6 +159,17 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   format, which follows the server's locale: on a comma-decimal server the
   three coordinates were unreadable, and the same spawn printed different
   bytes on two machines. Positions are now fixed-point and invariant.
+- The sense `wearing_glider` read swallowed every exception and returned
+  0, so a game patch that broke the equipment read produced a brain that
+  stopped seeing gliders with nothing in the log. The failure is now
+  reported through the servant's capped warning path, the same one the rest
+  of the sense scan uses.
+- A failed tick dispatch logged an info-level line naming neither the tick
+  nor the guest ("fuel exhausted during on_tick"), so the per-guest failure
+  stream was unattributable in a log carrying one such line per guest per
+  second, and a failed `on_player_join` was logged the same way. Both are
+  warnings that name the tick, the mod, and the fuel the call consumed, which
+  is what CHANGELOG 0.4.0's telemetry entry already claimed they were.
 - `make dist` staged the modlet with the third-party notices but not the
   project's own MIT LICENSE, so the shipped tree linked to a file that was
   not in it. Both travel in `dist/Mods/1_HordeForge_WasmHost/` now.
