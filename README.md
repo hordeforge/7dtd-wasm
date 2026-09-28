@@ -30,7 +30,7 @@ process.
 A thin net48 mod (`1_HordeForge_WasmHost`) embeds the host in the dedicated
 server, drives guests from `GameManager.Update` at the game tick rate, and
 exposes a `wasm` console command (`list`, `load`, `reload`, `unload`,
-`status`).
+`status`, `help`).
 
 ## Layout
 

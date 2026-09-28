@@ -46,8 +46,10 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
                               module roots, the settings table, mod id
                               validation, and two text helpers
                               (UnicodeEscapes, TextSanitizer)
-  WasmModLoadException.cs    the one type Core and Registry both throw, so it
-                              sits in the root namespace, in neither
+  WasmModLoadException.cs    the types Core and Registry both raise, so they
+  WasmManifestException.cs   sit in the root namespace, in neither: a module
+  ManifestReadException.cs   refused at load, a manifest the parser rejected,
+                              and a manifest file that could not be read
 
 src/GameBridge/              (net48) the in-game mod
   ModApi.cs                  the game's entry point
@@ -79,7 +81,9 @@ The placement rules the layout exists to enforce:
   Core.
 - A file at the root of a project is an entry point or a type several
   areas share: `ModApi` is where the game starts the mod,
-  `WasmModLoadException` is what a rejected module raises everywhere.
+  `WasmModLoadException` is what a rejected module raises everywhere, and
+  the two manifest exceptions are thrown from the registry and caught by
+  the host and by embedders alike.
 - `UnicodeEscapes` and `TextSanitizer` are in `Registry/` because that is
   where they have always been, not because the registry owns them:
   `UnicodeEscapes` is private to `MiniToml`, and no `Registry` type calls
@@ -161,6 +165,11 @@ in CI, not only on a host that already has a toolchain config.
   the hook runs once per game tick at 20 TPS). A second Harmony postfix on
   `GameManager.RequestToSpawnPlayer` (see Hooks/PlayerSpawnHook) forwards
   player joins to guests that export `on_player_join`.
+- Every tick dispatch is timed and folded into `TickTelemetry`, which the
+  bridge reports three ways: a heartbeat every 1200 ticks (60 s at 20 TPS),
+  a warning for a dispatch over `SlowDispatchMs` (half a frame) capped at
+  one per second, and a per-mod failure line capped like guest log output.
+  `wasm status` and the shutdown summary print the same totals.
 - `GameHostApi` implements the ABI over live game services: log via the game
   logger (rate capped per module), world time via `GameManager.Instance.World.GetWorldTime()`,
   chat via `ChatMessageServer(..., EChatType.Global, ..., EMessageSender.Server,
@@ -188,13 +197,14 @@ in CI, not only on a host that already has a toolchain config.
   the same world a different snapshot from run to run. Records come out in
   ascending net id order, and a world holding more alive entities than a
   snapshot carries reports the lowest ids.
-- `wasm status` and the hourly heartbeat print their totals in a fixed
-  order (limiter sources by ordinal key, armed glide net ids ascending), so
-  two runs of the same workload print the same line and a replayed run can
-  be diffed against the one that diverged.
+- `wasm status` prints its totals in a fixed order (limiter sources by
+  ordinal key, armed glide net ids ascending), so two runs of the same
+  workload print the same line and a replayed run can be diffed against the
+  one that diverged.
 - `CmdWasm` implements the V3 console command contract
   (`getCommands()`, `getDescription()`, `getHelp()`, `Execute(List<string>,
-  CommandSenderInfo)`) with subcommands list, load, reload, unload, status.
+  CommandSenderInfo)`) with subcommands list, load, reload, unload, status
+  (the default when none is given), and help.
 - Threading: tick and player-join dispatch run on the game main loop, but
   console commands execute on the telnet/console thread. Every
   `BridgeHost` entry point therefore serializes on one internal gate, so a

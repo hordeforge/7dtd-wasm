@@ -174,7 +174,7 @@ help:
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
 	@echo "  make pack           pack the host library as a NuGet package under artifacts/packages/"
-	@echo "  make check          docs gate + sbom tests + tools lint + guest lint gate + build + test + bridge + bridge-check"
+	@echo "  make check          everything check-ci runs, plus bridge and bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  make clean          remove build output, staged fixtures and dist/"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
