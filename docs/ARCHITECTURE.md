@@ -193,7 +193,9 @@ never holds a reference across calls.
 
 The Rust toolchain lives inside the repo (`.cargo/`, `.rustup/`) so nothing
 is installed system-wide; `make toolchain` populates it and CI calls the same
-target. `samples/rust-toolchain.toml` pins the channel the guests build and
+target, caching `.cargo/` and `.rustup/` against `samples/rust-toolchain.toml`
+so an unchanged channel is not re-downloaded per run. `samples/rust-toolchain.toml`
+pins the channel the guests build and
 lint with, and `make toolchain` installs that same channel, so the pin and
 the install cannot drift apart. The tracked `samples/.cargo/config.toml` pins
 `--max-memory=33554432` (32 MiB) and a 1 MiB stack for every guest, which
