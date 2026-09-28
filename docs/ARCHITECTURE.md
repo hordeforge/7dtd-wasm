@@ -38,7 +38,10 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
                               status codes, IGameHostApi, the sense snapshot
                               wire format, the UTF-8 cut helper
   Config/                    WasmHostConfig: the limits the host builds its
-                              engine with and validates at construction
+                              engine with and validates at construction, and
+                              SharedLimits, which applies the shared
+                              wasm.toml [limits] over those defaults before
+                              the host is constructed
   Core/                      the host itself: WasmModHost, WasmMod, the
                               per-call result and status types, tick telemetry,
                               MonotonicTimer (the one monotonic source every

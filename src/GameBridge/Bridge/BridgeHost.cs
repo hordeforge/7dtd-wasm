@@ -993,37 +993,20 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static bool TryApplySharedLimits(WasmHostConfig config, string sharedPath)
         {
-            try
+            // The library owns the layering, so an embedder of the package
+            // gets the same load order this bridge runs under. The reason
+            // it hands back quotes the file (a parse failure quotes its raw
+            // text), so clean it like guest log output before it reaches the
+            // logfile.
+            ModManifest? shared = SharedLimits.TryApply(config, sharedPath, out string reason);
+            if (reason.Length != 0)
             {
-                if (!File.Exists(sharedPath))
-                {
-                    return true;
-                }
-                ModManifest shared = ModManifest.ParseToml(ManifestFiles.ReadRequired(sharedPath), "shared");
-                LogIgnoredKeys("shared wasm.toml", shared);
-                if (shared.FuelPerCall.HasValue)
-                {
-                    config.FuelPerCall = shared.FuelPerCall.Value;
-                }
-                if (shared.MaxMemoryBytes.HasValue)
-                {
-                    config.StaticMemoryMaximumBytes = shared.MaxMemoryBytes.Value;
-                }
-                return true;
+                Log.Warning("[WasmHost] cannot apply shared wasm.toml limits: " +
+                            TextSanitizer.Clean(reason) + "; the host keeps its code defaults");
+                return false;
             }
-            catch (WasmModLoadException ex)
-            {
-                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + TextSanitizer.Clean(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                // Same verdict as a malformed file: the engine would run
-                // under the code defaults, not the configured ones. The
-                // parser message quotes raw file text, so clean it like guest
-                // log output.
-                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + TextSanitizer.Clean(ex.Message));
-            }
-            return false;
+            LogIgnoredKeys("shared wasm.toml", shared);
+            return true;
         }
 
         /// <summary>

@@ -15,6 +15,16 @@ operator, embedder, and guest author.
 
 ### Added
 
+- `HordeForge.WasmHost.Config.SharedLimits.TryApply(config, path, out reason)`
+  applies a shared `wasm.toml` `[limits]` table over the code defaults on a
+  `WasmHostConfig`, so the middle step of the documented load order
+  (docs/CONFIG.md) ships in the package. It was in the bridge only, so an
+  embedder of the library had to re-derive it, and the two copies could
+  drift: the file the README says replaces the code defaults was
+  unreachable from the library the README ships it with. The bridge now
+  calls it. An absent file is not a failure; one that exists but cannot be
+  parsed returns a reason and applies nothing, because the engine would
+  then run under limits the operator never wrote.
 - The heartbeat names the guests that failed since the previous one
   (`HordeForge.WasmHost.Core.FailureTally`). The per-tick failure lines are
   rate capped and the per-mod counters in `wasm status` are lifetime

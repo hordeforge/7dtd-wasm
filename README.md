@@ -252,7 +252,25 @@ after `Dispose` throws `ObjectDisposedException`). Each `Dispatch*` call
 builds its own result list and hands it back read-only, so a later dispatch
 (including one on another thread) never rewrites a list you are still
 reading. Limits live on `WasmHostConfig` (fuel per call, memory ceiling,
-module size cap) and are validated when the host is constructed. See
+module size cap) and are validated when the host is constructed. The shared
+operator file layers over those defaults before the host is built, which is
+the middle step of the load order in [docs/CONFIG.md](docs/CONFIG.md):
+
+```csharp
+var config = new WasmHostConfig();
+if (SharedLimits.TryApply(config, "/opt/server/Mods/Wasm/wasm.toml", out string reason) == null
+    && reason.Length != 0)
+{
+    throw new InvalidOperationException("wasm.toml is unusable: " + reason);
+}
+
+using var host = new WasmModHost(api, config);
+```
+
+A shared file that is absent is not a failure (`TryApply` returns a null
+manifest and an empty reason); one that exists but cannot be parsed is, since
+the engine would then run under limits the operator never wrote. Per-mod
+`wasm-mod.toml` limits are applied by `LoadModule` itself. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ABI.md](docs/ABI.md).
 
 Failure outcomes are typed, so nothing needs message matching:

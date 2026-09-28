@@ -12,7 +12,11 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
 - **Load order** (mirroring zdtd ADR 0010): host code defaults -> the shared
   `wasm.toml` (`Mods/Wasm/wasm.toml`, or the first staged modlet tree that
   carries one when the top-level file is absent) -> per-mod
-  `Mods/Wasm/<id>/wasm-mod.toml`. Shared `[limits]` replace the code
+  `Mods/Wasm/<id>/wasm-mod.toml`. The middle layer is
+  `HordeForge.WasmHost.Config.SharedLimits.TryApply(config, path, out reason)`,
+  which reads the shared file and applies its `[limits]` to a
+  `WasmHostConfig`; an embedder calls it before constructing the host, and
+  the bridge is the first caller. Shared `[limits]` replace the code
   defaults at host start, so an operator may raise them; a manifest's
   `fuel_per_call` overrides the effective default (bounded by the
   50,000,000 instruction parser ceiling, not by the shared value, so a mod

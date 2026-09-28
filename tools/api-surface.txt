@@ -80,6 +80,9 @@ src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type SenseSnapshotWriter
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type Snapshot
 src/HordeForge.WasmHost/Abi/Utf8Prefix.cs: Utf8Prefix.public static int Length(byte[] utf8, int capacity)
 src/HordeForge.WasmHost/Abi/Utf8Prefix.cs: type Utf8Prefix
+src/HordeForge.WasmHost/Config/SharedLimits.cs: SharedLimits.public const string SharedModId = ""
+src/HordeForge.WasmHost/Config/SharedLimits.cs: SharedLimits.public static ModManifest? TryApply(WasmHostConfig config, string path, out string failureReason)
+src/HordeForge.WasmHost/Config/SharedLimits.cs: type SharedLimits
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public bool InheritGuestStandardStreams { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public int MaxModuleSizeBytes { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public int MaximumStackBytes { get; set; }
