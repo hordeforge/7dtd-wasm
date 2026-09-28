@@ -765,6 +765,18 @@ operator, embedder, and guest author.
 
 ### Changed
 
+- `global.json` pins the SDK band as well as the floor: `rollForward` moved
+  from `latestFeature` to `latestPatch`. `latestFeature` accepted any 8.0
+  feature band at or above 8.0.100, so a developer with only 8.0.4xx
+  installed compiled a different SDK band than CI, and a newer band can
+  resolve overloads differently. A patch bump is now picked up and a band
+  bump fails by name. The CI `check` job also pins `LC_ALL`, `TZ`, and the
+  dotnet first-run variables, so no part of a build reads locale, timezone,
+  or `$HOME` state off the runner image.
+- `make bridge` clears `src/GameBridge/bin/Release` before building. `make
+  dist` stages the modlet with a glob over that directory, so a file the
+  current project set no longer produces survived a rebuild there and was
+  copied into a modlet that loaded an assembly nobody chose.
 - The `wasm` console command now reports what it did instead of a bare
   result. `wasm load` names the modules it loaded and prints a `skipped`
   line, with the reason, for every module or tree the scan refused;

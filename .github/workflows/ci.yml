@@ -25,6 +25,19 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Locale, timezone, and first-run state pinned so a build cannot pick up
+    # whatever the runner image happens to default to. C.UTF-8 fixes the
+    # collation and the default encoding the Python gates and the SDK read
+    # files with; UTC fixes any date the tree formats. The dotnet variables
+    # keep the first-run banner, the telemetry notice, and the SDK's
+    # first-run extraction under $HOME out of the job. Set per job, not at
+    # workflow level: the windows job below has no C.UTF-8 locale to resolve.
+    env:
+      LC_ALL: C.UTF-8
+      TZ: UTC
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "1"
     steps:
       # Actions pinned by full commit SHA (tag in comment) so a moved tag or a
       # compromised major-version release cannot inject code into the pipeline.

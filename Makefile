@@ -448,8 +448,15 @@ fixtures: samples boss boss-zig
 	cp $(ZDTD_SERVER)/mods/parachute/parachute.wasm             tests/fixtures/parachute.wasm
 	cp $(ZDTD_SERVER)/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
 
+# The output directory is cleared before the build, not after it. "make dist"
+# stages the modlet with a glob over bin/Release, and a file nothing in this
+# project produces any more (a renamed package assembly, an assembly from a
+# dropped reference) survives a rebuild in that directory, so the glob would
+# copy it into a modlet that loads an assembly nobody chose. Clearing first
+# means the glob can only ever carry what this build wrote.
 bridge:
 	$(call require_dotnet)
+	rm -rf src/GameBridge/bin/Release
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 bridge-check:

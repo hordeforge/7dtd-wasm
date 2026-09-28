@@ -1,7 +1,19 @@
 {
+  // The one declaration of the SDK the tree builds with. Both values are
+  // load-bearing: "version" is the floor and "rollForward" is the ceiling.
+  //
+  // rollForward was "latestFeature", which accepts any 8.0 feature band at or
+  // above 8.0.100. That is a floating toolchain in everything but name: CI
+  // installed exactly 8.0.100, while a machine whose only SDK was a later
+  // band compiled that one instead, and a newer band can resolve overloads
+  // differently, so the same source produced different IL with no diff in
+  // the tree. The floor is the band the tree is written and released
+  // against, and "latestPatch" moves only within it: a servicing patch is
+  // picked up, a band bump fails by name instead of quietly building
+  // something else. Bump the band here, in one place, deliberately.
   "sdk": {
-    "version": "8.0.100",
-    "rollForward": "latestFeature",
+    "version": "8.0.424",
+    "rollForward": "latestPatch",
     "allowPrerelease": false
   }
 }
