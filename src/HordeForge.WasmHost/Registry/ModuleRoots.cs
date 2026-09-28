@@ -140,11 +140,16 @@ namespace HordeForge.WasmHost.Registry
 
         /// <summary>
         /// First tree holding the module's named file, or empty when none
-        /// does. A directory without the file does not claim the module.
+        /// does. A directory without the file does not claim the module,
+        /// and a file name that is not a plain leaf name resolves to
+        /// nothing: Path.Combine drops the root and the module directory
+        /// when the last part is rooted, so "/etc/passwd" would otherwise
+        /// resolve to exactly that file while the on-disk spelling check
+        /// still passed on the module directory.
         /// </summary>
         public static string ResolveFile(IReadOnlyList<string> roots, string id, string fileName)
         {
-            if (!ModId.IsValid(id) || string.IsNullOrEmpty(fileName))
+            if (!ModId.IsValid(id) || !IsLeafName(fileName))
             {
                 return string.Empty;
             }
@@ -157,6 +162,32 @@ namespace HordeForge.WasmHost.Registry
                 }
             }
             return string.Empty;
+        }
+
+        /// <summary>
+        /// True when <paramref name="fileName"/> names one file inside the
+        /// module directory: no directory separator, no rooted form, and
+        /// not a dot segment. Every caller passes a literal today, so this
+        /// closes the shape rather than a live exploit.
+        /// </summary>
+        private static bool IsLeafName(string? fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)
+                || fileName.IndexOf('/') >= 0
+                || fileName.IndexOf('\\') >= 0
+                || fileName == "."
+                || fileName == "..")
+            {
+                return false;
+            }
+            try
+            {
+                return !Path.IsPathRooted(fileName);
+            }
+            catch (ArgumentException)
+            {
+                return false;
+            }
         }
 
         /// <summary>

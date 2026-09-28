@@ -123,6 +123,17 @@ operator, embedder, and guest author.
   budget, manifest determinism, and sanitizer idempotence rather than only
   "did not crash". `HORDEFORGE_FUZZ_SEED` and `HORDEFORGE_FUZZ_ITERATIONS`
   reseed and lengthen a run; every failure prints its replay command.
+- Seeded fuzz harnesses for the two untrusted-input entry points that had
+  none: the manifest file decoder (`ManifestFiles.TryRead`, driven with real
+  byte payloads: overlong forms, bare continuations, CESU-8 surrogate halves,
+  sequences past U+10FFFF, UTF-16 and UTF-32 BOMs, truncation, byte flips
+  into the shipped manifests) and module tree resolution
+  (`ModuleRoots.ResolveDir` / `ResolveFile`, driven with hostile ids and file
+  names against a staged tree with a decoy above the roots). Each asserts the
+  contract rather than survival: strict UTF-8 and the size bound, a reason on
+  every refusal, the typed load exception for a payload that decodes but does
+  not parse, and a resolved path that is inside a root, on disk, and spelled
+  exactly as the id named it.
 - CI builds the host library and runs its test suite on Windows as well as
   Linux. The net48 bridge is loaded inside a Windows game process, so every
   path, case comparison and encoding rule in `HordeForge.WasmHost` decides
@@ -239,6 +250,13 @@ operator, embedder, and guest author.
   names the path, and a decode failure names the line and byte.
 - The manifest parser accepted table names holding characters the key path
   rejects, and value errors named the line but not the key.
+- `ModuleRoots.ResolveFile` combined the root, the id, and the file name in
+  one `Path.Combine`, so a file name that is rooted or carries a separator
+  dropped both and resolved to that file: `/etc/passwd` came back as the
+  module's file while the on-disk spelling check still passed on the module
+  directory. The id was already validated; the file name is now held to the
+  same plain-leaf-name rule. Every current caller passes a literal, so no
+  shipped load path reached it.
 - `WasmModHost.Dispatch` did not compile. The result was narrowed through a
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so

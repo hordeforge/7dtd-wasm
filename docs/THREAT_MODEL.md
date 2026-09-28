@@ -199,7 +199,7 @@ named here and mapped in section 7; gaps are in section 8.
   leaves no record of the sender beyond the game's own console log.
 - *Tampering*: a module id differing only in case resolves to the same folder
   on Windows and macOS; the code refuses it by confirming the on-disk
-  spelling (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:163`), which
+  spelling (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:194`), which
   removes the double registration. The same filesystem accepts two spellings
   that are not the same id at all: a name ending in a space or a period is
   stored without it, and a device name (`con`, `com1`, ...) is no directory
@@ -373,7 +373,7 @@ named here and mapped in section 7; gaps are in section 8.
 | one guest driving another guest's bots | every bot id is checked against the module that asked for it, in the ownership registry, before move, look, shoot, despawn, count, and the `is_self` sense bit | `src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs:51`, `src/GameBridge/Bridge/BotServant.cs:1025` |
 | glide armed on a non-player | the target must resolve to a live `EntityPlayer` | `src/GameBridge/Bridge/BotServant.cs:1039` |
 | NaN or overflow through SimCommand numbers | invariant parsing, finite-float check | `src/GameBridge/Bridge/BotServant.cs:1054` |
-| path traversal through a mod id | id validation, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:28`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:163` |
+| path traversal through a mod id or a module file name | id validation, plain-leaf-name file name, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:28`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:137`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:194` |
 | manifest slurping | 1 MiB read bound, re-checked after the read, strict UTF-8 decode | `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:24` |
 | misspelled or misplaced limit key | `[limits]` is a closed table; unknown keys reject the module, misplaced ones are named in the load log | `src/HordeForge.WasmHost/Registry/ModManifest.cs:53`, `src/GameBridge/Bridge/BridgeHost.cs:709` |
 | manifest fuel beyond the parser ceiling | 50,000,000 instruction ceiling on the file, enforced on the host config too | `src/HordeForge.WasmHost/Registry/ModManifest.cs:46`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:123` |
