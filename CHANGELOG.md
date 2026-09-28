@@ -106,6 +106,28 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   Windows runner image has no GNU make; the Makefile targets are unchanged
   and README still records them as unproven there.
 
+### Performance
+
+- `SenseRecordPicker` no longer sorts the world's whole alive entity set on
+  every sense request. Only the lowest 41 ids can fit in a snapshot, so
+  above 2000 alive entities it selects them with a bounded max-heap and
+  sorts just the retained window: 6x faster at 6000 entities and 12x at
+  20000 (measured; 872 us to 70 us per request at 20 TPS). Below the
+  threshold the sort still wins on its own constant factor and is kept.
+  Both paths return the same list, pinned by a differential test against
+  the sort-and-truncate it replaces.
+- The host no longer builds a fresh log source tag per guest log line. The
+  tag is built once per guest call instead, so a guest looping the `log`
+  import within its fuel budget no longer allocates a string per call for
+  the rate limiter to throw away.
+- The `config` import memoizes the UTF-8 encoding of the config text it
+  last served, so a guest looping that import no longer re-encodes and
+  re-allocates the whole file on every call. The memo keys on the string
+  instance the host API hands back, so a reloaded config re-encodes; two
+  modules reading different configs are covered by tests.
+- Tick dispatch pre-sizes its result list to the loaded module count,
+  dropping the grow-and-copy reallocations from every tick.
+
 ### Fixed
 
 - `make dist` staged the native engine out of a hardcoded

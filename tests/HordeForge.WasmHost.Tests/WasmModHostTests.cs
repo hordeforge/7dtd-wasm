@@ -1048,12 +1048,67 @@ greeting = ""hello""
                 Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));
             using (WasmModHost host = NewHostForParachute(api))
             {
-                WasmMod mod = host.LoadModule("parachute", Fixture("parachute"));
-                Assert.True(mod.Init().Ok);
-                Assert.True(mod.Tick().Ok);
+                host.LoadModule("parachute", Fixture("parachute"));
+                // Through the host, not mod.Init(): the config import
+                // resolves against the mod the host is currently calling,
+                // so a direct call would serve the guest its own defaults
+                // instead of the file.
+                Assert.True(host.InitModule("parachute")!.Value.Ok);
+                Assert.True(host.DispatchTick(1).Single().Ok);
                 // on_enable logged "parachute: config deploy_vy=-6 delay_ticks=10"
                 // from the config.toml served through the zdtd.config import.
                 Assert.Contains(api.Logs, l => l.Message.Contains("config deploy_vy=-6") && l.Message.Contains("delay_ticks=10"));
+            }
+        }
+
+        [Fact]
+        public void EachModuleReadsItsOwnConfigWhenSeveralAreLoaded()
+        {
+            // The host memoizes the UTF-8 encoding of the config it last
+            // served, so a second module with a different config.toml must
+            // not be handed the first one's bytes. Two parachute modules
+            // with different tuning, enabled in order, and each must log
+            // its own values.
+            var api = new TestGameHostApi();
+            string tuning = File.ReadAllText(
+                Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));
+            api.RawConfigs["chute-a"] = tuning;
+            api.RawConfigs["chute-b"] = tuning.Replace("deploy_delay_ticks = 10", "deploy_delay_ticks = 3");
+            using (WasmModHost host = NewHostForParachute(api))
+            {
+                host.LoadModule("chute-a", Fixture("parachute"));
+                host.LoadModule("chute-b", Fixture("parachute"));
+                Assert.True(host.InitModule("chute-a")!.Value.Ok);
+                Assert.True(host.InitModule("chute-b")!.Value.Ok);
+                Assert.Contains(api.Logs, l => l.Source.EndsWith("/chute-a", StringComparison.Ordinal)
+                    && l.Message.Contains("delay_ticks=10"));
+                Assert.Contains(api.Logs, l => l.Source.EndsWith("/chute-b", StringComparison.Ordinal)
+                    && l.Message.Contains("delay_ticks=3"));
+            }
+        }
+
+        [Fact]
+        public void AChangedConfigIsServedAfterAReloadOfItsText()
+        {
+            // The memo keys on the string instance the host api hands back,
+            // so a config whose text changed must re-encode and be served
+            // fresh. Reassigning the entry replaces the instance, which is
+            // what a reload does through RegisterConfig.
+            var api = new TestGameHostApi();
+            api.RawConfigs["parachute"] = File.ReadAllText(
+                Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));
+            using (WasmModHost host = NewHostForParachute(api))
+            {
+                host.LoadModule("parachute", Fixture("parachute"));
+                Assert.True(host.InitModule("parachute")!.Value.Ok);
+                api.Logs.Clear();
+                api.RawConfigs["parachute"] = api.RawConfigs["parachute"]
+                    .Replace("deploy_delay_ticks = 10", "deploy_delay_ticks = 4");
+                // A fresh instance under the same id: a reload of that mod.
+                host.Unload("parachute");
+                host.LoadModule("parachute", Fixture("parachute"));
+                Assert.True(host.InitModule("parachute")!.Value.Ok);
+                Assert.Contains(api.Logs, l => l.Message.Contains("delay_ticks=4"));
             }
         }
 

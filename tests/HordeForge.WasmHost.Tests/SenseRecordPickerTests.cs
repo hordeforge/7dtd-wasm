@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HordeForge.GameBridge.Bridge;
 using Xunit;
 
@@ -50,6 +51,51 @@ namespace HordeForge.WasmHost.Tests
         {
             Assert.Throws<ArgumentOutOfRangeException>(
                 () => SenseRecordPicker.SelectLowest(new List<int> { 1 }, -1));
+        }
+
+        [Fact]
+        public void LargeWorldsSelectTheSameIdsAsSortingWould()
+        {
+            // Above the selection threshold the picker keeps a bounded heap
+            // instead of sorting the whole alive set. The bytes a guest sees
+            // are the contract, so the two paths must agree exactly, on a
+            // world with duplicates and on one that is already ascending.
+            foreach (bool ascending in new[] { false, true })
+            {
+                const int count = 6000;
+                var shuffled = new List<int>(count);
+                var ascendingIds = new List<int>(count);
+                for (int i = 0; i < count; i++)
+                {
+                    // A stride that shares factors with count, so ids repeat.
+                    int id = (i * 7919) % count;
+                    shuffled.Add(id);
+                    ascendingIds.Add(id);
+                }
+                ascendingIds.Sort();
+                SenseRecordPicker.SelectLowest(shuffled, 41);
+                Assert.Equal(ascendingIds.Take(41), shuffled);
+
+                var alreadySorted = new List<int>(Enumerable.Range(1, count));
+                SenseRecordPicker.SelectLowest(alreadySorted, 41);
+                Assert.Equal(Enumerable.Range(1, 41), alreadySorted);
+            }
+        }
+
+        [Fact]
+        public void AWorldAtTheSelectionThresholdStillSelectsTheLowestIds()
+        {
+            // The threshold only chooses how the ids are found, never which
+            // ones, so the boundary is pinned like any other size.
+            const int count = 2000;
+            var netIds = new List<int>(count);
+            for (int i = 0; i < count; i++)
+            {
+                netIds.Add((i * 104729) % count);
+            }
+            List<int> expected = netIds.OrderBy(id => id).Take(41).ToList();
+            SenseRecordPicker.SelectLowest(netIds, 41);
+            Assert.Equal(expected, netIds);
         }
     }
 }

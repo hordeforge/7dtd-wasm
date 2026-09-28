@@ -230,7 +230,9 @@ in CI, not only on a host that already has a toolchain config.
   is in whatever order the game built it, so the first N of it would give
   the same world a different snapshot from run to run. Records come out in
   ascending net id order, and a world holding more alive entities than a
-  snapshot carries reports the lowest ids.
+  snapshot carries reports the lowest ids. Above 2000 alive entities the
+  picker selects the lowest ids with a bounded max-heap instead of sorting
+  the whole set, since sense runs at tick rate and only 41 ids fit.
 - `wasm status` prints its totals in a fixed order (limiter sources by
   ordinal key, armed glide net ids ascending), so two runs of the same
   workload print the same line and a replayed run can be diffed against the

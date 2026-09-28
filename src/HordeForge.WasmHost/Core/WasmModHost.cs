@@ -79,6 +79,27 @@ namespace HordeForge.WasmHost.Core
         /// import resolve per-mod settings. Set before every guest call.
         /// </summary>
         private string _currentModId = string.Empty;
+
+        // Last config served through the zdtd config import, as its UTF-8
+        // bytes. The host api already hands back the same cached string
+        // instance for an unchanged config, so keying the memo on that
+        // instance turns a repeated import into a reference compare instead
+        // of a full re-encode and allocation of the whole file. One entry is
+        // enough: only one guest runs at a time, and a miss simply re-encodes.
+        private string? _configBytesSource;
+        private byte[]? _configBytes;
+
+        /// <summary>
+        /// Source tag for the guest currently being called, kept in step
+        /// with <see cref="_currentModId"/> by <see cref="SetCurrentMod"/>
+        /// and <see cref="ClearCurrentMod"/>. Built once per guest call
+        /// instead of once per log line: the log import is the one host
+        /// import a guest can loop on at fuel rate, and each call would
+        /// otherwise concat and allocate a tag the rate limiter then
+        /// throws away.
+        /// </summary>
+        private string _currentLogSource = string.Empty;
+
         private bool _disposed;
 
         /// <summary>
@@ -101,6 +122,9 @@ namespace HordeForge.WasmHost.Core
             _linker = new Linker(_engine);
             _linker.DefineWasi();
             DefineHostApi();
+            // No guest is current before the first call, so the log tag
+            // starts at the bare prefix, matching ClearCurrentMod.
+            ClearCurrentMod();
         }
 
         /// <summary>
@@ -388,7 +412,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     return null;
                 }
-                _currentModId = mod.Id;
+                SetCurrentMod(mod.Id);
                 try
                 {
                     return mod.Init();
@@ -397,7 +421,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     // The call is over; no mod is current until the next one
                     // starts, so a later direct guest call cannot inherit this id.
-                    _currentModId = string.Empty;
+                    ClearCurrentMod();
                 }
             }
         }
@@ -431,7 +455,7 @@ namespace HordeForge.WasmHost.Core
                 ThrowIfDisposed();
                 if (_mods.TryGetValue(id, out var mod))
                 {
-                    _currentModId = mod.Id;
+                    SetCurrentMod(mod.Id);
                     try
                     {
                         ModRunResult shutdown = mod.Shutdown();
@@ -445,7 +469,7 @@ namespace HordeForge.WasmHost.Core
                         // Same rule as InitModule: no mod is current once the call
                         // is over, so a later direct guest call cannot resolve
                         // settings or a log tag against the mod just unloaded.
-                        _currentModId = string.Empty;
+                        ClearCurrentMod();
                     }
                 }
                 return null;
@@ -523,9 +547,14 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         private IReadOnlyList<ModRunResult> Dispatch(Func<WasmMod, ModRunResult?> invoke)
         {
-            var results = new List<ModRunResult>();
             List<string> order = _modOrder;
             Dictionary<string, WasmMod> mods = _mods;
+            // Pre-sized to the mod count: at tick rate the list otherwise
+            // grows 4, 8, 16 ... reallocating and copying the whole backing
+            // store a few times before it settles, once per tick per
+            // dispatch. The capacity is an upper bound (a mod may report no
+            // result), so this never under-allocates.
+            var results = new List<ModRunResult>(order.Count);
             try
             {
                 for (int i = 0; i < order.Count; i++)
@@ -534,8 +563,9 @@ namespace HordeForge.WasmHost.Core
                     {
                         continue;
                     }
-                    _currentModId = mod.Id;
-                    if (invoke(mod) is ModRunResult result)
+                    SetCurrentMod(mod.Id);
+                    ModRunResult? result = invoke(mod);
+                    if (result.HasValue)
                     {
                         results.Add(result);
                     }
@@ -546,7 +576,7 @@ namespace HordeForge.WasmHost.Core
                 // The last mod walked stays current otherwise, and its id
                 // would then answer get_setting and the log source tag for
                 // any later single-module call that forgot to set one.
-                _currentModId = string.Empty;
+                ClearCurrentMod();
             }
             return new ReadOnlyCollection<ModRunResult>(results);
         }
@@ -693,7 +723,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     return 0;
                 }
-                byte[] bytes = Encoding.UTF8.GetBytes(content);
+                byte[] bytes = EncodedConfig(content);
                 int copy = Utf8Prefix.Length(bytes, outCap);
                 if (copy == 0)
                 {
@@ -782,15 +812,71 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
+        /// The UTF-8 encoding of <paramref name="content"/>, reusing the
+        /// previous encoding when it was made from the very same string
+        /// instance. The host api caches the config text per mod and hands
+        /// back that same instance until the file is re-read, so a guest
+        /// looping the config import stops re-encoding (and re-allocating)
+        /// the whole file on every call. A different instance re-encodes,
+        /// which covers a reloaded config and two mods alternating: the
+        /// memo is a cache of a pure function, never a source of truth.
+        /// </summary>
+        private byte[] EncodedConfig(string content)
+        {
+            if (ReferenceEquals(_configBytesSource, content) && _configBytes != null)
+            {
+                return _configBytes;
+            }
+            byte[] bytes = Encoding.UTF8.GetBytes(content);
+            _configBytesSource = content;
+            _configBytes = bytes;
+            return bytes;
+        }
+
+        /// <summary>
         /// Source tag for guest log lines: the configured prefix plus the
         /// calling mod's id, so log attribution and the bridge's per-module
         /// rate cap (ADR 0006) key on the module, not on the shared prefix.
+        /// Served from the tag built when the current mod was set, so a
+        /// guest looping the log import allocates no string per call.
         /// </summary>
         private string LogSource()
         {
-            return _currentModId.Length == 0
+            return _currentLogSource;
+        }
+
+        /// <summary>
+        /// The tag a guest called under <paramref name="modId"/> logs
+        /// under, built once per guest call rather than per log line.
+        /// </summary>
+        private string LogSourceFor(string modId)
+        {
+            return modId.Length == 0
                 ? _config.LogSourcePrefix
-                : _config.LogSourcePrefix + "/" + _currentModId;
+                : _config.LogSourcePrefix + "/" + modId;
+        }
+
+        /// <summary>
+        /// Marks <paramref name="modId"/> as the guest being called, and
+        /// builds its log tag with it. Every site that begins a guest call
+        /// goes through here, so the id and the tag can never disagree and
+        /// get_setting and the log line name different modules.
+        /// </summary>
+        private void SetCurrentMod(string modId)
+        {
+            _currentModId = modId;
+            _currentLogSource = LogSourceFor(modId);
+        }
+
+        /// <summary>
+        /// Forgets the current guest, so a later direct call cannot inherit
+        /// its id or its log tag. Every site that ends a guest call runs
+        /// this; the bare prefix is what an uncategorised line logs under.
+        /// </summary>
+        private void ClearCurrentMod()
+        {
+            _currentModId = string.Empty;
+            _currentLogSource = _config.LogSourcePrefix;
         }
 
         /// <summary>
@@ -879,7 +965,7 @@ namespace HordeForge.WasmHost.Core
                 {
                     if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
                     {
-                        _currentModId = mod.Id;
+                        SetCurrentMod(mod.Id);
                         try
                         {
                             ModRunResult shutdown = mod.Shutdown();
@@ -896,7 +982,7 @@ namespace HordeForge.WasmHost.Core
                             // Same rule as Unload and Dispatch: no mod is current
                             // once the call is over, so nothing after the loop can
                             // resolve settings or a log tag against the last one.
-                            _currentModId = string.Empty;
+                            ClearCurrentMod();
                         }
                     }
                 }
