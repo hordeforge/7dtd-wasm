@@ -91,10 +91,17 @@ jobs:
         # argument (--only-binary=:all:), which stricter YAML readers reject
         # as a mapping inside a plain scalar.
         run: 'python3 -m pip install --quiet --no-deps --only-binary=:all: "ruff==$(make ruff-version)"'
+      - name: Make sure shellcheck is on PATH
+        # check-ci lints the bash under evidence/ with shellcheck, and the
+        # ubuntu runner image ships it. This step only matters if a future
+        # image stops shipping it: without it the gate inside check-ci would
+        # fail on a missing tool rather than on a defective script.
+        run: |
+          command -v shellcheck >/dev/null \
+            || sudo apt-get install -y --no-install-recommends shellcheck
       # check-ci is the game-free half of check: doccheck, the tools unit
-      # tests, the tools lint and format gates, the guest lint gate, the
-      # host build,
-      # and the host test suite.
+      # tests, the tools lint and format gates, the shell lint gate, the
+      # guest lint gate, the host build, and the host test suite.
       # bridge and bridge-check need a dedicated server install and cannot run
       # on a hosted runner; that half is proven on a developer host.
       - run: make check-ci

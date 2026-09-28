@@ -24,6 +24,13 @@ namespace HordeForge.GameBridge
 
         private static readonly object PatchLock = new object();
 
+        /// <summary>
+        /// Entry point the game calls once at load. Records the modlet path,
+        /// stages the native engine, applies the Harmony patches, and scans
+        /// Mods/Wasm for modules. A failure here is logged and swallowed:
+        /// the game must load its Mods folder whether or not the host starts.
+        /// </summary>
+        /// <param name="_modInstance">The mod the game loaded, for its folder path.</param>
         public void InitMod(Mod _modInstance)
         {
             ModPath = _modInstance?.Path ?? string.Empty;

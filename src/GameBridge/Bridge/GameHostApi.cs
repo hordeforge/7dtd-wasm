@@ -111,6 +111,13 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public const int MaxChatMessageLength = 256;
 
+        /// <summary>
+        /// Writes one guest line to the server log, rate capped per source
+        /// so a guest cannot flood the log the operator reads.
+        /// </summary>
+        /// <param name="source">The module id the line came from.</param>
+        /// <param name="level">Host log level for the line.</param>
+        /// <param name="message">The line, cleaned of control characters.</param>
         public void Log(string source, int level, string message)
         {
             // The game logger must be named global::Log here: the simple
@@ -141,6 +148,11 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// In-game world time, the same clock the game itself reads, so a
+        /// guest's day/night cycle matches the server's.
+        /// </summary>
+        /// <returns>World time in ticks, or 0 when the world is not up.</returns>
         public long GetWorldTime()
         {
             try
@@ -175,6 +187,11 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>Resolves one setting for a module through the settings provider.</summary>
+        /// <param name="modId">The module asking; its own settings win.</param>
+        /// <param name="key">Setting name.</param>
+        /// <param name="value">The value found, or empty when no source has the key.</param>
+        /// <returns>True when the key resolved to a value.</returns>
         public bool TryGetSetting(string modId, string key, out string value)
         {
             return _settings.TryGetSetting(modId, key, out value);
@@ -328,6 +345,14 @@ namespace HordeForge.GameBridge.Bridge
                                 TextSanitizer.Clean(reason) + "); the guest gets no config and its defaults");
         }
 
+        /// <summary>
+        /// Queues a SimCommand for the main thread to run next tick, rate
+        /// capped per module because the work it starts is game-side and
+        /// never seen by the wasm fuel budget.
+        /// </summary>
+        /// <param name="modId">The module asking; it owns the rate cap.</param>
+        /// <param name="command">The command text, cleaned before it is queued.</param>
+        /// <returns>False when the module is over its cap and the command was dropped.</returns>
         public bool TryQueueCommand(string modId, string command)
         {
             // SimCommands execute game-side work (entity spawn, damage) that
@@ -371,6 +396,13 @@ namespace HordeForge.GameBridge.Bridge
             return true;
         }
 
+        /// <summary>
+        /// Serializes the world snapshot a sense-enabled guest reads, rate
+        /// capped per module for the same reason as TryQueueCommand.
+        /// </summary>
+        /// <param name="modId">The module asking; it owns the rate cap.</param>
+        /// <param name="buffer">Caller-provided buffer, written in place.</param>
+        /// <returns>Bytes written, or 0 when the module is capped or there is no world data.</returns>
         public int WriteSenseSnapshot(string modId, Span<byte> buffer)
         {
             // Building a snapshot scans the live world entity list; that is
@@ -385,6 +417,12 @@ namespace HordeForge.GameBridge.Bridge
             return _servant.WriteSense(modId, buffer);
         }
 
+        /// <summary>
+        /// Answers a cover or path query. Those are not wired yet, so this
+        /// is always null and the guest falls back to plain movement.
+        /// </summary>
+        /// <param name="request">The query text the guest sent.</param>
+        /// <returns>Null until the host answers cover and path queries.</returns>
         public string? TryQuery(string request)
         {
             // Stage 3: cover/path queries are not wired yet; the brain falls
@@ -392,6 +430,12 @@ namespace HordeForge.GameBridge.Bridge
             return null;
         }
 
+        /// <summary>
+        /// Sends one line to the server chat as the player, truncating at
+        /// <see cref="MaxChatMessageLength"/> code points.
+        /// </summary>
+        /// <param name="message">The chat line, cleaned before it is sent.</param>
+        /// <returns>False when the line was rejected (too long, or no player to send as).</returns>
         public bool SendChat(string message)
         {
             // The send_chat import carries no mod id (IGameHostApi.SendChat

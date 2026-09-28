@@ -91,6 +91,11 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>Reads one setting for a module, per-mod first, then the shared file.</summary>
+        /// <param name="modId">The module asking; its own settings win.</param>
+        /// <param name="key">Setting name.</param>
+        /// <param name="value">The value found, or empty when neither source has the key.</param>
+        /// <returns>True when the key resolved to a value.</returns>
         public bool TryGetSetting(string modId, string key, out string value)
         {
             lock (_gate)

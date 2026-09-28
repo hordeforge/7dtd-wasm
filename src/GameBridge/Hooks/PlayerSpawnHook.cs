@@ -11,6 +11,12 @@ namespace HordeForge.GameBridge.Hooks
     /// </summary>
     public static class PlayerSpawnHook
     {
+        /// <summary>
+        /// The patched method body. Hands the joining (or respawning)
+        /// client to the host dispatch, wrapped so a failure here is logged
+        /// instead of thrown into the game's spawn path.
+        /// </summary>
+        /// <param name="_cInfo">The client the server just spawned.</param>
         public static void Postfix(ClientInfo _cInfo)
         {
             try

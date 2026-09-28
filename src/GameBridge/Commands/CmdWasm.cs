@@ -43,21 +43,27 @@ namespace HordeForge.GameBridge.Commands
             "wasm help        this list",
         };
 
+        /// <summary>The command word the game dispatches here.</summary>
         public override string[] getCommands()
         {
             return new[] { "wasm" };
         }
 
+        /// <summary>The one line "help wasm" prints for the command.</summary>
         public override string getDescription()
         {
             return "Manage the WebAssembly mod host";
         }
 
+        /// <summary>The per-subcommand help block, shared by both help paths.</summary>
         public override string getHelp()
         {
             return string.Join("\n", SubcommandHelp);
         }
 
+        /// <summary>Runs the subcommand named in the first parameter.</summary>
+        /// <param name="_params">Subcommand plus its arguments; extra arguments are dropped.</param>
+        /// <param name="_senderInfo">Who ran it, logged by load, reload and unload.</param>
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
         {
             // Cleaned once, here: the subcommand is operator-typed text that

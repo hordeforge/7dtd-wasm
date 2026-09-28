@@ -117,6 +117,21 @@ operator, embedder, and guest author.
   docs/ABI.md.
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
+- `make shell-check`: the bash under `evidence/` (the acceptance and
+  playtest server runs) is linted with shellcheck, and `check-ci` calls
+  the target next to the ruff run over `evidence/`. Nothing analyzed those
+  scripts before, so an unset variable or an unquoted expansion in a
+  playtest harness shipped as a failed run rather than a failed check.
+- The ruff gate also runs the PGH (pygrep-hooks), INT (gettext) and FA
+  (future-annotations) groups, all clean on this tree. PGH is what keeps
+  a bare `# noqa` or an unjustified `# type: ignore` from being the quiet
+  way to turn a diagnostic off.
+- The net48 bridge enforces CS1591 like every other project instead of
+  suppressing it: the 20 undocumented public members (`ModApi.InitMod`,
+  `CmdWasm.Execute`, the `GameHostApi` imports, the hooks, `Start` and
+  `Shutdown`) carry XML docs now, so `NoWarn` is gone. The rule had been
+  switched off project-wide, which silenced the finding and every future
+  one, while the packable library beside it documented all 252 entries.
 - `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the
   modlet redistributes (Wasmtime, Apache-2.0 WITH LLVM-exception, plus the
   MIT-licensed .NET Foundation closure). `make dist` stages it next to the
