@@ -176,6 +176,7 @@ namespace HordeForge.WasmHost.Tests
 
                 int churnEnabledA = 0;
                 int churnEnabledB = 0;
+                int churnEnabledByChurner = 0;
                 RunWorkers(
                     () => EnableInALoop(host, new[] { "alpha", "beta", "churn" }, out churnEnabledA),
                     () => EnableInALoop(host, new[] { "alpha", "beta", "churn" }, out churnEnabledB),
@@ -185,6 +186,18 @@ namespace HordeForge.WasmHost.Tests
                         {
                             host.Unload("churn");
                             host.LoadModule("churn", churn);
+                            // Enabling the mod this thread just loaded is
+                            // what makes "an enable entered a store" a fact
+                            // about the run rather than about the
+                            // scheduler: the two enabling workers only ever
+                            // enable, so nothing they do can take the mod
+                            // away between these two calls. They keep
+                            // racing this thread's unloads, which is the
+                            // fault under test.
+                            if (host.InitModule("churn") != null)
+                            {
+                                churnEnabledByChurner++;
+                            }
                         }
                         host.Unload("churn");
                     },
@@ -194,7 +207,7 @@ namespace HordeForge.WasmHost.Tests
                 // while the churn worker disposed them. An enable of a mod
                 // that latches on its first success never re-enters, so
                 // without the churn id this loop would prove nothing.
-                Assert.True(churnEnabledA + churnEnabledB > 0,
+                Assert.True(churnEnabledA + churnEnabledB + churnEnabledByChurner > 0,
                     "no enable ever entered a store, so the unload race did not happen");
 
                 // A racing enable must not have served one guest the other's

@@ -299,6 +299,16 @@ namespace HordeForge.GameBridge.Bridge
                 WriteCapped("glide/parse", "glide (malformed): " + command);
                 return true;
             }
+            // Before the id is read, and once per command: the armed flags
+            // and the claims on them are otherwise dropped only by the sense
+            // scan, so a world where no guest senses keeps a claim on every
+            // net id a player ever armed under. The game hands those ids
+            // out again, and a new player wearing one is refused by every
+            // module but the one that armed the previous occupant
+            // ("glide (not owner ...)"), for the life of the server. The
+            // prune is a no-op while nothing is armed, and it runs under the
+            // servant gate like the scan does.
+            PruneGlideFlags();
             if (!TryParseId(parts[1], out int netId))
             {
                 WriteCapped("glide/parse", "glide (bad id): " + command);
@@ -639,8 +649,11 @@ namespace HordeForge.GameBridge.Bridge
         /// glider, for the life of the server, and "wasm status" prints all
         /// of them. A flag left behind on a reused net id is worse than
         /// growth: it would clamp the descent of whatever entity the game
-        /// later gave that id. Runs inside the sense scan, which already
-        /// owns the world lookup; the id list is pooled.
+        /// later gave that id, and the claim behind it would refuse every
+        /// other module's commands on the player that inherited it. Runs
+        /// from the sense scan, which already owns the world lookup, and
+        /// from the glide verb, which is the only other writer and the path
+        /// that reads a claim; the id list is pooled.
         /// </summary>
         private void PruneGlideFlags()
         {

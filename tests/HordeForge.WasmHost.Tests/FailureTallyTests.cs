@@ -65,6 +65,23 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void ABaselineHiddenByAnEqualCountIsStillForgotten()
+        {
+            // The count comparison is not a valid shortcut: an unloaded id
+            // and a newly loaded one keep the table the same size, so the
+            // stale baseline survives a size check and the returning
+            // generation is reported as jumping by the difference between
+            // its own counters and the previous instance's.
+            var tally = new FailureTally();
+            tally.Record(Counts(("brain", 0), ("parachute", 5)));
+            // "parachute" is gone and "boss" took its place in the report.
+            Assert.Equal(FailureTally.NoFailures, tally.Record(Counts(("brain", 0), ("boss", 0))));
+            // The fresh instance already failed six times; all six are its
+            // own, and the line names none of them.
+            Assert.Equal(FailureTally.NoFailures, tally.Record(Counts(("brain", 0), ("parachute", 6))));
+        }
+
+        [Fact]
         public void ResetForgetsTheBaseline()
         {
             var tally = new FailureTally();

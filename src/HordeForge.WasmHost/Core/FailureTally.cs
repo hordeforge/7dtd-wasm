@@ -74,12 +74,20 @@ namespace HordeForge.WasmHost.Core
             }
         }
 
+        /// <summary>
+        /// Drops every baseline entry whose module was not reported this
+        /// time, so the table tracks the loaded modules rather than every id
+        /// ever seen. The walk runs whenever the table holds anything the
+        /// report does not name: comparing the two counts is not a shortcut
+        /// for it, because a stale entry can hide behind a count that does
+        /// not exceed the report's (a two-module baseline where one id was
+        /// unloaded and a different one loaded in its place), and an id
+        /// loaded again under a stale baseline is reported as a jump in
+        /// failures it did not have. One heartbeat builds the set, so the
+        /// cost is nothing next to the hour between calls.
+        /// </summary>
         private void ForgetAbsent(IReadOnlyList<ModuleFailure> modules)
         {
-            if (_seen.Count <= modules.Count)
-            {
-                return;
-            }
             var present = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < modules.Count; i++)
             {
