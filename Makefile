@@ -318,6 +318,9 @@ dist: build fixtures bridge
 	# Apache-2.0 redistribution requires the license and attribution to travel
 	# with the binaries they cover (Wasmtime and the .NET Foundation closure).
 	cp THIRD-PARTY-NOTICES.md dist/Mods/1_HordeForge_WasmHost/
+	# Our own terms travel with them too: the modlet is MIT and the notices
+	# file links to LICENSE, which is not in the tree once dist/ is zipped.
+	cp LICENSE dist/Mods/1_HordeForge_WasmHost/
 	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
 	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig dist/Mods/Wasm/fps-bot
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm

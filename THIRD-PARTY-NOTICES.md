@@ -4,9 +4,10 @@ This project is MIT licensed (see [LICENSE](LICENSE)). That covers only the
 code in this repository. The modlet staged by `make dist` redistributes
 third-party binaries alongside our own, and the licenses below apply to them.
 
-`make dist` copies this file into `dist/Mods/1_HordeForge_WasmHost/` next to
-the binaries it covers. The NuGet package (`HordeForge.WasmHost`) carries it
-as well.
+`make dist` copies this file and `LICENSE` into
+`dist/Mods/1_HordeForge_WasmHost/` next to the binaries they cover, so the
+link above resolves in the shipped modlet. The NuGet package
+(`HordeForge.WasmHost`) carries this file as well.
 
 Every component below is pinned in a committed `packages.lock.json` with a
 SHA-512 content hash, and `make dist` writes a CycloneDX inventory to

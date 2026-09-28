@@ -20,6 +20,10 @@
          written. Without it "dotnet pack" warns and the listing is bare. -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/hordeforge/7dtd-wasm</RepositoryUrl>
+    <!-- Without the type the listing shows a bare URL instead of a link to
+         the source tree, which is where the version history and the issues
+         for a package nobody has published to a public feed yet live. -->
+    <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <Deterministic>true</Deterministic>
   </PropertyGroup>

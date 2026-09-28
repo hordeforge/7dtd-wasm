@@ -20,6 +20,8 @@ MANIFEST = """\
     <PackageLicenseExpression>{license}</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/hordeforge/7dtd-wasm</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
 {packed}  </ItemGroup>
@@ -59,6 +61,46 @@ class CheckTest(unittest.TestCase):
             )
         )
         self.assertTrue(any("RepositoryUrl" in finding for finding in packcheck.check(root)))
+
+    def test_missing_repository_type_is_reported(self):
+        root = make_repo(
+            MANIFEST.format(license="MIT", packed=PACKED).replace(
+                "<RepositoryType>git</RepositoryType>", ""
+            )
+        )
+        self.assertTrue(any("RepositoryType" in f for f in packcheck.check(root)))
+
+    def test_declared_frameworks_are_read_from_both_spellings(self):
+        multi = make_repo(
+            MANIFEST.format(license="MIT", packed=PACKED).replace(
+                "<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>",
+                "<TargetFramework>net8.0</TargetFramework>",
+            )
+        )
+        self.assertEqual(packcheck.shipped_frameworks(packcheck.project(multi)), {"net8.0"})
+
+    def test_manifest_without_frameworks_is_reported(self):
+        root = make_repo(
+            MANIFEST.format(license="MIT", packed=PACKED).replace(
+                "<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>", ""
+            )
+        )
+        self.assertTrue(
+            any("TargetFrameworks" in f for f in packcheck.check(root)),
+            "a manifest that names no framework packs nothing",
+        )
+
+    def test_a_dropped_framework_is_reported(self):
+        root = make_repo(
+            MANIFEST.format(license="MIT", packed=PACKED).replace(
+                "<TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>",
+                "<TargetFrameworks>net8.0</TargetFrameworks>",
+            )
+        )
+        self.assertTrue(
+            any("netstandard2.0" in f for f in packcheck.check(root)),
+            "a framework README.md promises must fail the gate",
+        )
 
     def test_license_expression_must_match_the_license_file(self):
         # The manifest claims Apache-2.0 while LICENSE is MIT.

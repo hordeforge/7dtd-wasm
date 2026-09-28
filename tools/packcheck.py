@@ -13,7 +13,8 @@ surface at publish time.
 This reads `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj` and checks:
 
   * the identity fields a listing needs are present (id, description,
-    repository URL)
+    repository URL and its type)
+  * `TargetFrameworks` still declares the frameworks README.md promises
   * `PackageLicenseExpression` matches the license in LICENSE
   * `PackageReadmeFile` is declared and the file it names is packed
   * THIRD-PARTY-NOTICES.md is packed
@@ -34,6 +35,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CSPROJ = pathlib.Path("src") / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
 LICENSE = pathlib.Path("LICENSE")
 NOTICES = pathlib.Path("THIRD-PARTY-NOTICES.md")
+
+# The frameworks a consumer gets an assembly for, as README.md states them.
+# Dropping one is a silent change to what the package installs, so the
+# declaration, the README and this list have to move together.
+SHIPPED_FRAMEWORKS = ("netstandard2.0", "net8.0")
 
 
 def project(root: pathlib.Path) -> ET.Element:
@@ -67,14 +73,38 @@ def license_id(root: pathlib.Path) -> str:
     return first.removesuffix(" License")
 
 
+def shipped_frameworks(manifest: ET.Element) -> set[str]:
+    """Frameworks the manifest packs an assembly for.
+
+    Both spellings are read: a single-target library declares
+    <TargetFramework>, a multi-target one the semicolon-separated
+    <TargetFrameworks>.
+    """
+    declared = declared_property(manifest, "TargetFrameworks") or declared_property(
+        manifest, "TargetFramework"
+    )
+    if not declared:
+        return set()
+    return {framework.strip() for framework in declared.split(";") if framework.strip()}
+
+
 def check(root: pathlib.Path) -> list[str]:
     """Findings for the library manifest; empty when it is complete."""
     manifest = project(root)
     findings = [
         f"{CSPROJ}: <{name}> is missing or empty"
-        for name in ("PackageId", "Description", "RepositoryUrl")
+        for name in ("PackageId", "Description", "RepositoryUrl", "RepositoryType")
         if not declared_property(manifest, name)
     ]
+
+    packed_frameworks = shipped_frameworks(manifest)
+    if not packed_frameworks:
+        findings.append(f"{CSPROJ}: no <TargetFrameworks> is declared")
+    findings.extend(
+        f"{CSPROJ}: does not pack {framework}, which README.md promises"
+        for framework in SHIPPED_FRAMEWORKS
+        if framework not in packed_frameworks
+    )
 
     declared = declared_property(manifest, "PackageLicenseExpression")
     actual = license_id(root)

@@ -91,6 +91,17 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Fixed
 
+- `make dist` staged the modlet with the third-party notices but not the
+  project's own MIT LICENSE, so the shipped tree linked to a file that was
+  not in it. Both travel in `dist/Mods/1_HordeForge_WasmHost/` now.
+- The guest crates under `samples/` carried no `publish` declaration, so
+  `cargo publish` offered wasm modules the host loads as raw `.wasm` and
+  then failed on the missing package metadata. `publish = false` is declared
+  once in `[workspace.package]` and inherited by every member.
+- The NuGet manifest left `<RepositoryType>` undeclared, which shows a bare
+  URL on the listing, and `tools/packcheck.py` did not look at
+  `<TargetFrameworks>`, so dropping a framework README.md promises would
+  ship silently. Both are checked now, with tests.
 - `apicheck.py` recorded a constructor's `: this(...)` / `: base(...)`
   clause as part of its signature, so a chained constructor read as a
   removal plus an addition and the gate failed on a clean tree

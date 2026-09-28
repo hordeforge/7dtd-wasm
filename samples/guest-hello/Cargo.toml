@@ -2,6 +2,7 @@
 name = "guest-hello"
 version = "0.1.0"
 edition = "2021"
+publish.workspace = true
 
 [lib]
 name = "guest_hello"

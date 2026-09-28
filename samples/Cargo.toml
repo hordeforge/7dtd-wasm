@@ -10,6 +10,13 @@ members = [
     "guest-fixtures/noexports",
 ]
 
+[workspace.package]
+# Every guest crate is a wasm module the host loads as a raw .wasm, never a
+# library another project takes from a registry. Without this, `cargo publish`
+# offers them and fails on the missing description and license instead, and a
+# guest module is not something a crate registry should carry.
+publish = false
+
 [workspace.lints.rust]
 # Every default-warn rustc lint is a build error in guest crates. The
 # tree compiles clean today, so a new diagnostic fails the build

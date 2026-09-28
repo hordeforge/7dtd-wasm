@@ -86,7 +86,7 @@ mention. Sections 3 and 5 name them.
 | B3 guest to host | Wasmtime store, linear memory | guest code, untrusted by contract | `src/HordeForge.WasmHost/Core/WasmModHost.cs:169` |
 | B4 guest to game | game world state | guest, via host imports | `src/GameBridge/Bridge/GameHostApi.cs:190`, `:231`, `:252` |
 | B5 guest to guest | per-mod settings and stores | other loaded guests | shared settings table, `sense` snapshot, join name |
-| B6 build to runtime | modlet files, native engine | whatever was copied into `dist/` | `Makefile:257` (`dist`), `src/GameBridge/Bridge/NativeBootstrap.cs:31` |
+| B6 build to runtime | modlet files, native engine | whatever was copied into `dist/` | `Makefile:303` (`dist`), `src/GameBridge/Bridge/NativeBootstrap.cs:31` |
 | B7 secrets to code | none in the host | `serverconfig.xml`, env | the host reads no credential |
 
 Privilege transitions, each with a named code path:
@@ -312,7 +312,7 @@ Recorded here, not fixed here. Each names the code that would have to change.
    password in plaintext, and `evidence/playtest-1/run_server.sh:22` documents
    it. The file is the record of a past run, so it should not be edited in
    place; a follow-up that rotates and redacts it is the right move.
-6. **Unsigned native engine and modules** (T12). `Makefile:257` stages them
+6. **Unsigned native engine and modules** (T12). `Makefile:303` stages them
    and the host loads them without any integrity check.
 7. **Engine version lag** (T6), tracked in `SECURITY.md`; recheck when the
    binding updates.
