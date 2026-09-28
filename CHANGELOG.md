@@ -206,6 +206,16 @@ operator, embedder, and guest author.
 
 ### Fixed
 
+- A shutdown that threw, rather than returning a failed result, skipped the
+  release of the mod's store and compiled module. The measurement around a
+  guest call sits outside the guard that turns guest faults into results, so
+  a caller-supplied `MonotonicTimer` that throws made the goodbye throw too:
+  `Unload` left the mod in the registry, still dispatching under an id the
+  caller was told it no longer had, and `Dispose` cleared the registry past
+  the mod, dropping the last reference to a live store and module so the
+  engine held their memory until finalization. Both now report the failure
+  and release the mod, and a host constructor that fails while defining the
+  host API releases the engine and linker it already built.
 - A per-mod `max_memory_bytes` above the effective cap is ignored by design
   (a manifest can only tighten), and nothing said so: a module the operator
   believed was capped tighter than the host cap ran under the host cap

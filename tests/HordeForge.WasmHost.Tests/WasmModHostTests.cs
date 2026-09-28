@@ -581,6 +581,51 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void UnloadReleasesTheModWhenTheGoodbyeItselfThrows()
+        {
+            // The measurement around a guest call sits outside the guard that
+            // turns guest faults into results, so a timer the embedder
+            // supplied that throws makes the goodbye throw too. When it did,
+            // the mod stayed in the registry and its store and compiled module
+            // were never released: an operator told "wasm unload x" saw the
+            // module tick again on the next frame, and the engine memory it
+            // held was reclaimed only at finalization, so every retry in the
+            // loop added one.
+            var api = new TestGameHostApi();
+            var host = new WasmModHost(api, new WasmHostConfig(), new MonotonicTimer(ThrowingReadMs));
+            using (host)
+            {
+                host.LoadModule("strings", Fixture("strings"));
+                ModRunResult? unloaded = host.Unload("strings");
+                Assert.NotNull(unloaded);
+                Assert.False(unloaded.GetValueOrDefault().Ok);
+                Assert.Empty(host.ModIds);
+                Assert.False(host.TryGetMod("strings", out _));
+            }
+        }
+
+        [Fact]
+        public void DisposeReleasesTheModWhenTheGoodbyeItselfThrows()
+        {
+            // The same failing timer through the shutdown path rather than the
+            // unload one. Dispose clears the registry after the loop, so a
+            // goodbye that threw there dropped the last reference to a live
+            // store and module and left the engine holding their memory for
+            // the rest of the process's life, which is why the bridge can
+            // build a fresh host after a Shutdown without inheriting it.
+            var api = new TestGameHostApi();
+            var host = new WasmModHost(api, new WasmHostConfig(), new MonotonicTimer(ThrowingReadMs));
+            host.LoadModule("strings", Fixture("strings"));
+            host.Dispose();
+            Assert.Contains(host.ShutdownFailures, r => r.ModId == "strings" && !r.Ok);
+        }
+
+        private static double ThrowingReadMs()
+        {
+            throw new InvalidOperationException("timer source failed");
+        }
+
+        [Fact]
         public void UnloadInvokesShutdownExport()
         {
             var (host, api) = NewHost();

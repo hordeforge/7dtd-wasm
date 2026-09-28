@@ -134,10 +134,35 @@ namespace HordeForge.WasmHost.Core
                 .WithFuelConsumption(true)
                 .WithStaticMemoryMaximumSize(config.StaticMemoryMaximumBytes)
                 .WithMaximumStackSize(config.MaximumStackBytes);
+            // The engine and the linker are native handles, and a failure
+            // between them and the assignment above has no owner to release
+            // them: a constructor that throws leaves the half-built engine
+            // resident until finalization. An embedder that reports the throw
+            // and builds another host (the bridge does exactly that on a
+            // refused start) would then hold one dead engine per attempt for
+            // the life of the process. Each step below therefore releases
+            // what came before it.
             _engine = new Engine(engineConfig);
-            _linker = new Linker(_engine);
-            _linker.DefineWasi();
-            DefineHostApi();
+            try
+            {
+                _linker = new Linker(_engine);
+                _linker.DefineWasi();
+            }
+            catch
+            {
+                _engine.Dispose();
+                throw;
+            }
+            try
+            {
+                DefineHostApi();
+            }
+            catch
+            {
+                _linker.Dispose();
+                _engine.Dispose();
+                throw;
+            }
             // No guest is current before the first call, so the log tag
             // starts at the bare prefix, matching ClearCurrentMod.
             ClearCurrentMod();
@@ -469,25 +494,60 @@ namespace HordeForge.WasmHost.Core
             lock (_gate)
             {
                 ThrowIfDisposed();
-                if (_mods.TryGetValue(id, out var mod))
+                if (!_mods.TryGetValue(id, out var mod))
                 {
-                    SetCurrentMod(mod.Id);
-                    try
-                    {
-                        ModRunResult shutdown = mod.Shutdown();
-                        _mods.Remove(id);
-                        _modOrder.Remove(id);
-                        return ReleaseStore(mod) ?? shutdown;
-                    }
-                    finally
-                    {
-                        // Same rule as InitModule: no mod is current once the call
-                        // is over, so a later direct guest call cannot resolve
-                        // settings or a log tag against the mod just unloaded.
-                        ClearCurrentMod();
-                    }
+                    return null;
                 }
-                return null;
+                SetCurrentMod(mod.Id);
+                try
+                {
+                    // Neither the goodbye nor the release may be skipped by a
+                    // failure in the other: a shutdown that throws before the
+                    // mod leaves the registry strands a store and a compiled
+                    // module that nothing will ever dispatch or release again,
+                    // and the mod keeps ticking under an id an operator was
+                    // told it no longer has.
+                    ModRunResult shutdown = RunShutdown(mod);
+                    _mods.Remove(id);
+                    _modOrder.Remove(id);
+                    return ReleaseStore(mod) ?? shutdown;
+                }
+                finally
+                {
+                    // Same rule as InitModule: no mod is current once the call
+                    // is over, so a later direct guest call cannot resolve
+                    // settings or a log tag against the mod just unloaded.
+                    ClearCurrentMod();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Runs a mod's shutdown export, reporting a throw as a failed result
+        /// rather than letting it escape.
+        ///
+        /// <see cref="WasmMod.Shutdown"/> turns every guest fault into a
+        /// result, but the measurement around the call is not inside that
+        /// guard: a timer the embedder supplied that throws makes the
+        /// goodbye throw, and an exception crossing here used to skip the
+        /// store and module release its caller owns. The failure is reported
+        /// in the same shape as any other shutdown failure so the caller's
+        /// cleanup chain still runs and the operator still sees it.
+        /// </summary>
+        private static ModRunResult RunShutdown(WasmMod mod)
+        {
+            try
+            {
+                return mod.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                return new ModRunResult(
+                    mod.Id,
+                    ModRunStatus.Error,
+                    "shutdown failed: " + ex.Message,
+                    string.Empty,
+                    0UL);
             }
         }
 
@@ -1038,7 +1098,13 @@ namespace HordeForge.WasmHost.Core
                     SetCurrentMod(mod.Id);
                     try
                     {
-                        ModRunResult shutdown = mod.Shutdown();
+                        // Both calls report instead of throwing, so neither
+                        // can skip the other: a goodbye that threw used to
+                        // leave this mod's store and compiled module
+                        // unreleased, and _mods.Clear() below then dropped the
+                        // last reference to them, holding the engine memory
+                        // until finalization.
+                        ModRunResult shutdown = RunShutdown(mod);
                         if (!shutdown.Ok)
                         {
                             // Kept rather than dropped: the embedder reads them
@@ -1058,18 +1124,6 @@ namespace HordeForge.WasmHost.Core
                         {
                             _shutdownFailures.Add(releaseFailure.Value);
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        // The same blast radius seen from the shutdown call
-                        // itself: one mod must not end the loop and leak the
-                        // engine for the life of the process.
-                        _shutdownFailures.Add(new ModRunResult(
-                            mod.Id,
-                            ModRunStatus.Error,
-                            "dispose failed: " + ex.Message,
-                            string.Empty,
-                            0UL));
                     }
                     finally
                     {
