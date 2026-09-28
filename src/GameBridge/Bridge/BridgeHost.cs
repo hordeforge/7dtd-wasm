@@ -285,9 +285,17 @@ namespace HordeForge.GameBridge.Bridge
                 if (_servant != null)
                 {
                     AddDropped(lines, _servant.CommandLogLimiter, "bot servant log lines");
-                    if (_servant.Glide.Count > 0)
+                    var armed = new List<int>();
+                    foreach (var pair in _servant.Glide)
                     {
-                        lines.Add("  glide armed (net ids): " + string.Join(", ", _servant.Glide.Keys));
+                        if (pair.Value)
+                        {
+                            armed.Add(pair.Key);
+                        }
+                    }
+                    if (armed.Count > 0)
+                    {
+                        lines.Add("  glide armed (net ids): " + string.Join(", ", armed));
                     }
                 }
                 AddDropped(lines, DispatchFailureLimiter, "tick failure logs");

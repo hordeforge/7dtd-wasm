@@ -379,6 +379,7 @@ namespace HordeForge.GameBridge.Bridge
                     ClampGlideDescent(alive, record.Vy, e.position, prevPos, elapsedTicks);
                 }
                 PrunePositionHistory(seen);
+                PruneGlideFlags();
             }
             catch (Exception ex)
             {
@@ -405,6 +406,7 @@ namespace HordeForge.GameBridge.Bridge
         private readonly List<int> _staleIds = new List<int>();
         private readonly List<int> _deadIds = new List<int>();
         private readonly List<int> _despawnIds = new List<int>();
+        private readonly List<int> _goneGlideIds = new List<int>();
 
         /// <summary>
         /// Drops position history for entities no longer in the world
@@ -432,6 +434,43 @@ namespace HordeForge.GameBridge.Bridge
             foreach (int id in stale)
             {
                 _lastPos.Remove(id);
+            }
+        }
+
+        /// <summary>
+        /// Drops armed glide flags for net ids that no longer name a live
+        /// player (disconnected, dead, or an id the game has since handed to
+        /// something else). Nothing else removes them, so without this the
+        /// table grows by one entry for every player who ever armed a
+        /// glider, for the life of the server, and "wasm status" prints all
+        /// of them. A flag left behind on a reused net id is worse than
+        /// growth: it would clamp the descent of whatever entity the game
+        /// later gave that id. Runs inside the sense scan, which already
+        /// owns the world lookup; the id list is pooled.
+        /// </summary>
+        private void PruneGlideFlags()
+        {
+            if (_glide.Count == 0)
+            {
+                return;
+            }
+            var game = GameManager.Instance;
+            if (game == null || game.World == null)
+            {
+                return;
+            }
+            var gone = _goneGlideIds;
+            gone.Clear();
+            foreach (int id in _glide.Keys)
+            {
+                if (!(game.World.GetEntity(id) is EntityPlayer player) || player.IsDead())
+                {
+                    gone.Add(id);
+                }
+            }
+            foreach (int id in gone)
+            {
+                _glide.Remove(id);
             }
         }
 

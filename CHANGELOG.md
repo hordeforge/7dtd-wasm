@@ -53,6 +53,12 @@ Codename: Quarantine (7dtd-wasm).
   settings table instead of being rejected, while the `\uXXXX` form already
   was. Such a value has no UTF-8 form and cannot round-trip the guest
   string ABI.
+- Armed glide flags are dropped for net ids that no longer name a live
+  player, in the same sense scan that prunes the position history. The
+  servant kept one entry per player who ever armed a glider for the life
+  of the server, and a net id the game later reused to another entity
+  kept clamping that entity's descent. `wasm status` now lists only the
+  armed ids, not every id the servant still remembers.
 
 ### Changed
 

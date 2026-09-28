@@ -331,11 +331,21 @@ namespace HordeForge.WasmHost.Core
             if (_mods.TryGetValue(id, out var mod))
             {
                 _currentModId = mod.Id;
-                ModRunResult shutdown = mod.Shutdown();
-                _mods.Remove(id);
-                _modOrder.Remove(id);
-                mod.Dispose();
-                return shutdown;
+                try
+                {
+                    ModRunResult shutdown = mod.Shutdown();
+                    _mods.Remove(id);
+                    _modOrder.Remove(id);
+                    mod.Dispose();
+                    return shutdown;
+                }
+                finally
+                {
+                    // Same rule as InitModule: no mod is current once the call
+                    // is over, so a later direct guest call cannot resolve
+                    // settings or a log tag against the mod just unloaded.
+                    _currentModId = string.Empty;
+                }
             }
             return null;
         }
