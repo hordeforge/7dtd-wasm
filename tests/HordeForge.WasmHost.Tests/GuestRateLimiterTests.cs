@@ -98,6 +98,48 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void SweepRunsOnFreshSourcesThatNeverRollAWindow()
+        {
+            // A guest-chosen source key (the servant's failing verb) makes
+            // every call a new source, and a window is only reset when the
+            // same source writes again a second later. A sweep tied to that
+            // reset therefore never runs, and the table grows by one entry
+            // per guest command for the life of the server. Ten minutes of
+            // one-new-source-per-call traffic must still leave only the last
+            // idle window behind.
+            int nowMs = 0;
+            var limiter = new GuestRateLimiter(1, () => nowMs);
+            for (int i = 0; i < 200; i++)
+            {
+                limiter.TryWrite("mod" + i, out _);
+            }
+            for (int i = 0; i < 600; i++)
+            {
+                nowMs += 1000;
+                limiter.TryWrite("fresh" + i, out _);
+            }
+            // 600 fresh sources over 10 minutes: only the ones younger than
+            // the 5 minute idle threshold are still tracked, and the 200
+            // written before the clock moved are all idle by now.
+            Assert.True(limiter.TrackedSourceCount <= 300,
+                "tracked " + limiter.TrackedSourceCount + " sources; idle ones were not swept");
+        }
+
+        [Fact]
+        public void SourceKeyBoundsGuestChosenDetail()
+        {
+            // The servant's failure key embeds the verb the guest wrote, so
+            // one command must not pin its own string in a table that lives
+            // as long as the process. Long details collapse onto the first
+            // MaxSourceKeyChars characters.
+            string verb = new string('v', 1 << 20);
+            string key = GuestRateLimiter.SourceKey("bot/", verb);
+            Assert.Equal("bot/", key.Substring(0, "bot/".Length));
+            Assert.Equal(GuestRateLimiter.MaxSourceKeyChars, key.Length - "bot/".Length);
+            Assert.Equal("bot/shoot", GuestRateLimiter.SourceKey("bot/", "shoot"));
+        }
+
+        [Fact]
         public void WindowResetsAfterOneSecond()
         {
             int nowMs = 1000;

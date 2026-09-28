@@ -15,6 +15,12 @@ namespace HordeForge.GameBridge.Bridge
     /// The counters surface in "wasm status", and the callers that own a
     /// limit log the running total every 100th drop so an operator can see
     /// a mod is being throttled without the log itself being spammed.
+    ///
+    /// The window table tracks live sources in a long-running server: a
+    /// source that has gone quiet is swept (see EvictIdleSources), and a key
+    /// built from guest-written text goes in through
+    /// <see cref="SourceKey"/>, which bounds its length. Neither the number
+    /// of tracked sources nor the size of a key grows with total traffic.
     /// </summary>
     public sealed class GuestRateLimiter
     {
@@ -62,6 +68,24 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private const int MaxTrackedSources = 128;
 
+        /// <summary>
+        /// How often the idle sweep is allowed to walk the table. The sweep
+        /// has its own clock rather than riding on a source's window reset,
+        /// because a source written exactly once never rolls its window: a
+        /// workload that only ever creates fresh sources (guest-chosen keys
+        /// such as the servant's failing verb) would otherwise never reach
+        /// the sweep at all.
+        /// </summary>
+        private const int SweepIntervalMs = 1000;
+
+        /// <summary>
+        /// Longest detail a <see cref="SourceKey"/> embeds. Source keys are
+        /// held for as long as the limiter lives, and some of them carry
+        /// guest-written text, so an unbounded detail would let one command
+        /// pin an arbitrarily large string in a process-lifetime table.
+        /// </summary>
+        internal const int MaxSourceKeyChars = 64;
+
         private readonly int _maxPerSecond;
 
         // Monotonic millisecond clock, injectable for tests. Defaults to
@@ -78,9 +102,32 @@ namespace HordeForge.GameBridge.Bridge
 
         private readonly Dictionary<string, Window> _windows = new Dictionary<string, Window>(StringComparer.Ordinal);
 
+        /// <summary>Sources currently tracked; the table's own size, for tests.</summary>
+        internal int TrackedSourceCount => _windows.Count;
+
         // Pooled removal list for the idle sweep, so bounding the table
         // never allocates on the guest's log path.
         private readonly List<string> _idle = new List<string>();
+
+        // Clock behind the sweep cadence; see SweepIntervalMs. int.MinValue
+        // means "never swept", so the first over-threshold write sweeps.
+        private int _lastSweepMs = int.MinValue;
+
+        /// <summary>
+        /// Builds a source key whose detail is bounded to
+        /// <see cref="MaxSourceKeyChars"/>. Callers whose key embeds
+        /// guest-written text go through here so the retained key stays
+        /// small however long that text is; a detail within the bound is
+        /// passed through unchanged, so ordinary keys are unaffected.
+        /// </summary>
+        internal static string SourceKey(string prefix, string detail)
+        {
+            if (detail.Length <= MaxSourceKeyChars)
+            {
+                return prefix + detail;
+            }
+            return prefix + detail.Substring(0, MaxSourceKeyChars);
+        }
 
         /// <summary>
         /// Creates a limiter whose cap is fixed at construction, so the
@@ -130,10 +177,20 @@ namespace HordeForge.GameBridge.Bridge
             {
                 window.StartTickMs = nowMs;
                 window.Count = 0;
-                // A window is reset at most once a second per source, so the
-                // sweep runs at most that often no matter how hard a guest
-                // writes. Doing it here, not on every call, keeps the log
-                // path allocation free and O(1) in the common case.
+            }
+            // The idle sweep runs on its own clock, not on the calling
+            // source's reset: a source written once never rolls its window,
+            // so tying the sweep to a reset meant a workload of nothing but
+            // fresh sources never reached it and the table grew without
+            // bound. At most once a second per limiter, and only above the
+            // tracked-source threshold, so the log path stays O(1) and
+            // allocation free in the common case. The int.MinValue sentinel
+            // is checked explicitly; unchecked subtraction would wrap and
+            // read as "not due" (same reasoning as the window reset).
+            if (_windows.Count > MaxTrackedSources
+                && (_lastSweepMs == int.MinValue || nowMs - _lastSweepMs >= SweepIntervalMs))
+            {
+                _lastSweepMs = nowMs;
                 EvictIdleSources(nowMs);
             }
             if (window.Count >= _maxPerSecond)
@@ -149,17 +206,14 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Drops windows for sources that have gone quiet, so the table
-        /// tracks live sources rather than every id ever seen. Unchecked int
-        /// subtraction matches the window reset above. Dropping a window
-        /// drops its dropped-item count too: an idle source is no longer
-        /// being throttled, so reporting it as dropped would be wrong.
+        /// tracks live sources rather than every id ever seen. The caller
+        /// owns the threshold and the cadence. Unchecked int subtraction
+        /// matches the window reset above. Dropping a window drops its
+        /// dropped-item count too: an idle source is no longer being
+        /// throttled, so reporting it as dropped would be wrong.
         /// </summary>
         private void EvictIdleSources(int nowMs)
         {
-            if (_windows.Count <= MaxTrackedSources)
-            {
-                return;
-            }
             List<string> idle = _idle;
             idle.Clear();
             foreach (var pair in _windows)

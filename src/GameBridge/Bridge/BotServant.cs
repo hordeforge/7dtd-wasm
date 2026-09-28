@@ -330,7 +330,10 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("bot/" + verb, "bot " + verb + " failed: " + ex);
+                // The verb is guest-written text, and the key it lands in is
+                // held by the limiter for as long as the process lives, so
+                // it goes in bounded; the log line keeps the verb in full.
+                WarnCapped(GuestRateLimiter.SourceKey("bot/", verb), "bot " + verb + " failed: " + ex);
                 return false;
             }
         }
