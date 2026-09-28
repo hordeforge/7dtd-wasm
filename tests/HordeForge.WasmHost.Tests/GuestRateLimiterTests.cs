@@ -140,6 +140,26 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void SourceKeyCutNeverSplitsASurrogatePair()
+        {
+            // A verb of 63 ASCII characters followed by one emoji puts the
+            // cut between the halves of that emoji's surrogate pair. The
+            // retained key is held for the life of the process and printed by
+            // "wasm status"; a lone high surrogate there has no UTF-8 form, so
+            // the encoding of the line the operator reads would fail or
+            // mangle every later key in it.
+            string verb = new string('v', GuestRateLimiter.MaxSourceKeyChars - 1) + "😀";
+            string key = GuestRateLimiter.SourceKey("bot/", verb);
+            Assert.Equal(GuestRateLimiter.MaxSourceKeyChars - 1, key.Length - "bot/".Length);
+            Assert.Equal("bot/" + new string('v', GuestRateLimiter.MaxSourceKeyChars - 1), key);
+            // The key must survive the round trip it is about to be put
+            // through: a whole-character prefix is encodable, a split one
+            // would have been replaced by U+FFFD.
+            Assert.Equal(key, new System.Text.UTF8Encoding(false, true)
+                .GetString(new System.Text.UTF8Encoding(false, true).GetBytes(key)));
+        }
+
+        [Fact]
         public void ForgetSourceGivesTheNextGenerationAFullBudget()
         {
             // A module reloaded inside the second the old one saturated its

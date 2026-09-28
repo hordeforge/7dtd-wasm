@@ -86,10 +86,12 @@ namespace HordeForge.GameBridge.Bridge
         private const int SweepIntervalMs = 1000;
 
         /// <summary>
-        /// Longest detail a <see cref="SourceKey"/> embeds. Source keys are
-        /// held for as long as the limiter lives, and some of them carry
-        /// guest-written text, so an unbounded detail would let one command
-        /// pin an arbitrarily large string in a process-lifetime table.
+        /// Longest detail a <see cref="SourceKey"/> embeds, in UTF-16 code
+        /// units, cut so the prefix never ends in half a character. Source
+        /// keys are held for as long as the limiter lives, and some of them
+        /// carry guest-written text, so an unbounded detail would let one
+        /// command pin an arbitrarily large string in a process-lifetime
+        /// table.
         /// </summary>
         internal const int MaxSourceKeyChars = 64;
 
@@ -130,7 +132,9 @@ namespace HordeForge.GameBridge.Bridge
         /// <see cref="MaxSourceKeyChars"/>. Callers whose key embeds
         /// guest-written text go through here so the retained key stays
         /// small however long that text is; a detail within the bound is
-        /// passed through unchanged, so ordinary keys are unaffected.
+        /// passed through unchanged, so ordinary keys are unaffected. A
+        /// detail past the bound is cut at a character boundary, one unit
+        /// short when the cut would split a surrogate pair.
         /// </summary>
         internal static string SourceKey(string prefix, string detail)
         {
@@ -138,7 +142,16 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return prefix + detail;
             }
-            return prefix + detail.Substring(0, MaxSourceKeyChars);
+            int cut = MaxSourceKeyChars;
+            // A cut landing between the halves of a surrogate pair leaves a
+            // lone high surrogate in a key the process then holds and prints
+            // ("wasm status"), where it has no UTF-8 form. One unit short is
+            // the largest prefix that is still whole characters.
+            if (char.IsHighSurrogate(detail[cut - 1]))
+            {
+                cut--;
+            }
+            return prefix + detail.Substring(0, cut);
         }
 
         /// <summary>
