@@ -36,6 +36,7 @@ namespace HordeForge.GameBridge.Bridge
     /// </summary>
     public sealed class GuestRateLimiter
     {
+        /// <summary>Cap on host log lines one guest source may emit per second.</summary>
         public const int MaxLinesPerSecond = 10;
 
         /// <summary>

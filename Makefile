@@ -104,6 +104,26 @@ define require_ruff
 	  exit 1; }
 endef
 
+# shellcheck is the evidence scripts' lint and format gate, the same role
+# ruff fills for tools/*.py. The scripts under evidence/ drive a live
+# dedicated server (steamcmd install, telnet session, log scraping) and
+# nothing else in the tree analyzed them, so a quoting bug or an unset
+# variable in one shipped as a failed playtest instead of a failed check.
+# shellcheck needs no second tool on top of it, the way ruff format is the
+# Python half and zig fmt is the Zig half.
+define require_shellcheck
+	@command -v shellcheck >/dev/null 2>&1 || { \
+	  echo "make: shellcheck not found on PATH."; \
+	  echo "  The evidence shell scripts are linted with it (apt-get install shellcheck,"; \
+	  echo "  brew install shellcheck). No other 'make check' target needs it."; \
+	  exit 1; }
+endef
+
+# Every shell script in the tree, one glob so a new evidence run is linted
+# the day it lands. shellcheck with no file argument reads stdin and waits,
+# so the empty case below is a named failure rather than a hang.
+SHELL_SCRIPTS = $(wildcard evidence/*/*.sh)
+
 # NuGet restore mode for the dotnet targets below. Plain builds stay
 # unlocked so dependency bumps regenerate packages.lock.json; "make
 # check" flips this to true so a manifest that drifts from its
@@ -213,7 +233,7 @@ RUST_TOOLCHAIN = $(shell $(PYTHON) tools/pinned.py rust)
 # module the host then rejects at load.
 ZIG_VERSION := 0.16.0
 
-.PHONY: help build test test-list test-tools tools-check toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks sbom api-baseline check check-ci clean
+.PHONY: help build test test-list test-tools tools-check shell-check toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks sbom api-baseline check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -229,6 +249,7 @@ help:
 	@echo "                      run only the tools test file(s) matching a glob"
 	@echo "  make tools-check    the tools half of check-ci: the four Python gates,"
 	@echo "                      the tools unit tests, and the ruff lint and format gates"
+	@echo "  make shell-check    lint the evidence shell scripts (shellcheck)"
 	@echo "  make toolchain      populate the in-project rustup toolchain (.cargo/, .rustup/)"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
 	@echo "  make samples-check  guest lint gate (rustc + clippy denied)"
@@ -320,6 +341,18 @@ tools-check:
 	$(call require_ruff)
 	ruff check tools
 	ruff format --check tools
+
+# Lint gate for the bash under evidence/. Runs on the same commit as the
+# Python gate, in the same unit of work, and in check-ci next to the ruff
+# run over evidence/, so the two evidence checks cannot drift.
+shell-check:
+	$(call require_shellcheck)
+	@test -n "$(SHELL_SCRIPTS)" || { \
+	  echo "make: no shell scripts found under evidence/."; \
+	  echo "  shellcheck with no file argument reads stdin and waits, so this"; \
+	  echo "  fails by name instead of hanging the gate."; \
+	  exit 1; }
+	shellcheck $(SHELL_SCRIPTS)
 
 # Populate the in-project rustup toolchain. RUSTUP_HOME and CARGO_HOME are
 # exported at the top of this file, so this installs nothing system-wide and
@@ -576,6 +609,7 @@ check-ci:
 	$(call require_ruff)
 	ruff check evidence
 	ruff format --check evidence
+	$(MAKE) shell-check
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test

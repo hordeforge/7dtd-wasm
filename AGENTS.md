@@ -55,6 +55,7 @@ make build          # host library + tests (net8)
 make test           # host test suite (needs prebuilt fixtures in tests/fixtures)
 make test-tools     # tools/*.py unit tests only (no .NET, no Rust, no game install)
 make tools-check    # the tools half of check-ci: Python gates + ruff
+make shell-check    # lint the evidence shell scripts (shellcheck)
 make toolchain      # once per clone: fills .cargo/ and .rustup/ (no system-wide Rust)
 make fixtures       # rebuild guest fixtures from samples/ and stage them
 make bridge         # net48 mod against GAME_DIR (defaults to this machine's install)
@@ -63,8 +64,8 @@ make dist           # assemble dist/Mods/1_HordeForge_WasmHost + sample guests
 make pack           # pack the host library as a NuGet package under artifacts/
 make check          # everything check-ci runs, plus bridge and bridge-check
 make check-ci       # doccheck, versioncheck, packcheck, apicheck, the tools
-                    # unit tests, ruff lint, samples-check, build, test, pack
-                    # (what CI runs)
+                    # unit tests, ruff lint, shellcheck, samples-check, build,
+                    # test, pack (what CI runs)
 ```
 
 Known gaps (stated honestly): the bridge has run inside a live dedicated

@@ -32,6 +32,12 @@ namespace HordeForge.GameBridge.Bridge
     {
         private const int RtldNow = 2;
 
+        /// <summary>
+        /// Puts the Wasmtime native library on the loader path before any
+        /// Wasmtime type is touched, preferring the copy staged under the
+        /// modlet's Native/ directory and falling back to the system one.
+        /// </summary>
+        /// <param name="modletDirectory">This modlet's folder, the parent of Native/.</param>
         public static void Prepare(string modletDirectory)
         {
             string nativeDir = Path.Combine(modletDirectory, "Native");

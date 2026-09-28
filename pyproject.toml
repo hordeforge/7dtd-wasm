@@ -20,6 +20,14 @@
 # real defects. ANN is the biggest group still off (no annotations
 # on the tools), and it stays off until the tree is annotated.
 #
+# PGH (pygrep-hooks), INT (gettext) and FA (future-annotations) are on
+# because the tree passes them today. PGH is the group that keeps the
+# suppression rules honest: PGH004 rejects a bare noqa that silences
+# every rule on a line, PGH003 a `# type: ignore` with nothing to
+# justify it, and PGH001 an eval(). INT and FA cover the two ways a
+# translatable string or a new-style annotation silently breaks at
+# runtime, and both are clean here.
+#
 # "ruff format" is the formatter (the pinned ruff ships it, so there is
 # no second tool to version) and "make check-ci" runs it in check mode.
 [tool.ruff]
@@ -66,6 +74,9 @@ select = [
     "TID",  # tidy imports: no banned modules
     "RSE",  # flake8-raise: nothing is raised inside a pointless wrapper
     "TRY",  # tryceratops: control flow and raise-from inside try
+    "PGH",  # pygrep-hooks: eval, blanket noqa, unjustified type: ignore
+    "INT",  # gettext: a translated string built by a non-literal
+    "FA",   # future-annotations: syntax newer than target-version
 ]
 # TRY003 hoists an exception message into a named constant. These are CLI
 # tools whose raise() sites carry a short inline message, and a constant

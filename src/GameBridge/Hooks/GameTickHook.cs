@@ -11,6 +11,11 @@ namespace HordeForge.GameBridge.Hooks
     /// </summary>
     public static class GameTickHook
     {
+        /// <summary>
+        /// The patched method body. One call per game tick into the host
+        /// dispatch; a guest that traps or exhausts its fuel is reported
+        /// in its own ModRunResult and cannot reach the game loop.
+        /// </summary>
         public static void Postfix()
         {
             if (!GameManager.IsDedicatedServer)

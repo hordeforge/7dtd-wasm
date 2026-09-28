@@ -16,6 +16,9 @@ namespace HordeForge.GameBridge.Bridge
         public static readonly ModuleLoadScan None = new ModuleLoadScan(
             new List<string>(), new List<string>());
 
+        /// <summary>The outcome of one Mods/Wasm scan.</summary>
+        /// <param name="loadedIds">Ids loaded by the scan, in dispatch order.</param>
+        /// <param name="skipped">One "what: why" line per refused module or tree.</param>
         public ModuleLoadScan(List<string> loadedIds, List<string> skipped)
         {
             LoadedIds = loadedIds;

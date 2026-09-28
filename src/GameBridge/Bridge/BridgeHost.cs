@@ -154,6 +154,11 @@ namespace HordeForge.GameBridge.Bridge
         // never separate an old fault from a current one.
         private static readonly FailureTally _failures = new FailureTally();
 
+        /// <summary>
+        /// Builds the engine and loads every module found under Mods/Wasm.
+        /// A second call is a no-op with a warning, so a re-entered init
+        /// cannot double-load the tree.
+        /// </summary>
         public static void Start()
         {
             lock (Gate)
@@ -1101,6 +1106,11 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// Runs every guest's shutdown export, despawns the bots its servants
+        /// created, then disposes the engine. Safe to call when the host
+        /// never started.
+        /// </summary>
         public static void Shutdown()
         {
             lock (Gate)
