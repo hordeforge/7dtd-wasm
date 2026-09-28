@@ -41,9 +41,16 @@ CHECKBOX = re.compile(r"^\s*- \[[ x]\]")
 # A TODO-looking list item that is not a checkbox (checked in markdown).
 TODO_BARE = re.compile(r"^\s*- (TODO|todo)")
 
+# Per-line rules as (message, pattern) pairs. Markdown carries all of them;
+# other scanned text carries the em-dash rule alone, so the whole file is
+# read and walked once instead of twice.
+MARKDOWN_LINE_RULES = (
+    ("em dash found", EM_DASH),
+    ("possible AI attribution", AI_ATTR),
+)
+TEXT_LINE_RULES = (MARKDOWN_LINE_RULES[0],)
+
 errors = 0
-warnings = 0
-text_files = []
 
 
 def emit(message: str) -> None:
@@ -51,14 +58,9 @@ def emit(message: str) -> None:
     print(message, file=sys.stderr)
 
 
-def line_errors(line: str) -> list[str]:
-    """Rule hits for one line: em dash, AI attribution. Pure for tests."""
-    hits = []
-    if EM_DASH.search(line):
-        hits.append("em dash found")
-    if AI_ATTR.search(line):
-        hits.append("possible AI attribution")
-    return hits
+def line_errors(line: str, rules=MARKDOWN_LINE_RULES) -> list[str]:
+    """Rule hits for one line. Pure, so tests can call it directly."""
+    return [message for message, pattern in rules if pattern.search(line)]
 
 
 def link_target_broken(path: pathlib.Path, target: str) -> bool:
@@ -73,12 +75,12 @@ def link_target_broken(path: pathlib.Path, target: str) -> bool:
 
 def is_todo_violation(line: str) -> bool:
     """True for a TODO list item not using the checkbox format."""
-    if line.lstrip().startswith("- [ ]") or line.lstrip().startswith("- [x]"):
+    if CHECKBOX.match(line):
         return False
     return TODO_BARE.match(line) is not None
 
 
-def walk(root: pathlib.Path):
+def walk(root: pathlib.Path) -> None:
     for path in root.rglob("*"):
         if not path.is_file():
             continue
@@ -89,7 +91,7 @@ def walk(root: pathlib.Path):
             continue
         # "makefile" sits in the name check, not the suffix set: a file
         # named Makefile has no dot suffix, so it would never match.
-        if (
+        if not (
             path.suffix.lower()
             in {
                 ".md",
@@ -108,9 +110,8 @@ def walk(root: pathlib.Path):
             }
             or path.name.lower() == "makefile"
         ):
-            text_files.append(path)
-        if path.suffix.lower() == ".md":
-            check_markdown(path)
+            continue
+        check_file(path)
 
 
 def read_text(path: pathlib.Path) -> str | None:
@@ -129,41 +130,32 @@ def read_text(path: pathlib.Path) -> str | None:
         return None
 
 
-def check_markdown(path):
-    global errors, warnings
+def check_file(path: pathlib.Path) -> None:
+    """Every scanned file, in one pass: the line rules always apply, the
+    link and TODO rules only where they mean something (markdown)."""
+    global errors
+    is_markdown = path.suffix.lower() == ".md"
+    rules = MARKDOWN_LINE_RULES if is_markdown else TEXT_LINE_RULES
     text = read_text(path)
     if text is None:
         return
     for lineno, line in enumerate(text.splitlines(), 1):
-        for hit in line_errors(line):
+        for hit in line_errors(line, rules):
             errors += 1
             emit(f"{path}:{lineno}: {hit}")
-        # Internal links must resolve to an existing file.
+        if not is_markdown:
+            continue
         for target in LINK.findall(line):
             if link_target_broken(path, target):
                 errors += 1
                 emit(f"{path}:{lineno}: broken link -> {target}")
-    # TODO list items must use the checkbox format.
-    for lineno, line in enumerate(text.splitlines(), 1):
         if is_todo_violation(line):
             errors += 1
             emit(f"{path}:{lineno}: TODO item must use '- [ ]' checkbox format")
 
 
-def check_plain_text():
-    global errors
-    for path in text_files:
-        text = read_text(path)
-        if text is None:
-            continue
-        for lineno, line in enumerate(text.splitlines(), 1):
-            if EM_DASH.search(line):
-                errors += 1
-                emit(f"{path}:{lineno}: em dash found")
-
-
 def main(argv: list[str] | None = None) -> int:
-    global errors, warnings, text_files
+    global errors
     parser = argparse.ArgumentParser(
         prog="doccheck.py",
         description=__doc__,
@@ -177,14 +169,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    errors, warnings, text_files = 0, 0, []
+    errors = 0
     # A mistyped --root would otherwise scan nothing and report "ok": a
     # silent pass is the one outcome a gate must never produce.
     if not args.root.is_dir():
         emit(f"doccheck: {args.root} is not a directory")
         return 2
     walk(args.root)
-    check_plain_text()
     if errors:
         emit(f"doccheck: {errors} error(s) found")
         return 1

@@ -84,9 +84,10 @@ def project_version(root: pathlib.Path) -> str:
         tag = ET.parse(modinfo).find("Version")  # noqa: S314
     except (OSError, ET.ParseError) as error:
         raise SystemExit(f"sbom: cannot read {modinfo}: {error}") from error
-    if tag is None or not tag.get("value"):
+    version = tag.get("value") if tag is not None else None
+    if not version:
         raise SystemExit(f"sbom: no <Version value=...> in {modinfo}")
-    return tag.get("value")
+    return version
 
 
 def load_json(path: pathlib.Path) -> dict:
@@ -190,7 +191,7 @@ def build_bom(root: pathlib.Path) -> dict:
     }
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sbom.py",
         description=__doc__,
@@ -231,4 +232,4 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())

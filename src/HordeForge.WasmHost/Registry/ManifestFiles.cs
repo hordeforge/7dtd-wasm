@@ -36,6 +36,7 @@ namespace HordeForge.WasmHost.Registry
         {
             content = string.Empty;
             failureReason = string.Empty;
+            string oversize = "the file is larger than " + MaxBytes + " bytes";
             try
             {
                 var info = new FileInfo(path);
@@ -46,14 +47,14 @@ namespace HordeForge.WasmHost.Registry
                 }
                 if (info.Length > MaxBytes)
                 {
-                    failureReason = "the file is larger than " + MaxBytes + " bytes";
+                    failureReason = oversize;
                     return false;
                 }
                 byte[] bytes = File.ReadAllBytes(path);
                 if (bytes.Length > MaxBytes)
                 {
                     // The file grew between the stat and the read.
-                    failureReason = "the file is larger than " + MaxBytes + " bytes";
+                    failureReason = oversize;
                     return false;
                 }
                 content = StrictUtf8.GetString(bytes);

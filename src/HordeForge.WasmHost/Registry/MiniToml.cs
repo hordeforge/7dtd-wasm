@@ -377,13 +377,27 @@ namespace HordeForge.WasmHost.Registry
         }
     }
 
+    /// <summary>
+    /// A parsed value. Each accessor rejects with a "must be a ..." message
+    /// unless the concrete value supports that type, so a type overrides
+    /// only the accessors it can answer and the rest reject here.
+    /// </summary>
     internal abstract class TomlValue
     {
-        public abstract string AsString(string context);
+        public virtual string AsString(string context)
+        {
+            throw new FormatException(context + " must be a string");
+        }
 
-        public abstract long AsInteger(string context);
+        public virtual long AsInteger(string context)
+        {
+            throw new FormatException(context + " must be an integer");
+        }
 
-        public abstract TomlTable AsTable(string context);
+        public virtual TomlTable AsTable(string context)
+        {
+            throw new FormatException(context + " must be a table");
+        }
     }
 
     internal sealed class TomlTable : TomlValue
@@ -412,16 +426,6 @@ namespace HordeForge.WasmHost.Registry
             get { return _values.Keys; }
         }
 
-        public override string AsString(string context)
-        {
-            throw new FormatException(context + " must be a string");
-        }
-
-        public override long AsInteger(string context)
-        {
-            throw new FormatException(context + " must be an integer");
-        }
-
         public override TomlTable AsTable(string context)
         {
             return this;
@@ -440,16 +444,6 @@ namespace HordeForge.WasmHost.Registry
         public override string AsString(string context)
         {
             return Value;
-        }
-
-        public override long AsInteger(string context)
-        {
-            throw new FormatException(context + " must be an integer");
-        }
-
-        public override TomlTable AsTable(string context)
-        {
-            throw new FormatException(context + " must be a table");
         }
     }
 
@@ -471,11 +465,6 @@ namespace HordeForge.WasmHost.Registry
         {
             return Value;
         }
-
-        public override TomlTable AsTable(string context)
-        {
-            throw new FormatException(context + " must be a table");
-        }
     }
 
     internal sealed class TomlDouble : TomlValue
@@ -490,16 +479,6 @@ namespace HordeForge.WasmHost.Registry
         public override string AsString(string context)
         {
             return Value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        public override long AsInteger(string context)
-        {
-            throw new FormatException(context + " must be an integer");
-        }
-
-        public override TomlTable AsTable(string context)
-        {
-            throw new FormatException(context + " must be a table");
         }
     }
 
@@ -519,38 +498,14 @@ namespace HordeForge.WasmHost.Registry
         {
             return Value ? "true" : "false";
         }
-
-        public override long AsInteger(string context)
-        {
-            throw new FormatException(context + " must be an integer");
-        }
-
-        public override TomlTable AsTable(string context)
-        {
-            throw new FormatException(context + " must be a table");
-        }
     }
 
     /// <summary>
     /// An array value. The parser validates its items but keeps none: no
     /// manifest field reads array elements, and using one as a scalar is
-    /// rejected by the As* methods.
+    /// rejected by the inherited As* methods.
     /// </summary>
     internal sealed class TomlArray : TomlValue
     {
-        public override string AsString(string context)
-        {
-            throw new FormatException(context + " must be a string");
-        }
-
-        public override long AsInteger(string context)
-        {
-            throw new FormatException(context + " must be an integer");
-        }
-
-        public override TomlTable AsTable(string context)
-        {
-            throw new FormatException(context + " must be a table");
-        }
     }
 }

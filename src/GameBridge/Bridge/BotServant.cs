@@ -31,6 +31,16 @@ namespace HordeForge.GameBridge.Bridge
         // The brain speaks radians; the game speaks degrees.
         private const float RadiansToDegrees = 57.2957795f;
 
+        // Seconds per game tick: the bridge dispatches at 20 TPS. Per-tick
+        // deltas (vertical velocity, the glide descent floor) are converted
+        // to per-second rates with it.
+        private const float SecondsPerTick = 0.05f;
+
+        // Widest tick gap a position delta is read across. A guest that
+        // stopped polling (or a rate-capped import) leaves a wider gap, and
+        // dividing by it would report a teleport as sustained velocity.
+        private const long MaxVelocityDeltaTicks = 10;
+
         // Damage of the pistol every bot carries (the brain's weapon id 0).
         // Loadout records are not wired yet, so the other weapon ids of the
         // zdtd pool (shotgun 1, ak 2, sniper 3, auto 4, smg 5) have no
@@ -505,9 +515,8 @@ namespace HordeForge.GameBridge.Bridge
                 long dtTicks = tick - last.Tick;
                 if (dtTicks > 0 && dtTicks <= MaxVelocityDeltaTicks)
                 {
-                    // 20 TPS bridge tick; blocks per second.
                     elapsedTicks = (int)dtTicks;
-                    vy = (position.y - last.Pos.y) / (dtTicks * 0.05f);
+                    vy = (position.y - last.Pos.y) / (dtTicks * SecondsPerTick);
                 }
             }
             if (!known || last.Tick != tick)
@@ -554,7 +563,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            float maxDrop = SinkVyMps * 0.05f; // blocks per 20 TPS tick
+            float maxDrop = SinkVyMps * SecondsPerTick; // blocks per tick
             float floorY = prevPos.y - maxDrop;
             if (position.y < floorY)
             {

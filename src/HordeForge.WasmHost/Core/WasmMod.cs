@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 using HordeForge.WasmHost.Abi;
 using Wasmtime;
 
