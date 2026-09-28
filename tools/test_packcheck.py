@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Unit tests for tools/packcheck.py. Run: python3 -m unittest discover -s tools"""
 
+import contextlib
+import io
 import pathlib
 import sys
 import tempfile
@@ -88,6 +90,36 @@ class CheckTest(unittest.TestCase):
 
     def test_license_id_reads_the_spdx_id_from_the_license_header(self):
         self.assertEqual(packcheck.license_id(packcheck.ROOT), "MIT")
+
+
+class MainTest(unittest.TestCase):
+    """The command-line contract: exit codes and the stdout/stderr split."""
+
+    def run_main(self, root):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = packcheck.main(["--root", str(root)])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_complete_manifest_exits_zero_with_empty_stdout(self):
+        code, out, err = self.run_main(complete_repo())
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertIn("packcheck: ok", err)
+
+    def test_findings_exit_one_on_stderr(self):
+        root = make_repo(MANIFEST.format(license="Apache-2.0", packed=PACKED))
+        code, out, err = self.run_main(root)
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("PackageLicenseExpression", err)
+
+    def test_missing_root_is_a_usage_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, out, err = self.run_main(pathlib.Path(tmp) / "absent")
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertIn("is not a directory", err)
 
 
 if __name__ == "__main__":

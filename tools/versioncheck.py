@@ -92,6 +92,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # A mistyped --root is a usage error (exit 2), like the other tools,
+    # not a failed check: it says nothing about the declarations.
+    if not args.root.is_dir():
+        print(f"versioncheck: {args.root} is not a directory", file=sys.stderr)
+        return 2
+
     modinfo = args.root / "src" / "GameBridge" / "ModInfo.xml"
     csproj = args.root / "src" / "HordeForge.WasmHost" / "HordeForge.WasmHost.csproj"
     changelog = args.root / "CHANGELOG.md"

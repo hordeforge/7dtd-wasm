@@ -119,6 +119,17 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   started, which a guest computing a day/night phase reads as a plausible
   answer to the wrong question. `get_world_time` and the sense v4 header now
   read the clock through `WorldTime.ToAbi`, which saturates.
+- The repository tools drifted from the command-line contract in
+  CONTRIBUTING. `tools/packcheck.py` printed its pass line to stdout while
+  every other tool keeps stdout free, and both it and
+  `tools/versioncheck.py` reported a mistyped `--root` as a failed check
+  (exit 1, a bare `[Errno 2]`) instead of the documented usage error
+  (exit 2), so a caller could not tell a broken checkout from a bad
+  argument. `tools/targetcheck` read an unknown flag as the `GAME_DIR`
+  path and reported `Assembly-CSharp.dll not found under --flag/...`.
+- `wasm` with a mistyped subcommand printed the full status report, so a
+  typo read like a command that worked. It now names the unknown word and
+  prints the usage list, and `wasm help` prints the same list on request.
 - `make check` failed on a clean tree. `tools/api-surface.txt` predated
   `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
   `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three

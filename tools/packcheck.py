@@ -110,10 +110,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # A mistyped --root is a usage error (exit 2), like the other tools,
+    # not a failed check: it says nothing about the manifest.
+    if not args.root.is_dir():
+        print(f"packcheck: {args.root} is not a directory", file=sys.stderr)
+        return 2
+
     try:
         findings = check(args.root)
     except OSError as error:
-        print(f"packcheck: {error}", file=sys.stderr)
+        # A readable repository whose manifest is gone is a failed check, not
+        # a usage error: the path it names is the finding.
+        print(f"packcheck: cannot read the manifest: {error}", file=sys.stderr)
         return 1
 
     for finding in findings:
@@ -121,7 +129,9 @@ def main(argv: list[str] | None = None) -> int:
     if findings:
         print(f"packcheck: {len(findings)} package metadata problem(s)", file=sys.stderr)
         return 1
-    print(f"packcheck: ok ({CSPROJ} declares a complete package)")
+    # The summary is a diagnostic, not data: stdout stays empty so a caller
+    # piping it never has to tell gate chatter from output.
+    print(f"packcheck: ok ({CSPROJ} declares a complete package)", file=sys.stderr)
     return 0
 
 

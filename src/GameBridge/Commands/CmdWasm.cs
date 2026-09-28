@@ -10,7 +10,8 @@ namespace HordeForge.GameBridge.Commands
     ///   wasm load      (re)scan Mods/Wasm and load new modules
     ///   wasm reload &lt;id&gt;  reload one module from disk
     ///   wasm unload &lt;id&gt;  unload one module (runs its shutdown export)
-    ///   wasm status    host health and per-module counters
+    ///   wasm status    host health and per-module counters (the default)
+    ///   wasm help      the same list this class documents
     /// </summary>
     public class CmdWasm : ConsoleCmdAbstract
     {
@@ -26,7 +27,7 @@ namespace HordeForge.GameBridge.Commands
 
         public override string getHelp()
         {
-            return "wasm list\nwasm load\nwasm reload <id>\nwasm unload <id>\nwasm status";
+            return "wasm list\nwasm load\nwasm reload <id>\nwasm unload <id>\nwasm status (default)\nwasm help";
         }
 
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
@@ -67,11 +68,22 @@ namespace HordeForge.GameBridge.Commands
                     Output(BridgeHost.Unload(_params[1]) ? "unloaded " + TextSanitizer.Clean(_params[1]) : "not loaded: " + TextSanitizer.Clean(_params[1]));
                     break;
 
-                default:
+                case "status":
                     foreach (string line in StatusLines("status:"))
                     {
                         Output(line);
                     }
+                    break;
+
+                case "help":
+                    Output("usage: " + getHelp().Replace("\n", "\n       "));
+                    break;
+
+                default:
+                    // Not the status dump: a mistyped subcommand that prints a
+                    // full report reads like it did what was asked.
+                    Output("unknown subcommand: " + TextSanitizer.Clean(sub));
+                    Output("usage: " + getHelp().Replace("\n", "\n       "));
                     break;
             }
         }

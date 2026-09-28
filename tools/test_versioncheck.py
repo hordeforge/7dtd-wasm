@@ -113,12 +113,12 @@ class MainTest(unittest.TestCase):
         self.assertEqual(out, "")
         self.assertIn("disagree", err)
 
-    def test_missing_repository_exits_one_on_stderr(self):
+    def test_missing_repository_is_a_usage_error_on_stderr(self):
         with tempfile.TemporaryDirectory() as tmp:
             code, out, err = self.run_main(pathlib.Path(tmp) / "absent")
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 2)
         self.assertEqual(out, "")
-        self.assertIn("versioncheck:", err)
+        self.assertIn("is not a directory", err)
 
 
 class TagTest(unittest.TestCase):

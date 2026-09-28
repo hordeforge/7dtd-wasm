@@ -55,6 +55,15 @@ namespace TargetCheck
                 Console.Error.Write("targetcheck: expected at most one GAME_DIR argument\n" + Usage);
                 return 2;
             }
+            if (args.Length == 1 && args[0].StartsWith("-", StringComparison.Ordinal))
+            {
+                // A mistyped flag is not a path: reporting it as a missing
+                // install would send the reader looking for a directory named
+                // after the flag. -h/--help is handled above, so anything left
+                // starting with "-" is unknown.
+                Console.Error.Write("targetcheck: unknown option: " + args[0] + "\n" + Usage);
+                return 2;
+            }
 
             string? gameDir = args.Length > 0 ? args[0] : null;
             if (gameDir == null)
@@ -66,7 +75,10 @@ namespace TargetCheck
             string asmCSharp = Path.Combine(managed, "Assembly-CSharp.dll");
             if (!File.Exists(asmCSharp))
             {
-                Console.Error.WriteLine("FAIL: Assembly-CSharp.dll not found under " + managed);
+                // Prefixed with the tool name, not FAIL: a missing install is
+                // a usage error, and a "FAIL:" line means a target check ran
+                // and did not find what the bridge binds to.
+                Console.Error.WriteLine("targetcheck: Assembly-CSharp.dll not found under " + managed);
                 Console.Error.WriteLine("targetcheck: pass the dedicated server install as GAME_DIR " +
                                         "(make bridge-check GAME_DIR=...), or install the server first");
                 return 2;

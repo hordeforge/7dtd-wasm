@@ -84,7 +84,9 @@ longer exists on V3.
 ## Console commands
 
 `wasm list`, `wasm load`, `wasm reload <id>`, `wasm unload <id>`,
-`wasm status`.
+`wasm status` (the default when no subcommand is given), `wasm help`. An
+unknown subcommand prints the same usage list rather than falling through to
+the status report, so a typo does not read like a successful command.
 
 ## Player join events
 
