@@ -56,6 +56,22 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void DescribeDroppedOrdersSourcesByKey()
+        {
+            // The summary is a run's totals, so it must not depend on the
+            // window table's hash order: two runs that drop the same items
+            // in a different order print the same line and can be diffed.
+            var limiter = new GuestRateLimiter(1);
+            foreach (string source in new[] { "delta", "alpha", "charlie", "bravo" })
+            {
+                Assert.True(limiter.TryWrite(source, out _));
+                Assert.False(limiter.TryWrite(source, out _));
+            }
+            Assert.Equal("lines dropped: alpha=1, bravo=1, charlie=1, delta=1",
+                limiter.DescribeDropped("lines"));
+        }
+
+        [Fact]
         public void IdleSourcesAreSweptWhileActiveOnesSurvive()
         {
             // Sources only exist while a guest writes through them, so the

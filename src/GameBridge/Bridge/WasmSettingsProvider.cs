@@ -21,6 +21,8 @@ namespace HordeForge.GameBridge.Bridge
     public sealed class WasmSettingsProvider
     {
         private readonly string _sharedPath;
+        // Clock behind the probe throttle; see ProbeIntervalMs.
+        private readonly Func<int> _clockMs;
         private readonly SettingsTable _table = new SettingsTable();
         private DateTime _sharedMtime = DateTime.MinValue;
         // mtime of the last reload attempt that failed and was logged, so a
@@ -35,9 +37,17 @@ namespace HordeForge.GameBridge.Bridge
         private const int ProbeIntervalMs = 500;
         private int _lastProbeMs = int.MinValue;
 
-        public WasmSettingsProvider(string sharedPath)
+        /// <summary>
+        /// Creates the provider. <paramref name="clockMs"/> is the
+        /// millisecond clock the shared-file probe throttle measures against
+        /// (see <see cref="ProbeIntervalMs"/>); it defaults to the process
+        /// clock, and a driver that steps its own time passes its own so
+        /// the throttle is a function of that time rather than of wall time.
+        /// </summary>
+        public WasmSettingsProvider(string sharedPath, Func<int>? clockMs = null)
         {
             _sharedPath = sharedPath;
+            _clockMs = clockMs ?? (() => Environment.TickCount);
         }
 
         /// <summary>Registers (or replaces) a module's settings from its manifest.</summary>
@@ -65,7 +75,7 @@ namespace HordeForge.GameBridge.Bridge
         {
             // Throttle disk probes (see ProbeIntervalMs); unchecked int
             // subtraction stays correct across TickCount wraparound.
-            int nowMs = Environment.TickCount;
+            int nowMs = _clockMs();
             if (_lastProbeMs != int.MinValue && nowMs - _lastProbeMs < ProbeIntervalMs)
             {
                 return;

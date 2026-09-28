@@ -20,18 +20,26 @@ namespace HordeForge.GameBridge.Bridge
         // must not stat the disk at call rate.
         private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        public GameHostApi(WasmSettingsProvider settings, BotServant servant)
+        /// <summary>
+        /// Creates the API. <paramref name="clockMs"/> is the millisecond
+        /// clock every cap below measures its one-second window against
+        /// (BridgeHost.ClockMs is the process default), so a driver that
+        /// steps its own time caps and releases output on that time instead
+        /// of on wall time.
+        /// </summary>
+        public GameHostApi(WasmSettingsProvider settings, BotServant servant, Func<int>? clockMs = null)
         {
             _settings = settings;
             _servant = servant;
+            Func<int> clock = clockMs ?? (() => Environment.TickCount);
             // Each limiter carries its own cap from construction; the
             // per-purpose constants cannot drift from their call sites.
-            LogLimiter = new GuestRateLimiter();
-            ChatLimiter = new GuestRateLimiter();
-            CommandLimiter = new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond);
-            SenseLimiter = new GuestRateLimiter(GuestRateLimiter.MaxSensePerSecond);
-            WorldTimeErrorLimiter = new GuestRateLimiter();
-            ChatRejectLimiter = new GuestRateLimiter();
+            LogLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
+            ChatLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
+            CommandLimiter = new GuestRateLimiter(GuestRateLimiter.MaxCommandsPerSecond, clock);
+            SenseLimiter = new GuestRateLimiter(GuestRateLimiter.MaxSensePerSecond, clock);
+            WorldTimeErrorLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
+            ChatRejectLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>

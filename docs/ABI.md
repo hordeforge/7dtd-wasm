@@ -99,7 +99,10 @@ glide flags and applies the glide effect (a fall-damage immunity buff synced
 to the client, plus a server-side clamp of the descent to the sink rate),
 and `sense` reports players, zombies, and our bots in the ZBS4 layout (v4:
 40-byte records with server-derived `vy` from the per-tick position history
-and the `wearing_glider` bit, zdtd ADR 0037). Only a net id that names a live
+and the `wearing_glider` bit, zdtd ADR 0037). Records are ordered by
+ascending net id, and when more alive entities exist than one snapshot can
+carry, the lowest net ids are the ones reported, so the same entity set
+always produces the same snapshot bytes. Only a net id that names a live
 player in the world can be armed, so a guest cannot steer an entity it does
 not own. The descent clamp is anchored to the last observed position and
 applies only when that observation is the previous tick, so a gap in sense

@@ -38,7 +38,9 @@ namespace HordeForge.GameBridge.Bridge
 
         // Widest tick gap a position delta is read across. A guest that
         // stopped polling (or a rate-capped import) leaves a wider gap, and
-        // dividing by it would report a teleport as sustained velocity.
+        // dividing by it would report a teleport as sustained velocity. A
+        // larger gap (the bot was unloaded, the server hitched) reports vy 0
+        // and leaves the stored position alone.
         private const long MaxVelocityDeltaTicks = 10;
 
         // Damage of the pistol every bot carries (the brain's weapon id 0).
@@ -69,13 +71,17 @@ namespace HordeForge.GameBridge.Bridge
         private const int MaxSenseRecords = 41;
 
         private readonly Func<long> _tickProvider;
+        // Millisecond clock for the log cap and the spawn top-up throttle,
+        // so neither window depends on wall time the servant cannot be
+        // driven through (BridgeHost.ClockMs is the process default).
+        private readonly Func<int> _clockMs;
         // Every log line below is written on a guest-driven path: a brain
         // that keeps issuing a failing or repetitive SimCommand would
         // otherwise write server log lines at its command rate, which
         // buries everything else. Sources are per verb or per entity, so
         // one noisy mod cannot mute another's diagnostics. Dropped totals
         // surface in "wasm status" and every 100th drop is logged.
-        private readonly GuestRateLimiter _commandLogLimiter = new GuestRateLimiter();
+        private readonly GuestRateLimiter _commandLogLimiter;
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
         // Sense runs once per
@@ -102,10 +108,16 @@ namespace HordeForge.GameBridge.Bridge
         /// Creates the servant. <paramref name="tickProvider"/> supplies the
         /// bridge's monotonic tick counter for sense snapshots; injecting it
         /// keeps the servant free of a reference back into BridgeHost.
+        /// <paramref name="clockMs"/> is the millisecond clock the log cap
+        /// and the spawn top-up throttle measure their windows against;
+        /// without it those two decisions would follow wall time and a run
+        /// could not be replayed from its inputs.
         /// </summary>
-        public BotServant(Func<long> tickProvider)
+        public BotServant(Func<long> tickProvider, Func<int>? clockMs = null)
         {
             _tickProvider = tickProvider ?? throw new ArgumentNullException(nameof(tickProvider));
+            _clockMs = clockMs ?? (() => Environment.TickCount);
+            _commandLogLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, _clockMs);
         }
 
         /// <summary>Per-source cap on this servant's log lines; exposed for "wasm status".</summary>
@@ -334,7 +346,9 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>
         /// Serializes the current world snapshot into the calling guest's
         /// buffer and returns the byte count, or 0 when there is no world
-        /// data or it does not fit. The snapshot, its records, and the
+        /// data or it does not fit. Records cover the lowest net ids in
+        /// ascending order, so the same set of alive entities always yields
+        /// the same bytes. The snapshot, its records, and the
         /// scratch id sets are pooled and refilled per call, so a sense
         /// request at tick rate does not allocate.
         /// </summary>
@@ -367,15 +381,32 @@ namespace HordeForge.GameBridge.Bridge
                 var records = _senseRecords;
                 var seen = _seenIds;
                 seen.Clear();
+                // Two passes on purpose. The first collects the net ids of
+                // the alive entities and nothing else, so a world with more
+                // entities than a snapshot holds still costs one IsDead
+                // check each; the second does the per-entity record work
+                // for the selected ids only. The order the world keeps its
+                // entity list in is not a property of the world, so the ids
+                // are selected on the net id (SenseRecordPicker) and the
+                // records come out in ascending net id order: the snapshot a
+                // guest sees is a function of the entity set, not of the
+                // game's internal bookkeeping.
+                var candidates = _senseCandidates;
+                candidates.Clear();
                 foreach (Entity e in entities.list)
                 {
+                    if (e is EntityAlive alive && !alive.IsDead())
+                    {
+                        candidates.Add(e.entityId);
+                    }
+                }
+                SenseRecordPicker.SelectLowest(candidates, MaxSenseRecords);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    Entity e = game.World.GetEntity(candidates[i]);
                     if (!(e is EntityAlive alive) || alive.IsDead())
                     {
                         continue;
-                    }
-                    if (snapshot.Records.Count >= MaxSenseRecords)
-                    {
-                        break;
                     }
                     SenseSnapshotWriter.EntityRecord record = records[snapshot.Records.Count];
                     record.NetId = e.entityId;
@@ -413,12 +444,12 @@ namespace HordeForge.GameBridge.Bridge
         // could be refilled underneath it.
         private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
             new Dictionary<int, (long, UnityEngine.Vector3)>();
-        // Largest tick gap a vy sample is taken over. A larger gap (the bot
-        // was unloaded, the server hitched) is a teleport-scale move, not a
-        // fall, so it reports vy 0 and leaves the stored position alone.
-        private const long MaxVelocityDeltaTicks = 10;
 
         private readonly HashSet<int> _seenIds = new HashSet<int>();
+        // Alive net ids collected by the sense scan before the record
+        // window is chosen. Pooled for the same reason as the rest: sense
+        // runs at tick rate per calling brain and allocates nothing.
+        private readonly List<int> _senseCandidates = new List<int>();
         private readonly List<int> _staleIds = new List<int>();
         private readonly List<int> _deadIds = new List<int>();
         private readonly List<int> _despawnIds = new List<int>();
@@ -648,7 +679,7 @@ namespace HordeForge.GameBridge.Bridge
             // request costs nothing in steady state. Unchecked int
             // subtraction stays correct across TickCount wraparound (same
             // reasoning as GuestRateLimiter).
-            int nowMs = Environment.TickCount;
+            int nowMs = _clockMs();
             if (_lastTopUpMs != int.MinValue && nowMs - _lastTopUpMs < TopUpIntervalMs)
             {
                 return;

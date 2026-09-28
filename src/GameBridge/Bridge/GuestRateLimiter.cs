@@ -175,7 +175,13 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        /// <summary>One-line summary of dropped items per source, for "wasm status".</summary>
+        /// <summary>
+        /// One-line summary of dropped items per source, for "wasm status".
+        /// Sources are listed in ordinal key order, not the window table's
+        /// hash order: the status line is the run's totals, and two runs of
+        /// the same workload must produce the same line so a replayed run
+        /// can be diffed against the one that diverged.
+        /// </summary>
         public string DescribeDropped(string noun)
         {
             var parts = new List<string>();
@@ -183,10 +189,19 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (pair.Value.Dropped > 0)
                 {
-                    parts.Add(pair.Key + "=" + pair.Value.Dropped);
+                    parts.Add(pair.Key);
                 }
             }
-            return parts.Count == 0 ? string.Empty : noun + " dropped: " + string.Join(", ", parts);
+            if (parts.Count == 0)
+            {
+                return string.Empty;
+            }
+            parts.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < parts.Count; i++)
+            {
+                parts[i] = parts[i] + "=" + _windows[parts[i]].Dropped;
+            }
+            return noun + " dropped: " + string.Join(", ", parts);
         }
     }
 }

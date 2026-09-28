@@ -167,6 +167,31 @@ in CI, not only on a host that already has a toolchain config.
   GeneratedTextManager.BbCodeSupportMode.NotSupported)` (rate capped globally),
   settings from `Mods/Wasm/wasm.toml` plus each mod's `wasm-mod.toml`
   ([docs/CONFIG.md](CONFIG.md); shared settings re-read on change).
+- `BridgeHost.ClockMs` is the one millisecond clock behind every rate
+  window, throttle, and probe in the bridge: the guest log, chat,
+  SimCommand, and sense caps, the tick-failure and slow-dispatch log caps,
+  the bot spawn top-up, and the shared-settings file probe. Each of those
+  decides whether a guest's output is accepted or dropped, so they read one
+  replaceable clock rather than the process clock at their own call sites.
+  It defaults to `Environment.TickCount`; a driver that steps its own time
+  (a test, or a simulation replaying a run) replaces it before `Start` and
+  the whole bridge follows that time. Two inputs stay real by nature: the
+  shared `wasm.toml`'s mtime decides when guests see new settings, and
+  `Stopwatch` measures the dispatch cost in the telemetry. Both feed logs
+  and a file read, never a guest's tick.
+- The module scan sorts each tree's directories ordinally, so the load order
+  (which fixes the order every later tick dispatches mods in) does not follow
+  the order the filesystem enumerates them in.
+- `BotServant.WriteSense` picks the entities a snapshot reports on the net
+  id, not on the game's entity list order (`SenseRecordPicker`): the list
+  is in whatever order the game built it, so the first N of it would give
+  the same world a different snapshot from run to run. Records come out in
+  ascending net id order, and a world holding more alive entities than a
+  snapshot carries reports the lowest ids.
+- `wasm status` and the hourly heartbeat print their totals in a fixed
+  order (limiter sources by ordinal key, armed glide net ids ascending), so
+  two runs of the same workload print the same line and a replayed run can
+  be diffed against the one that diverged.
 - `CmdWasm` implements the V3 console command contract
   (`getCommands()`, `getDescription()`, `getHelp()`, `Execute(List<string>,
   CommandSenderInfo)`) with subcommands list, load, reload, unload, status.

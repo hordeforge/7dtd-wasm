@@ -111,6 +111,24 @@ Codename: Quarantine (7dtd-wasm).
 - Three manifest tests still asserted `WasmModLoadException` where the parser
   now raises the narrower `WasmManifestException`, so they failed against the
   typed manifest errors. They assert the exact type the parser throws.
+- `BotServant` declared `MaxVelocityDeltaTicks` twice, so the net48 bridge
+  did not compile (`error CS0102`) and `make bridge` and `make check` were
+  red. One declaration, with both comments, remains.
+- The module scan walked each tree's directories in filesystem order, so
+  the load order, which fixes the order every later tick dispatches mods in,
+  could differ between runs on the same tree. Directories are now sorted
+  ordinally, as the modlet trees already were.
+- A sense snapshot took the first 41 alive entities in the game's entity
+  list order and reported them in that order. The list is in whatever order
+  the game built it, so the same world could hand a guest a different
+  snapshot from run to run, and which entities were dropped at the 41-record
+  cap moved with it. Records are now selected on the net id
+  (`SenseRecordPicker`) and come out in ascending order, so the snapshot is
+  a function of the entity set alone.
+- The dropped-item summary in `wasm status` and the armed glide net id list
+  were printed in hash-table order, so the same run printed a different
+  line between runs. Sources are listed in ordinal key order and net ids
+  ascending now.
 - A raw lone surrogate in a manifest string (basic or literal) reached the
   settings table instead of being rejected, while the `\uXXXX` form already
   was. Such a value has no UTF-8 form and cannot round-trip the guest
@@ -165,6 +183,15 @@ Codename: Quarantine (7dtd-wasm).
   bridge and the host library, the rules that decide which folder new code
   goes in, and the source link that lets the net8 suite cover
   `GuestRateLimiter`.
+- Every rate window, throttle, and file probe in the bridge reads one
+  replaceable millisecond clock, `BridgeHost.ClockMs` (default
+  `Environment.TickCount`), instead of each call site reading the process
+  clock: the guest log, chat, SimCommand, and sense caps, the tick-failure
+  and slow-dispatch log caps, the bot spawn top-up (`BotServant`), and the
+  shared-settings probe (`WasmSettingsProvider`). Those windows decide
+  whether a guest's output is accepted or dropped, so a run driven by a
+  virtual clock makes the same decisions on every replay. Log output is
+  unchanged at the default clock.
 - Decision and requirement documents that had drifted from the code:
   ADR 0007 no longer claims the JSON manifest is still accepted (ADR 0005
   superseded it), PRD 0001 no longer claims undeclared-maximum modules are

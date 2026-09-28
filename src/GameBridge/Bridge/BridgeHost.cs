@@ -43,6 +43,35 @@ namespace HordeForge.GameBridge.Bridge
         private static BotServant? _servant;
         private static long _tick;
 
+        // Monotonic millisecond clock behind every rate window, throttle,
+        // and probe in the bridge (the guest log, chat, SimCommand, sense,
+        // and servant caps, the spawn top-up, the shared-file probe). Each
+        // of those decides whether a guest's output is accepted or dropped
+        // on this clock, so a run replayed from the same inputs makes the
+        // same decisions only if the clock reads the same too. Defaults to
+        // the process clock; a driver that steps its own time (a simulation
+        // or a test) replaces it before Start and the whole bridge follows
+        // that time. Nothing in the bridge reads a millisecond clock any
+        // other way.
+        private static Func<int> _clockMs = () => Environment.TickCount;
+
+        /// <summary>
+        /// The millisecond clock every bridge rate window measures against.
+        /// Set before <see cref="Start"/> to drive the bridge from a virtual
+        /// clock. Never null.
+        /// </summary>
+        public static Func<int> ClockMs
+        {
+            get
+            {
+                return _clockMs;
+            }
+            set
+            {
+                _clockMs = value ?? throw new ArgumentNullException(nameof(value));
+            }
+        }
+
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>
         public static string WasmRoot { get; private set; } = string.Empty;
 
@@ -62,13 +91,15 @@ namespace HordeForge.GameBridge.Bridge
         // Caps the per-tick dispatch-failure log lines per module so a
         // permanently trapping or fuel-burning guest cannot flood the server
         // log at tick rate; totals surface in "wasm status".
-        private static readonly GuestRateLimiter DispatchFailureLimiter = new GuestRateLimiter();
+        private static readonly GuestRateLimiter DispatchFailureLimiter =
+            new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, () => ClockMs());
 
         // A dispatch that overruns the frame budget is a real fault, not a
         // per-mod flood, so it gets its own one-per-second budget: a guest
         // burning fuel every tick must not suppress the warning, but it must
         // not produce 20 lines a second either.
-        private static readonly GuestRateLimiter DispatchSlowLimiter = new GuestRateLimiter(DispatchSlowLogsPerSecond);
+        private static readonly GuestRateLimiter DispatchSlowLimiter =
+            new GuestRateLimiter(DispatchSlowLogsPerSecond, () => ClockMs());
 
         /// <summary>Slow-dispatch warnings allowed per second.</summary>
         private const int DispatchSlowLogsPerSecond = 1;
@@ -124,7 +155,7 @@ namespace HordeForge.GameBridge.Bridge
                         break;
                     }
                 }
-                _settings = new WasmSettingsProvider(sharedTomlPath);
+                _settings = new WasmSettingsProvider(sharedTomlPath, () => ClockMs());
 
                 var config = new WasmHostConfig();
                 if (!TryApplySharedLimits(config, sharedTomlPath))
@@ -139,8 +170,8 @@ namespace HordeForge.GameBridge.Bridge
                                 " and restart the server; no guest modules are loaded");
                     return;
                 }
-                _servant = new BotServant(() => _tick);
-                _gameApi = new GameHostApi(_settings, _servant);
+                _servant = new BotServant(() => _tick, () => ClockMs());
+                _gameApi = new GameHostApi(_settings, _servant, () => ClockMs());
                 _host = new WasmModHost(_gameApi, config);
                 _telemetry.Reset();
 
@@ -311,6 +342,10 @@ namespace HordeForge.GameBridge.Bridge
                     }
                     if (armed.Count > 0)
                     {
+                        // Ascending net id, not the glide table's hash order:
+                        // the status line is a run's totals and two runs of
+                        // the same workload must print it identically.
+                        armed.Sort();
                         lines.Add("  glide armed (net ids): " + string.Join(", ", armed));
                     }
                 }
@@ -385,6 +420,11 @@ namespace HordeForge.GameBridge.Bridge
                                     TextSanitizer.Clean(ex.Message) + "; tree skipped");
                         continue;
                     }
+                    // Ordinal, so the load order (which fixes the order every
+                    // later tick dispatches in) is the same on every run and
+                    // on every filesystem. The directory order the OS
+                    // enumerates is not a property of the tree.
+                    Array.Sort(dirs, StringComparer.Ordinal);
                     foreach (string dir in dirs)
                     {
                         string id = Path.GetFileName(dir);
