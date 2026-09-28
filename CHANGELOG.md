@@ -477,6 +477,21 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   (`--no-deps --only-binary=:all:`): ruff ships no runtime dependencies, so
   a transitive resolution was pure added surface, and a source build of the
   linter in the pipeline was never intended.
+- `docs/THREAT_MODEL.md`: every `path:line` re-resolved against the source
+  after the files it points at moved, and the model gained what the drift had
+  hidden. A modlet-carried `Wasm/` tree is a module source, and its
+  `wasm.toml` becomes the shared limits file when `Mods/Wasm/wasm.toml` is
+  absent, so a third-party modlet sets what loads and under which fuel and
+  memory ceilings; that is now threat T5 and a named gap. Also recorded: the
+  manifest fuel ceiling a module author can raise against (50,000,000
+  instructions, 50x the default), the `is_self` ownership gate that does
+  cover bots, the lowest-N-net-id rule that makes `sense` stable, and the
+  invariant number parsing in the SimCommand path. `on_admin_command` and
+  `query` are listed as present-but-unreachable so a later pass does not read
+  a validated export as a live console hook.
+- `SECURITY.md` names that modlet surface under "What is NOT sandboxed", and
+  the chat row now says the 10/second cap is one shared counter across every
+  module rather than a per-module line.
 - The release workflow's tag gate is now `tools/versioncheck.py --tag`,
   the same tool `make check` runs, instead of a bash copy of its three
   version parses. One set of rules and one set of error messages cover both

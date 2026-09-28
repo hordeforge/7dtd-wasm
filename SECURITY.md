@@ -27,7 +27,7 @@ the operator summary; that one is what a security review is aimed with.
 | Reading host memory | Guests see only their own linear memory; no pointers into host space are ever exposed | Runtime (engine) |
 | Reaching game objects | No game types, Reflection, or file APIs reachable from wasm; only the ABI imports | Design |
 | Trap / crash | Traps return `ModRunResult` with a trap code; the host and other modules keep running | Every call |
-| Host-API abuse (spam chat) | The game does NOT rate limit ChatMessageServer on its own (observed live); the bridge caps guest chat globally at 10 messages/second and counts drops | Bridge |
+| Host-API abuse (spam chat) | The game does NOT rate limit ChatMessageServer on its own (observed live); the bridge caps guest chat globally at 10 messages/second, one shared counter for every module, and counts drops | Bridge |
 | Log flooding | Per-module rate cap (default 10 lines/second); excess lines are dropped and counted, visible in `wasm status` | Bridge |
 | Stack exhaustion | Wasm caller stack bounded (`MaximumStackBytes`, default 1 MiB) | Engine |
 
@@ -51,6 +51,15 @@ the operator summary; that one is what a security review is aimed with.
   signature or checksum check and records no operator identity, so anything
   with telnet console access can load code. See `docs/GAME_HOOKS.md` for who
   may run the command.
+- **Other modlets' module trees and shared limits**: every `Mods/<modlet>/Wasm`
+  folder is scanned as a module tree, and when `Mods/Wasm/wasm.toml` is
+  absent, the first `wasm.toml` found in one of those trees becomes the
+  shared limits file, setting the fuel and memory ceilings every module runs
+  under. A third-party modlet therefore changes what loads and under which
+  limits, with only the effective-limits line at start to show for it
+  (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:53`,
+  `src/GameBridge/Bridge/BridgeHost.cs:168`). See
+  `docs/THREAT_MODEL.md` sections 3 and 8.
 - **The bridge itself**: a bug in `1_HordeForge_WasmHost` runs with game
   privileges. It is small, reviewed, and all its game API targets are
   validated by `tools/targetcheck`, but it is still game-process code.
