@@ -6,6 +6,11 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+This cycle carries breaking changes, so it ships as 0.4.0: in this project's
+0.x scheme the minor digit carries breaking changes and the patch digit never
+does (CONTRIBUTING, "Versioning and releases"). Cutting it as 0.3.2 would put
+a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
+
 ### Added
 
 - `make pack` builds the publishable library as a NuGet package under
@@ -129,22 +134,15 @@ Codename: Quarantine (7dtd-wasm).
   were printed in hash-table order, so the same run printed a different
   line between runs. Sources are listed in ordinal key order and net ids
   ascending now.
-- `on_enable` could run more than once for one load generation, although
-  `docs/ABI.md` documents it as "called once when the mod is loaded and
-  enabled". An embedder that enabled a mod twice (a second `DispatchInit`,
-  an `InitModule` after the load scan already enabled it) re-ran the
-  guest's enable side effects. `WasmMod.Init` now latches the enable per
-  generation, so a repeat enable reports Ok without calling the guest; a
-  failed enable is still retryable, and a reloaded generation enables
-  again. `WasmMod.Enabled` reads the latch back.
 - `WasmModHost.InitModule` took no internal lock while every other entry
   point did, so an enable racing a dispatch or an unload could enter a
   wasm store the unload was disposing, or hand one guest the setting the
   other was reading. It now serializes on the same gate.
->- A raw lone surrogate in a manifest string (basic or literal) reached the
-  settings table instead of being rejected, while the `\uXXXX` form already
-  was. Such a value has no UTF-8 form and cannot round-trip the guest
-  string ABI.
+- (breaking) A raw lone surrogate in a manifest string (basic or literal)
+  reached the settings table instead of being rejected, while the `\uXXXX`
+  form already was. Such a value has no UTF-8 form and cannot round-trip the
+  guest string ABI. A manifest carrying one now fails to load, so a guest
+  relying on it stops loading until the string is replaced.
 - Armed glide flags are dropped for net ids that no longer name a live
   player, in the same sense scan that prunes the position history. The
   servant kept one entry per player who ever armed a glider for the life
@@ -163,15 +161,6 @@ Codename: Quarantine (7dtd-wasm).
 - Guest rate limiter windows for sources that stopped writing are swept
   once the table grows past its threshold, so unloading and reloading
   modules no longer leaves one window per id ever seen.
-- A misspelled key in a manifest's `[limits]` table is rejected instead of
-  ignored. It used to leave the host cap in force where the operator wrote
-  a tighter one, and nothing in the log said so. Keys outside `[limits]`
-  stay tolerated, so a manifest written for a newer host still loads.
-- A shared `Mods/Wasm/wasm.toml` that exists but cannot be parsed now aborts
-  the bridge start instead of falling back to the code defaults, which
-  handed every guest a fuel budget and memory ceiling the operator never
-  wrote. The server keeps running and no guest loads until the file is
-  fixed.
 - `apicheck` recorded a property whose accessor body nested braces as its
   private backing field, so `WasmModHost.Tick` and `WasmModHost.ModIds` were
   no longer on the recorded surface. The accessor body is now stripped with
@@ -179,7 +168,114 @@ Codename: Quarantine (7dtd-wasm).
 - `tools/api-surface.txt` regenerated: it still described the surface before
   the tick telemetry, the single-module init entry point, the shutdown
   failure list, and the collapsed TOML accessors landed, so the gate failed
-  on a tree whose published surface had only grown.
+  on a tree whose published surface had only grown. It was regenerated a
+  second time for the members that landed with the typed manifest errors
+  (`ManifestReadException`, `WasmManifestException`, `ModRunResult.GuestStatus`,
+  `AbiConstants.StatusNotImplemented`/`StatusInternalError`, `WasmMod.Enabled`,
+  `WasmModHost.InheritGuestStandardStreams`/`FuelPerCall`/`StaticMemoryMaximumBytes`),
+  which the first regeneration predated, so `make check` was still red on a
+  clean tree.
+- The guest, fixture and dist targets failed on a clean clone with a bare
+  `sh: .cargo/bin/cargo: No such file or directory` or a `cp: cannot stat`,
+  because the in-project toolchain, zig and the sibling `zdtd-server`
+  checkout were each an undocumented prerequisite. Each target now names the
+  missing piece and the command that provides it, and the path to the
+  sibling checkout is overridable with `ZDTD_SERVER=...`.
+- `make help` listed neither `make clean` nor the guest toolchain step, and
+  described `make check` without the bridge build it runs.
+- `make check-ci` failed on a clean clone: `tools/` had never been formatted
+  with the ruff the gate pins, so `ruff format --check` refused six files.
+  They are formatted now, and `pyproject.toml` declares
+  `required-version = "==0.16.4"` so a developer's ruff has to be the one CI
+  installs rather than whatever happens to be on PATH.
+- (breaking) `WasmModHost` guarded its "call it from one thread" contract with
+  a comment only: two threads entering it skipped or duplicated mods in a
+  dispatch, served one guest another guest's settings, and could enter a
+  wasm store that was already running a call (the engine aborts the
+  process). Every entry point now serializes on one internal gate, and the
+  dispatch results and `ModIds` are per-call copies instead of host-owned
+  live views, so a list handed to one caller cannot be refilled by a
+  dispatch running on another thread. A consumer that read `ModIds` or a
+  dispatch result and expected it to track later host state now holds the
+  snapshot the call returned; re-read it after each dispatch instead.
+  `WasmModHostConcurrencyTests` drives dispatch, load, and unload from
+  several threads against real guest fixtures.
+- The `config` host import cut its copy at `min(out_cap, len)` bytes, which
+  could land inside a multi-byte UTF-8 character and hand the guest bytes it
+  decodes as U+FFFD. The cut now stops on a character boundary
+  (`Utf8Prefix`), and `docs/ABI.md` states the boundary.
+- (breaking) Manifest and `config.toml` reads decoded the bytes in this class
+  instead of through `File.ReadAllText`, whose reader silently switches
+  encoding on a UTF-16 or UTF-32 BOM: a non-UTF-8 file now fails its load
+  with a reason instead of loading, and a UTF-8 BOM is stripped explicitly.
+  A manifest or shared `wasm.toml` written in a UTF-16 editor now stops
+  loading and says why.
+- (breaking) `ModId.IsValid` accepts U+FFFD, so a module folder whose name is
+  not valid UTF-8 (legal on Linux) produced an id that no longer re-encodes
+  to its own directory and the module silently never loaded. Replacement
+  characters are rejected like the other invisible characters, so a folder
+  with such a name is now refused at the id instead of loading nothing.
+- The guest link flags (`--max-memory=33554432`, 1 MiB stack) move into the
+  tracked `samples/.cargo/config.toml`. They lived only in the gitignored
+  in-project toolchain config, so a fresh checkout and CI built guests that
+  declare no memory maximum, which the host treats as the 4 GiB wasm32
+  ceiling and refuses under the default cap.
+- `wasm load` skips a module tree it cannot enumerate (permissions, a
+  modlet being replaced) with a warning instead of aborting the whole
+  scan and leaving the host unstarted.
+- The server-side glide clamp measured the fall against a single tick while
+  `vy` is averaged over every tick since the entity's stored position, so a
+  player sampled several ticks after the last one (sense called below tick
+  rate) was lifted back up even while sinking within the glide rate. The
+  drop budget now covers the same interval `vy` was measured over.
+- (breaking) `limits.max_memory_bytes` was accepted down to 1 byte. As a
+  per-mod value it could only reject the module, but the shared `wasm.toml`
+  value becomes the engine's memory ceiling, where the host constructor threw
+  and took the bridge start down with it. The manifest parser now rejects
+  anything below one wasm page, the bound the host already enforces, so an
+  invalid file keeps the documented "log it and use the defaults" behavior.
+  A per-mod value that tight was accepted before and is now a load failure.
+- The CycloneDX SBOM now carries an SPDX license per NuGet component.
+  `tools/sbom.py` holds the table and fails the build when a package
+  reaches a committed lock file without a recorded license, and the SBOM
+  skips lock files under `evidence/` (a frozen playtest record, not a
+  shipped artifact).
+- `BotServant.PruneDeadBots` collects dead ids into the pooled scratch list
+  instead of allocating one per call, matching the pooling the sense path
+  already does.
+
+### Changed (breaking)
+
+- A misspelled key in a manifest's `[limits]` table is rejected instead of
+  ignored. It used to leave the host cap in force where the operator wrote a
+  tighter one, and nothing in the log said so. Keys outside `[limits]` stay
+  tolerated, so a manifest written for a newer host still loads, but a
+  manifest that loaded under 0.3.1 with a key that does not exist now fails
+  its load. The replacement is the correct spelling of the key.
+- A shared `Mods/Wasm/wasm.toml` that exists but cannot be parsed now aborts
+  the bridge start instead of falling back to the code defaults, which handed
+  every guest a fuel budget and memory ceiling the operator never wrote. The
+  server keeps running and no guest loads until the file is fixed, so a
+  shared file with a syntax error that 0.3.1 ignored is now a stop.
+- `on_enable` runs once per load generation. `WasmMod.Init` latches the
+  enable, so a second `DispatchInit` or an `InitModule` after the load scan
+  reports Ok without calling the guest again, and `WasmMod.Enabled` reads
+  the latch back. An embedder that relied on a repeated enable to re-run the
+  guest's setup has to reload the mod for that; a failed enable stays
+  retryable. `docs/ABI.md` already documented the once-per-load contract.
+- The `glide` queue verb only arms a net id that names a live player
+  (`EntityPlayer`) in the loaded world. An armed flag applies the glide buff
+  and clamps the entity's descent, so accepting any world net id let a guest
+  steer entities it does not own, other players included. A guest that armed
+  a non-player net id is now refused with a `glide (not a player)` line in
+  the log, and `docs/ABI.md` states the gate.
+- `TextSanitizer` also strips the invisible bidi controls (U+202A to U+202E,
+  U+2066 to U+2069) and the zero-width no-break space (U+FEFF) from guest-
+  and client-supplied log, chat and set-name text, replacing them with '?'
+  like the control characters it already stripped. A guest that relied on
+  those code points passing through gets '?' instead. Zero-width space,
+  joiner, word joiner and variation selectors are left alone, so emoji
+  sequences and non-Latin scripts still render.
 
 ### Changed
 
@@ -247,102 +343,12 @@ Codename: Quarantine (7dtd-wasm).
 - `ModApi.ApplyHarmonyPatches` posts each hook through one `Patch` helper
   (same targets, same messages).
 - `CmdWasm` writes console output through one `Output` helper.
-- The `glide` queue verb only arms a net id that names a live player
-  (`EntityPlayer`) in the loaded world. An armed flag applies the glide buff
-  and clamps the entity's descent, so accepting any world net id let a guest
-  steer entities it does not own, other players included. A non-player net id
-  is refused with a `glide (not a player)` line in the log.
-  `docs/ABI.md` states the gate.
-- `TextSanitizer` also strips the invisible bidi controls (U+202A to
-  U+202E, U+2066 to U+2069) and the zero-width no-break space (U+FEFF) from
-  guest- and client-supplied log, chat and set-name text, replacing them
-  with '?' like the control characters it already stripped. They render as
-  nothing while reordering the text around them, so a chat or log line
-  could read as some other name or as text the guest never wrote. Zero-width
-  space, joiner, word joiner and variation selectors are left alone, so
-  emoji sequences and non-Latin scripts still render.
 - The repository tools (`doccheck.py`, `versioncheck.py`, `sbom.py`,
   `targetcheck`) share one command-line contract: `--help` documents every
   flag, `--root` selects the repository to work on, machine-readable data
   goes to stdout and progress to stderr, and exit codes are 0 pass, 1 check
   failed, 2 usage error. `versioncheck.py` moved its messages to stderr and
   gained `--root`.
-
-### Fixed
-
-- The guest, fixture and dist targets failed on a clean clone with a bare
-  `sh: .cargo/bin/cargo: No such file or directory` or a `cp: cannot stat`,
-  because the in-project toolchain, zig and the sibling `zdtd-server`
-  checkout were each an undocumented prerequisite. Each target now names the
-  missing piece and the command that provides it, and the path to the
-  sibling checkout is overridable with `ZDTD_SERVER=...`.
-- `make help` listed neither `make clean` nor the guest toolchain step, and
-  described `make check` without the bridge build it runs.
-- `make check-ci` failed on a clean clone: `tools/` had never been formatted
-  with the ruff the gate pins, so `ruff format --check` refused six files.
-  They are formatted now, and `pyproject.toml` declares
-  `required-version = "==0.16.4"` so a developer's ruff has to be the one CI
-  installs rather than whatever happens to be on PATH.
-- `WasmModHost` guarded its "call it from one thread" contract with a comment
-  only: two threads entering it skipped or duplicated mods in a dispatch,
-  served one guest another guest's settings, and could enter a wasm store
-  that was already running a call (the engine aborts the process). Every
-  entry point now serializes on one internal gate, and the dispatch results
-  and `ModIds` are per-call copies instead of host-owned live views, so a
-  list handed to one caller cannot be refilled by a dispatch running on
-  another thread. `WasmModHostConcurrencyTests` drives dispatch, load, and
-  unload from several threads against real guest fixtures.
-- The `config` host import cut its copy at `min(out_cap, len)` bytes, which
-  could land inside a multi-byte UTF-8 character and hand the guest bytes it
-  decodes as U+FFFD. The cut now stops on a character boundary
-  (`Utf8Prefix`), and `docs/ABI.md` states the boundary.
-- Manifest and `config.toml` reads decoded the bytes in this class instead of
-  through `File.ReadAllText`, whose reader silently switches encoding on a
-  UTF-16 or UTF-32 BOM: a non-UTF-8 file now fails its load with a reason
-  instead of loading, and a UTF-8 BOM is stripped explicitly.
-- `ModId.IsValid` accepts U+FFFD, so a module folder whose name is not valid
-  UTF-8 (legal on Linux) produced an id that no longer re-encodes to its own
-  directory and the module silently never loaded. Replacement characters are
-  rejected like the other invisible characters.
-- The guest link flags (`--max-memory=33554432`, 1 MiB stack) move into the
-  tracked `samples/.cargo/config.toml`. They lived only in the gitignored
-  in-project toolchain config, so a fresh checkout and CI built guests that
-  declare no memory maximum, which the host treats as the 4 GiB wasm32
-  ceiling and refuses under the default cap.
-- `wasm load` skips a module tree it cannot enumerate (permissions, a
-  modlet being replaced) with a warning instead of aborting the whole
-  scan and leaving the host unstarted.
-- The server-side glide clamp measured the fall against a single tick while
-  `vy` is averaged over every tick since the entity's stored position, so a
-  player sampled several ticks after the last one (sense called below tick
-  rate) was lifted back up even while sinking within the glide rate. The
-  drop budget now covers the same interval `vy` was measured over.
-- `limits.max_memory_bytes` was accepted down to 1 byte. As a per-mod value
-  it could only reject the module, but the shared `wasm.toml` value becomes
-  the engine's memory ceiling, where the host constructor threw and took the
-  bridge start down with it. The manifest parser now rejects anything below
-  one wasm page, the bound the host already enforces, so an invalid file
-  keeps the documented "log it and use the defaults" behavior.
-- The CycloneDX SBOM now carries an SPDX license per NuGet component.
-  `tools/sbom.py` holds the table and fails the build when a package
-  reaches a committed lock file without a recorded license, and the SBOM
-  skips lock files under `evidence/` (a frozen playtest record, not a
-  shipped artifact).
-- `BotServant.PruneDeadBots` collects dead ids into the pooled scratch list
-  instead of allocating one per call, matching the pooling the sense path
-  already does.
-- A module initialized on its own (the start scan, `wasm reload`) read its
-  settings, its `config.toml`, and its log attribution from whichever mod
-  the host happened to have called last, or from no mod at all on a fresh
-  start. `WasmModHost.InitModule(id)` runs `on_enable` with the calling mod
-  set, and the host clears that state after every dispatch.
-- The sense position history is pruned by entity membership instead of a
-  size comparison. A tick where entities left while others joined kept the
-  departed ids, and a net id the game later reused was reported with a
-  vertical velocity derived from the previous occupant.
-- Guest rate limiter windows for sources that stopped writing are swept
-  once the table grows past its threshold, so unloading and reloading
-  modules no longer leaves one window per id ever seen.
 
 ### Removed
 
