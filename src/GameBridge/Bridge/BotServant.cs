@@ -207,16 +207,36 @@ namespace HordeForge.GameBridge.Bridge
             // raw control character into the log. Cleaning twice (the bridge
             // already cleaned what it passes in) is a no-op.
             command = TextSanitizer.Clean(command);
-            bool isBot = command.StartsWith("bot ", StringComparison.Ordinal);
+            // Only "bot" and "glide" are servant verbs; every other text is
+            // the guest's chat announce (the parachute deploy message,
+            // docs/ABI.md). Reporting handled=false and accepting nothing is
+            // what lets the caller broadcast it: a command that is neither
+            // verb belongs to no servant surface, so an unknown verb under
+            // "bot" is still ours and is answered (and logged) here, while
+            // "Glider deployed" is not a bot command at all.
+            bool isBot = IsVerbCommand(command, "bot");
+            if (!isBot && !IsVerbCommand(command, "glide"))
+            {
+                return false;
+            }
             handled = true;
             lock (_gate)
             {
-                if (!isBot && !command.StartsWith("glide ", StringComparison.Ordinal))
-                {
-                    return TryQueueBot(modId, command);
-                }
                 return isBot ? TryQueueBot(modId, command) : TryQueueGlide(command);
             }
+        }
+
+        /// <summary>
+        /// True when <paramref name="command"/> is the verb
+        /// <paramref name="verb"/> on its own or followed by arguments. A
+        /// bare verb belongs to the servant surface too, so a malformed
+        /// "glide" is reported as a malformed glide command rather than
+        /// broadcast to chat.
+        /// </summary>
+        private static bool IsVerbCommand(string command, string verb)
+        {
+            return command.Equals(verb, StringComparison.Ordinal)
+                || command.StartsWith(verb + " ", StringComparison.Ordinal);
         }
 
         /// <summary>
