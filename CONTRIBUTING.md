@@ -74,6 +74,9 @@ requested:
   package), and the newest released `## [X.Y.Z]` section of CHANGELOG.md.
   `tools/versioncheck.py` (part of `make check`) fails when they disagree;
   the release workflow rejects a `vX.Y.Z` tag that does not match all three.
+  A tag also has to pass the same CI gate a pull request does: the release
+  workflow calls `ci.yml` as a reusable workflow, so there is one copy of
+  the gate and a release never ships a tree main has not proved.
 - **Changelog before tag.** A release exists when its dated CHANGELOG.md
   section exists; tagging without cutting that section fails in CI.
 - **Breaking changes bump the minor digit** and say "(breaking)" in their

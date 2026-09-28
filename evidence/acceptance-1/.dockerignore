@@ -1,0 +1,6 @@
+# The Dockerfile needs no build context at all: everything it does is
+# baked into the image (apt packages plus the steamcmd game install).
+# Without this file the recorded run logs and the console transcripts are
+# shipped to the daemon on every build and land in the build cache, so
+# regenerating a log changes the build context and needlessly busts it.
+*

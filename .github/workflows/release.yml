@@ -14,6 +14,10 @@ name: release
 # not have; a maintainer with a game install runs `make package` and attaches
 # the zip. Gating the tag is the half that can be proven automatically, and
 # asserting the other half here would be a claim, not evidence.
+#
+# The tag is not taken on trust: this workflow first runs ci.yml (the same
+# docs, lint, guest, build, and test gate that guards pull requests), so a tag
+# can never ship a tree that main has not already proved.
 
 on:
   push:
@@ -23,7 +27,14 @@ permissions:
   contents: read
 
 jobs:
+  # A tag is a release, and a release must not be cut from a tree that does
+  # not pass the same gate a pull request does. This calls ci.yml rather than
+  # repeating its steps, so the two can never drift apart.
+  check:
+    uses: ./.github/workflows/ci.yml
+
   verify-tag:
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

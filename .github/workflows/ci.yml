@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # release.yml calls this workflow so a tag is gated by the same checks a
+  # pull request is, instead of shipping a second copy of the steps.
+  workflow_call:
 
 # Least privilege: the pipeline only needs to read the code.
 permissions:
@@ -30,6 +33,13 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: "8.0.x"
+          # Every project restores from a committed, SHA512-hashed
+          # packages.lock.json, so the cache key is exact: a package bump
+          # misses the cache, an unchanged tree restores from it instead of
+          # re-downloading the whole closure. Locked mode still verifies
+          # every hash, so a warm cache is a speed win, not a trust one.
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
       # The Makefile pins RUSTUP_HOME and CARGO_HOME inside the checkout, so a
       # developer host installs no Rust system-wide, and those assignments win
       # over the environment. Honour that layout rather than working around

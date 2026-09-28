@@ -51,7 +51,11 @@ SLN = HordeForge.WasmHost.sln
 # Wasmtime NuGet version as resolved into the committed lock file, so the
 # staged native engine always matches the managed binding (single source
 # of truth; bumping the PackageReference updates dist automatically).
-WASMTIME_VERSION := $(shell python3 -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
+# Recursively expanded (=, not :=) so the lock file is read only by the
+# targets that stage the native engine: an eagerly evaluated $(shell) starts
+# a python interpreter on every "make", including "make clean", and fails
+# those targets outright when the lock file has not been restored yet.
+WASMTIME_VERSION = $(shell python3 -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
 .PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
 

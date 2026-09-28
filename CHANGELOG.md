@@ -16,6 +16,14 @@ Codename: Quarantine (7dtd-wasm).
 - The tools lint gate covers more rule groups (S, A, BLE, DTZ, FBT, FURB,
   G, ICN, ISC, LOG, N, PERF, PIE, SLF, TID), all of which the tree passes
   today. `tools/` is reformatted to the pinned ruff's style.
+- A `vX.Y.Z` tag now runs the full CI gate (docs, lint, guest lint, build,
+  test) before the version check, by calling `ci.yml` as a reusable
+  workflow instead of tagging on version agreement alone.
+- CI caches the NuGet restore, keyed on the committed `packages.lock.json`
+  files. Locked mode still verifies every content hash, so a warm cache
+  changes restore time, not what is trusted.
+- The acceptance image build ignores its own directory (`.dockerignore`),
+  so recorded run logs no longer enter the build context or bust the cache.
 
 ## [0.3.1] - 2026-09-21
 
