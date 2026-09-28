@@ -10,11 +10,13 @@ namespace HordeForge.WasmHost.Registry
     /// never exceed the host caps (fuel_per_call overrides the effective
     /// default within the parser ceiling; max_memory_bytes only tightens
     /// it). Unknown fields outside [limits] are tolerated, so a manifest
-    /// written for a newer host still loads; malformed values and unknown
-    /// [limits] keys reject the module with a specific reason. A misspelled
-    /// limit is not a harmless extra field: it would silently leave the
-    /// host ceiling in force where the operator wrote a tighter one, so
-    /// [limits] is a closed table.
+    /// written for a newer host still loads, but they are reported in
+    /// <see cref="IgnoredKeys"/> for the load log rather than dropped in
+    /// silence; malformed values and unknown [limits] keys reject the
+    /// module with a specific reason. A misspelled limit is not a harmless
+    /// extra field: it would leave the host ceiling in force where the
+    /// operator wrote a tighter one, so [limits] is a closed table and a
+    /// limit key misplaced above its section is named in the log.
     ///
     /// TOML shape (canonical, docs/CONFIG.md, following the zdtd-server
     /// conventions: snake_case keys, [section] groups, defaults identical
@@ -50,6 +52,15 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         private static readonly string[] KnownLimitKeys = { "fuel_per_call", "max_memory_bytes" };
 
+        /// <summary>
+        /// Top-level keys the parser reads, plus the informational metadata a
+        /// manifest carries. Anything else at the root is tolerated (a
+        /// manifest written for a newer host still loads) but reported in
+        /// <see cref="IgnoredKeys"/> instead of vanishing: a limit written
+        /// above its section is the same operator mistake [limits] rejects.
+        /// </summary>
+        private static readonly string[] KnownRootKeys = { "name", "description", "version", "limits", "settings" };
+
         private ModManifest()
         {
         }
@@ -66,6 +77,21 @@ namespace HordeForge.WasmHost.Registry
         /// settings). Empty when the manifest has no [settings] table.
         /// </summary>
         public IReadOnlyDictionary<string, string> Settings { get; private set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Top-level keys and sections the parser did not read, in ordinal
+        /// order. A limit key written at the root rather than in [limits]
+        /// lands here, and so does a misspelled section header, so the
+        /// caller can name it in the log instead of leaving the operator
+        /// believing a cap the engine never applies is in force.
+        /// </summary>
+        public IReadOnlyList<string> IgnoredKeys { get; private set; } = new string[0];
+
+        /// <summary>True when <paramref name="key"/> is a key of the [limits] table.</summary>
+        public static bool IsLimitKey(string key)
+        {
+            return key != null && Array.IndexOf(KnownLimitKeys, key) >= 0;
+        }
 
         /// <summary>
         /// Parses a TOML manifest. Throws <see cref="WasmManifestException"/>
@@ -91,6 +117,7 @@ namespace HordeForge.WasmHost.Registry
                 {
                     BindSettings(manifest, settingsValue.AsTable("settings"));
                 }
+                manifest.IgnoredKeys = UnknownRootKeys(root);
                 return manifest;
             }
             catch (FormatException ex)
@@ -117,6 +144,27 @@ namespace HordeForge.WasmHost.Registry
             {
                 manifest.MaxMemoryBytes = (ulong)CheckMemory(memory.AsInteger("limits.max_memory_bytes"));
             }
+        }
+
+        /// <summary>
+        /// Top-level keys this parser does not read, ordinal-sorted so two
+        /// runs of the same file report them in the same order. A key holding
+        /// a table is a section header the parser has no use for (a
+        /// misspelled [limits] lands here), a key holding a scalar is
+        /// metadata a newer host may own.
+        /// </summary>
+        private static IReadOnlyList<string> UnknownRootKeys(TomlTable root)
+        {
+            var unknown = new List<string>();
+            foreach (string key in root.Keys)
+            {
+                if (Array.IndexOf(KnownRootKeys, key) < 0)
+                {
+                    unknown.Add(key);
+                }
+            }
+            unknown.Sort(StringComparer.Ordinal);
+            return unknown;
         }
 
         private static void BindSettings(ModManifest manifest, TomlTable settings)

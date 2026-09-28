@@ -63,6 +63,15 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Game tick at which the mod was loaded and initialized.</summary>
         public long InitTick { get; }
 
+        /// <summary>
+        /// Fuel budget this instance's calls are actually charged against:
+        /// its manifest's fuel_per_call when it wrote one, the host default
+        /// otherwise. The layering that produced it (docs/CONFIG.md) is only
+        /// checkable from the value, so an embedder reports this rather than
+        /// the host default.
+        /// </summary>
+        public ulong FuelPerCall => _fuelPerCall;
+
         /// <summary>Total fuel consumed across all calls so far.</summary>
         public ulong TotalFuelConsumed { get; private set; }
 

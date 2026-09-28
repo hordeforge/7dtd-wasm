@@ -137,6 +137,7 @@ src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long InitTick { get; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long TotalCalls { get; private set; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long TrapCalls { get; private set; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public string Id { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ulong FuelPerCall
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ulong TotalFuelConsumed { get; private set; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public void Dispose()
 src/HordeForge.WasmHost/Core/WasmMod.cs: type WasmMod
@@ -192,7 +193,9 @@ src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public virtual string As
 src/HordeForge.WasmHost/Registry/ModId.cs: ModId.public static bool IsValid(string? id)
 src/HordeForge.WasmHost/Registry/ModId.cs: type ModId
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public IReadOnlyDictionary<string, string> Settings { get; private set; }
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public IReadOnlyList<string> IgnoredKeys { get; private set; }
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public static ModManifest ParseToml(string toml, string modId)
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public static bool IsLimitKey(string key)
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? FuelPerCall { get; private set; }
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? MaxMemoryBytes { get; private set; }
 src/HordeForge.WasmHost/Registry/ModManifest.cs: type ModManifest

@@ -21,20 +21,25 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   `fuel_percall` would otherwise leave the operator believing a cap is in
   force that the engine never applies. An unknown key fails the same way a
   malformed one does: per mod, the module is skipped; for the shared file,
-  see below.
+  see below. A tolerated top-level key is named in the load log rather than
+  vanishing, so `fuel_per_call` written above `[limits]`, or a section header
+  the host does not know, reaches the operator instead of leaving the engine
+  on a default nobody wrote.
 - **A bad `wasm.toml` is not silently replaced by the defaults.** The shared
   file is the only place the host limits come from, so a file that exists
   but cannot be parsed aborts the bridge start: the server keeps running and
   no guest loads until the file is fixed. Falling back to the code defaults
   would hand every guest a fuel budget and memory ceiling nobody wrote.
 - `wasm status` prints the limits the engine is actually running under (fuel
-  per call, memory ceiling, module size cap, guest stdio), and the same line
-  is logged at start. That is the check that the layering produced the limits
-  the operator intended.
+  per call, memory ceiling, module size cap, guest stdio), each module's
+  effective fuel per call, and the same host line is logged at start. That is
+  the check that the layering produced the limits the operator intended.
 - A **new tunable is a new field**, not a new parse arm: the parser binds
   the file onto `ModManifest` struct fields, so adding a supported key means
   adding a field in one place, and adding one to `[limits]` also means adding
-  it to the closed key list the manifest parser accepts.
+  it to the closed key list the manifest parser accepts. A new top-level key
+  joins the informational set the parser recognizes, or every load logs it as
+  ignored.
 
 ## Files
 

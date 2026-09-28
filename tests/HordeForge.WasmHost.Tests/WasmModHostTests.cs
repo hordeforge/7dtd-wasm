@@ -728,6 +728,23 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void EffectiveFuelPerCallIsReadablePerModule()
+        {
+            // "wasm status" reports the per-module budget, so it must be the
+            // one the engine charges: the manifest value where one was
+            // written, the host default where it was not.
+            var (host, _) = NewHost(c => c.FuelPerCall = 1234UL);
+            using (host)
+            {
+                WasmMod overridden = host.LoadModule(
+                    "strings", Fixture("strings"), ModManifest.ParseToml("[limits]\nfuel_per_call = 500\n", "strings"));
+                WasmMod defaulted = host.LoadModule("counted", CountedEnableModule());
+                Assert.Equal(500UL, overridden.FuelPerCall);
+                Assert.Equal(1234UL, defaulted.FuelPerCall);
+            }
+        }
+
+        [Fact]
         public void ManifestFuelAboveCeilingIsRejected()
         {
             WasmModLoadException ex = Assert.Throws<WasmManifestException>(

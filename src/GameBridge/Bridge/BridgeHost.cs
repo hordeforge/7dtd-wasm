@@ -361,7 +361,9 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     if (_host.TryGetMod(id, out var mod) && mod != null)
                     {
-                        lines.Add("  " + id + " (init tick " + mod.InitTick + ", calls " + mod.TotalCalls + ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
+                        lines.Add("  " + id + " (fuel/call " + mod.FuelPerCall +
+                                  ", init tick " + mod.InitTick + ", calls " + mod.TotalCalls +
+                                  ", traps " + mod.TrapCalls + ", fuel exhausted " + mod.FuelExhaustedCalls + ")");
                     }
                 }
                 if (_gameApi != null)
@@ -560,8 +562,31 @@ namespace HordeForge.GameBridge.Bridge
             }
             _settings?.UpdateMod(id, manifest);
             _gameApi?.RegisterConfig(id, ReadRawConfig(id));
+            LogIgnoredKeys("manifest for " + id, manifest);
             LogFuelOverride(id, manifest, host.FuelPerCall);
             return true;
+        }
+
+        /// <summary>
+        /// Names the top-level keys the manifest parser did not read, once
+        /// per load. They are tolerated (a manifest written for a newer host
+        /// still loads), but a limit key written above [limits], or a
+        /// section header the host does not know, is a cap the operator
+        /// believes is in force while the engine runs on the default. A
+        /// limit key gets the placement named, because that is the mistake
+        /// the message is there to catch.
+        /// </summary>
+        private static void LogIgnoredKeys(string what, ModManifest? manifest)
+        {
+            if (manifest == null)
+            {
+                return;
+            }
+            foreach (string key in manifest.IgnoredKeys)
+            {
+                string hint = ModManifest.IsLimitKey(key) ? "; limits belong in [limits]" : string.Empty;
+                Log.Out("[WasmHost] " + what + ": ignoring unknown key '" + TextSanitizer.Clean(key) + "'" + hint);
+            }
         }
 
         /// <summary>
@@ -702,6 +727,7 @@ namespace HordeForge.GameBridge.Bridge
                     return true;
                 }
                 ModManifest shared = ModManifest.ParseToml(ManifestFiles.ReadRequired(sharedPath), "shared");
+                LogIgnoredKeys("shared wasm.toml", shared);
                 if (shared.FuelPerCall.HasValue)
                 {
                     config.FuelPerCall = shared.FuelPerCall.Value;

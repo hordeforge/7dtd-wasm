@@ -13,6 +13,16 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Added
 
+- A top-level key or section the manifest parser does not read is now named
+  in the load log, per mod and for the shared `wasm.toml`
+  (`ModManifest.IgnoredKeys`). Unknown keys stay tolerated so a manifest
+  written for a newer host still loads, but a `fuel_per_call` written above
+  `[limits]`, or a section header the host does not know, no longer vanishes:
+  the engine would run on the default while the operator believed a cap was
+  in force.
+- `wasm status` reports each module's effective fuel per call
+  (`WasmMod.FuelPerCall`), the value the engine actually charges, so a
+  per-mod override is checkable after the load line has scrolled away.
 - `make pack` builds the publishable library as a NuGet package under
   `artifacts/packages/`, and `tools/packcheck.py` gates the package metadata
   it depends on (identity fields, the license expression against LICENSE,
