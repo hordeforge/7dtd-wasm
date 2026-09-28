@@ -208,6 +208,7 @@ help:
 	@echo "  make check          everything check-ci runs, plus bridge and bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  make clean          remove build output, samples/target, dist/ and artifacts/"
+	@echo "  make ruff-version   print the pinned ruff release on stdout (CI installs it)"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 	@echo "  ZDTD_SERVER=...     zdtd-server checkout holding the plugins fixtures and dist copy"
 	@echo
@@ -394,7 +395,7 @@ dist: build fixtures bridge
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	# SBOM: CycloneDX inventory built from the committed lock files, so
 	# consumers and vuln scanners know exactly what shipped.
-	$(PYTHON) tools/sbom.py --root . -o dist/SBOM.json
+	$(PYTHON) tools/sbom.py --root . --output dist/SBOM.json
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
 # The publishable library package, the artifact a consumer installs with a

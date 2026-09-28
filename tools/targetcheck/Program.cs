@@ -47,6 +47,15 @@ namespace TargetCheck
         {
             if (args.Any(a => a == "-h" || a == "--help"))
             {
+                // Help is the only argument it accepts. Answering it while
+                // swallowing a mistyped flag would report the usage text and
+                // exit 0 for "targetcheck --bogus --help", where every tool
+                // in tools/ rejects the unknown option with exit 2.
+                if (args.Length > 1)
+                {
+                    Console.Error.Write("targetcheck: --help takes no other argument\n" + Usage);
+                    return 2;
+                }
                 Console.Write(Usage);
                 return 0;
             }

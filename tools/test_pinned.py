@@ -102,6 +102,16 @@ class PinsTest(unittest.TestCase):
             self.assertEqual(pinned.main(["wasmtime", "--root", str(root)]), 0)
         self.assertEqual(out.getvalue(), "44.0.0\n")
 
+    def test_cli_reports_a_missing_root_as_a_usage_error(self):
+        # 2, not 1: a --root that is not a directory says nothing about the
+        # declarations, the same split the other tools make.
+        missing = pathlib.Path(tempfile.mkdtemp()) / "nope"
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.assertEqual(pinned.main(["wasmtime", "--root", str(missing)]), 2)
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("is not a directory", err.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

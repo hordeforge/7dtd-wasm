@@ -15,7 +15,8 @@ The version goes to stdout and nothing else does, so the Makefile can
 substitute it directly. A name that is not declared, or a declaration that
 does not parse, is an error on stderr with a non-zero exit: a version the
 build silently invented would put the wrong engine in a dist, or check a
-developer machine against the wrong gate.
+developer machine against the wrong gate. A --root that is not a directory
+is a usage error (exit 2), the same code every tool here uses for one.
 """
 
 import argparse
@@ -113,6 +114,11 @@ def main(argv: list[str] | None = None) -> int:
         help="repository to read (default: the tool's own repo)",
     )
     args = parser.parse_args(argv)
+    # A mistyped --root is a usage error (exit 2), like the other tools, not
+    # a failed read: it says nothing about the declarations.
+    if not args.root.is_dir():
+        print(f"pinned: {args.root} is not a directory", file=sys.stderr)
+        return 2
     try:
         version = PINS[args.pin](args.root)
     except (PinError, KeyError) as error:

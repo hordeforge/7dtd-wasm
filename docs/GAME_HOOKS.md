@@ -90,10 +90,13 @@ longer exists on V3.
 
 ## Console commands
 
-`wasm list`, `wasm load`, `wasm reload <id>`, `wasm unload <id>`,
-`wasm status` (the default when no subcommand is given), `wasm help`. An
-unknown subcommand prints the same usage list rather than falling through to
-the status report, so a typo does not read like a successful command.
+`wasm list` (loaded module ids, one per line), `wasm load`,
+`wasm reload <id>`, `wasm unload <id>`, `wasm status` (the default when no
+subcommand is given; the full report: limits, per-module counters, dropped
+line summaries), `wasm help`. An unknown subcommand, and any argument past
+the ones a subcommand takes, print the same usage list rather than falling
+through to the status report, so a typo does not read like a successful
+command.
 
 ## Player join events
 

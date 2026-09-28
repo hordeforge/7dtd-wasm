@@ -381,6 +381,25 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// Ids of the loaded modules, one per line, in load order.
+        ///
+        /// "wasm list" prints this, not the telemetry in StatusLines: a
+        /// command named list that answers with limits, rate-limit counters
+        /// and a servant summary is a full status report under the wrong
+        /// name, and an operator asking which modules are loaded has to read
+        /// past everything else to find out.
+        /// </summary>
+        public static List<string> ModuleIds()
+        {
+            lock (Gate)
+            {
+                return _host == null
+                    ? new List<string> { "host not started" }
+                    : new List<string>(_host.ModIds);
+            }
+        }
+
         public static List<string> StatusLines()
         {
             lock (Gate)

@@ -6,7 +6,7 @@ namespace HordeForge.GameBridge.Commands
 {
     /// <summary>
     /// Console command "wasm" with subcommands:
-    ///   wasm list      list loaded modules
+    ///   wasm list      loaded module ids, one per line
     ///   wasm load      (re)scan Mods/Wasm and load new modules
     ///   wasm reload &lt;id&gt;  reload one module from disk
     ///   wasm unload &lt;id&gt;  unload one module (runs its shutdown export)
@@ -33,10 +33,22 @@ namespace HordeForge.GameBridge.Commands
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
         {
             string sub = _params.Count > 0 ? _params[0].ToLowerInvariant() : "status";
+            // An argument past the subcommand's own is dropped by every
+            // case below, so "wasm reload trap 3" and "wasm list now" would
+            // both read as a call that did what was asked. Only reload and
+            // unload take a second word.
+            int maxArgs = sub == "reload" || sub == "unload" ? 2 : 1;
+            if (_params.Count > maxArgs)
+            {
+                Output("wasm " + sub + " takes no more than " +
+                       (maxArgs - 1) + " argument(s)");
+                Output(Usage());
+                return;
+            }
             switch (sub)
             {
                 case "list":
-                    foreach (string line in StatusLines("modules:"))
+                    foreach (string line in BridgeHost.ModuleIds())
                     {
                         Output(line);
                     }
@@ -76,16 +88,21 @@ namespace HordeForge.GameBridge.Commands
                     break;
 
                 case "help":
-                    Output("usage: " + getHelp().Replace("\n", "\n       "));
+                    Output(Usage());
                     break;
 
                 default:
                     // Not the status dump: a mistyped subcommand that prints a
                     // full report reads like it did what was asked.
                     Output("unknown subcommand: " + TextSanitizer.Clean(sub));
-                    Output("usage: " + getHelp().Replace("\n", "\n       "));
+                    Output(Usage());
                     break;
             }
+        }
+
+        private string Usage()
+        {
+            return "usage: " + getHelp().Replace("\n", "\n       ");
         }
 
         private static void Output(string line)

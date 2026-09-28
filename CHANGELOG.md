@@ -161,6 +161,23 @@ operator, embedder, and guest author.
   `SharedLogCollection` no test names. The file is gone, and so is the
   exclusion. The csproj comment that called the file "redundant" now says
   what the five source-linked bridge files and the one log shim are.
+- `wasm list` printed the whole status report under a different header, so
+  "list loaded modules" answered with limits, rate-limit counters and the
+  servant summary. It now prints the loaded module ids, one per line
+  (`BridgeHost.ModuleIds`), which is what its help line claims. `wasm status`
+  keeps the report.
+- `wasm <sub> <extra>` dropped the extra word silently: `wasm reload trap 3`
+  and `wasm list now` read as calls that did what was asked. An argument past
+  a subcommand's own now prints the usage list, the way an unknown
+  subcommand does.
+- `tools/pinned.py` reported a `--root` that is not a directory as a failed
+  read (exit 1). It is a usage error, exit 2, like every other tool in
+  `tools/`, and the message says so.
+- `targetcheck --help` answered with the usage text and exit 0 even when it
+  was given another argument, so a mistyped flag alongside it was swallowed.
+  `--help` with any other argument is now a usage error (exit 2).
+- `make help` left out `make ruff-version`, which CI calls to install the
+  pinned ruff. It is listed now.
 - `WasmModHost.Dispatch` did not compile. The result was narrowed through a
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so
