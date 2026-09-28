@@ -76,6 +76,13 @@ mention. Sections 3 and 5 name them.
   accepts the fuel value unconditionally and the memory value only to
   tighten (`src/HordeForge.WasmHost/Core/WasmModHost.cs:231`,
   `src/HordeForge.WasmHost/Core/WasmModHost.cs:262`).
+- The two zdtd guest modules the modlet ships are copied unmodified out of a
+  sibling `zdtd-server` checkout (`ZDTD_SERVER` in the Makefile) with no
+  checksum over either binary, so what a built modlet carries is whatever
+  that local checkout holds. It is a build-time input, not a runtime one, and
+  the NuGet closure beside it is hash-pinned; the two modules are inventoried
+  in `dist/SBOM.json` and `THIRD-PARTY-NOTICES.md` by name and version, with
+  no checksum, because this repository has nothing to check one against.
 
 ## 3. Trust boundaries
 

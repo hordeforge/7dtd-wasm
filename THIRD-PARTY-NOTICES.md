@@ -9,12 +9,14 @@ third-party binaries alongside our own, and the licenses below apply to them.
 link above resolves in the shipped modlet. The NuGet package
 (`HordeForge.WasmHost`) carries this file as well.
 
-Every component below is pinned in a committed `packages.lock.json` with a
-SHA-512 content hash, and `make dist` writes a CycloneDX inventory to
+Every NuGet component below is pinned in a committed `packages.lock.json`
+with a SHA-512 content hash, and `make dist` writes a CycloneDX inventory to
 `dist/SBOM.json` from those same lock files. `tools/sbom.py` holds the
 machine-readable license table and fails the build if a new package appears
 in a lock file without a recorded license, so this file and the SBOM cannot
-drift apart silently.
+drift apart silently. The guest modules in the second table are not NuGet
+packages and carry no such hash; `tools/sbom.py` inventories them as
+`pkg:generic` components read from the manifests under `samples/`.
 
 ## Redistributed in the modlet
 
@@ -30,6 +32,26 @@ drift apart silently.
 `System.Runtime.CompilerServices.Unsafe.dll` is compiled against but not
 staged: the bridge binds to 4.0.4.1 and the game already provides that
 assembly in `Managed`.
+
+## Redistributed guest modules
+
+`make dist` also stages two guest modules the modlet ships as examples of
+real-world compatibility. They are built by the sibling
+[hordeforge/zdtd-server](https://github.com/hordeforge/zdtd-server)
+project and are copied in unmodified, straight from that checkout's
+`mods/` folder, as `dist/Mods/Wasm/fps-bot/module.wasm` and
+`dist/Mods/Wasm/parachute/module.wasm`.
+
+| Component | Version | License | What ships |
+|---|---|---|---|
+| zdtd `fps_bot`, staged as `fps-bot` | 2.5.0 | asserted by hordeforge/zdtd-server for its own build | `dist/Mods/Wasm/fps-bot/module.wasm` |
+| zdtd `parachute` | 0.1.0 | asserted by hordeforge/zdtd-server for its own build | `dist/Mods/Wasm/parachute/module.wasm`, `config.toml` |
+
+This repository does not vendor those sources, so it cannot reproduce their
+license text; the SBOM records both components with the SPDX value
+`NOASSERTION` rather than a license this file cannot back up. Anyone
+redistributing a modlet built from this repository is responsible for
+carrying the terms hordeforge/zdtd-server declares for these two modules.
 
 ### Wasmtime attribution
 

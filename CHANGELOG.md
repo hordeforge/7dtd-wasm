@@ -394,6 +394,20 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Changed
 
+- `make dist` also ships the two zdtd guest modules (`fps_bot` 2.5.0 and
+  `parachute` 0.1.0) as unmodified binaries from the sibling
+  `hordeforge/zdtd-server` checkout, and neither the CycloneDX SBOM nor
+  `THIRD-PARTY-NOTICES.md` named them: a modlet redistributing third-party
+  modules with no attribution and no inventory entry. `tools/sbom.py` now
+  emits them as `pkg:generic` components read from the manifests under
+  `samples/`, the notices record where each one comes from and what ships,
+  and the existing notices drift gate covers them too. Their license stays
+  `NOASSERTION`, since this repository does not vendor the sources that
+  declare it.
+- The CI ruff install resolves nothing beside the pinned wheel
+  (`--no-deps --only-binary=:all:`): ruff ships no runtime dependencies, so
+  a transitive resolution was pure added surface, and a source build of the
+  linter in the pipeline was never intended.
 - The release workflow's tag gate is now `tools/versioncheck.py --tag`,
   the same tool `make check` runs, instead of a bash copy of its three
   version parses. One set of rules and one set of error messages cover both

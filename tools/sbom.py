@@ -4,6 +4,7 @@
 Sources of truth, in order:
   * **/packages.lock.json  (NuGet; SHA512 content hashes included)
   * samples/Cargo.lock     (guest workspace; path-only deps carry no hash)
+  * samples/*/wasm-mod.toml (guest modules staged from the sibling checkout)
 
 The output is a deterministic CycloneDX 1.6 JSON document covering every
 third-party component that ships with a dist, so consumers and vuln
@@ -60,6 +61,19 @@ NUGET_LICENSES = {
     "xunit.extensibility.execution": "Apache-2.0",
     "xunit.runner.visualstudio": "Apache-2.0",
 }
+
+# Guest modules "make dist" copies into the modlet from the sibling
+# zdtd-server checkout. They are third-party binaries (built from
+# hordeforge/zdtd-server, not from this repository) and they ship next to the
+# NuGet closure, so the inventory has to name them. Name and version are read
+# from the manifest committed beside the samples, the only in-tree record of
+# which module is staged. Their terms are declared by hordeforge/zdtd-server
+# for its own build and are not reproduced here, so the SPDX field asserts
+# nothing rather than restating a license this repository cannot show.
+REDISTRIBUTED_MODULES = (
+    "samples/parachute/wasm-mod.toml",
+    "samples/zdtd-fps-bot/wasm-mod.toml",
+)
 
 
 def license_for(name: str) -> str:
@@ -164,6 +178,28 @@ def cargo_components(cargo_lock: pathlib.Path) -> list[dict]:
     return comps
 
 
+def redistributed_components(root: pathlib.Path) -> list[dict]:
+    """Components for the guest modules staged from the sibling checkout."""
+    comps = []
+    for relative in sorted(REDISTRIBUTED_MODULES):
+        manifest = root / relative
+        doc = load_toml(manifest)
+        name = doc.get("name")
+        version = doc.get("version")
+        if not name or not version:
+            raise SystemExit(f"sbom: {relative} names no name/version")
+        comps.append(
+            {
+                "type": "library",
+                "name": name,
+                "version": version,
+                "purl": f"pkg:generic/{name}@{version}",
+                "licenses": [{"expression": "NOASSERTION"}],
+            }
+        )
+    return comps
+
+
 def build_bom(root: pathlib.Path) -> dict:
     """Build the full CycloneDX document for the repository at root."""
     components: dict[str, dict] = {}
@@ -175,6 +211,9 @@ def build_bom(root: pathlib.Path) -> dict:
     cargo_lock = root / "samples" / "Cargo.lock"
     if cargo_lock.exists():
         for comp in cargo_components(cargo_lock):
+            components[comp["purl"]] = comp
+    if (root / "samples").is_dir():
+        for comp in redistributed_components(root):
             components[comp["purl"]] = comp
     return {
         "bomFormat": "CycloneDX",

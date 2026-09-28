@@ -106,6 +106,40 @@ class NoticesTest(unittest.TestCase):
                 self.assertIn(name, text)
                 self.assertIn(license_id.split(" WITH ")[0].lower(), text)
 
+    def test_every_redistributed_module_is_named_in_the_notices(self):
+        """A module the modlet ships must be attributable, not just inventoried."""
+        text = self.NOTICES.read_text(encoding="utf-8").lower()
+        root = pathlib.Path(__file__).resolve().parent.parent
+        for comp in sbom.redistributed_components(root):
+            with self.subTest(module=comp["name"]):
+                self.assertIn(comp["name"].lower(), text)
+                self.assertIn(comp["version"], text)
+
+    def test_the_real_manifests_produce_the_documented_components(self):
+        root = pathlib.Path(__file__).resolve().parent.parent
+        comps = {c["name"]: c for c in sbom.redistributed_components(root)}
+        self.assertEqual(sorted(comps), ["fps-bot", "parachute"])
+        self.assertEqual(comps["fps-bot"]["version"], "2.5.0")
+        self.assertEqual(comps["parachute"]["licenses"], [{"expression": "NOASSERTION"}])
+
+
+class RedistributedComponentsTest(unittest.TestCase):
+    def test_a_samples_tree_without_the_manifests_fails_loudly(self):
+        """A deleted manifest must not silently shrink the inventory."""
+        root = pathlib.Path(tempfile.mkdtemp())
+        (root / "samples").mkdir()
+        with self.assertRaises(SystemExit) as caught:
+            sbom.redistributed_components(root)
+        self.assertIn("wasm-mod.toml", str(caught.exception))
+
+    def test_a_manifest_without_a_version_fails_loudly(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        for relative in sbom.REDISTRIBUTED_MODULES:
+            write(root / relative, 'name = "x"\n')
+        with self.assertRaises(SystemExit) as caught:
+            sbom.redistributed_components(root)
+        self.assertIn("no name/version", str(caught.exception))
+
 
 class CargoComponentsTest(unittest.TestCase):
     def test_excludes_workspace_members(self):
