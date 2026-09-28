@@ -56,8 +56,10 @@ are net8; any C# mod forces EAC off.
 - [x] Goal 1: per-call fuel budget; fuel fixture exhausts and the host
       recovers (tests `FuelBudgetStopsGuestAndRecovers`,
       `ManifestFuelOverrideIsEnforced`).
-- [x] Goal 2: memory maximum validated at load; oversized and
-      undeclared-maximum modules rejected (tests
+- [x] Goal 2: memory maximum validated at load; oversized modules
+      rejected, and a module with no declared maximum is treated as
+      declaring the 4 GiB wasm32 ceiling, so it loads only when the
+      effective cap is raised that far (ADR 0004 amendment; tests
       `MemoryMaximumOverCapIsRejected`, `ModuleSizeOverCapIsRejected`).
 - [x] Goal 3: ABI round trips tested with multi-byte UTF-8, settings, and
       chat (tests `TickDispatchesHostApiRoundTrips`, `InitLogsUtf8Losslessly`,
@@ -66,9 +68,9 @@ are net8; any C# mod forces EAC off.
       (tests `GuestTrapIsReportedAndHostSurvives`, `LoadOrderIsDispatchOrder`).
 - [x] Goal 5: `tools/targetcheck` validates every bridge target against
       the installed server; `make bridge-check` gates.
-- [x] Goal 6: per-mod manifests (`wasm-mod.json` at the time; the canonical
-      format is now `wasm-mod.toml`, JSON still accepted: ADR 0007) with
-      fuel and memory ceilings (tests `TomlManifestLimitsAreEnforcedAtLoad`,
+- [x] Goal 6: per-mod manifests (`wasm-mod.toml`, the only format since
+      ADR 0007 superseded the JSON manifest) with fuel and memory ceilings
+      (tests `TomlManifestLimitsAreEnforcedAtLoad`,
       `MalformedTomlManifestIsRejected`).
 - [ ] In-game acceptance on a live dedicated server: a containerized live
       server run succeeded (bot servant, on_player_join; see

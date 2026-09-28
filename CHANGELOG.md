@@ -18,6 +18,12 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Changed
 
+- Decision and requirement documents that had drifted from the code:
+  ADR 0007 no longer claims the JSON manifest is still accepted (ADR 0005
+  superseded it), PRD 0001 no longer claims undeclared-maximum modules are
+  rejected (ADR 0004's 4 GiB amendment) or that JSON manifests are
+  accepted, ADR 0005 links the record that superseded it, `docs/CONFIG.md`
+  points MiniToml at ADR 0007, and the ADR index carries a status column.
 - The tools lint gate covers more rule groups (S, A, BLE, DTZ, FBT, FURB,
   G, ICN, ISC, LOG, N, PERF, PIE, SLF, TID), all of which the tree passes
   today. `tools/` is reformatted to the pinned ruff's style.

@@ -24,8 +24,9 @@ Candidates for our mods:
 The guest side stays unchanged in spirit: guests cannot read files (they
 are sandboxed), so `[settings]` values are served through the existing
 `get_setting` host import, now resolved per calling mod. The TOML parsing
-stays dependency-free (MiniToml, ADR 0005): the trust boundary does not
-grow with a TOML library dll.
+stays dependency-free (MiniToml): the trust boundary does not grow with a
+TOML library dll. ADR 0005 recorded the same reasoning for the JSON
+manifest and was superseded when that format was dropped.
 
 ## Decision
 
@@ -40,7 +41,8 @@ effective default within the parser ceiling, and its max_memory_bytes can
 only tighten.
 Hook export names are exactly the zdtd plugin hooks (on_enable,
 on_tick, on_player_join, on_shutdown), exported bare like zdtd. The
-deprecated JSON manifest is still accepted.
+deprecated JSON manifest is no longer accepted: only `wasm-mod.toml` is
+read (see docs/ABI.md, per-mod manifests).
 
 ## Consequences
 
