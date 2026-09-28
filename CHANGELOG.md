@@ -99,6 +99,16 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   with `--update`. A member's body is not surface, so an implementation
   change does not touch the baseline. This is the guard that was missing
   when `WasmModHost.TryInit` came off the surface in the 0.3.1 patch slot.
+- Seeded fuzz harnesses for the sense snapshot writer
+  (`SenseSnapshotWriter.Write`) and the guest string cut (`Utf8Prefix.Length`),
+  the two guest-facing boundaries that had no harness. The snapshot writer is
+  driven with random entity, damage, and bot-info counts, integer extremes,
+  and every float class from NaN to the denormals, against a buffer the guest
+  sized plus a guard region, so a miscounted record becomes a failed assertion
+  rather than a write past `out_cap` in the server process; the string cut is
+  driven with hostile bytes (overlong forms, truncated sequences, lone
+  continuations) and a guest-chosen capacity, and asserts the cut stays inside
+  the capacity, is the longest one that fits, and never splits a character.
 - Seeded fuzz harnesses for the manifest parser (`ModManifest.ParseToml`)
   and the guest-text entry points (`TextSanitizer.Clean`, `ModId.IsValid`),
   run by `make test`. They assert the load contract, a per-input time
