@@ -30,7 +30,14 @@ operator, embedder, and guest author.
 - Per-guest dispatch cost: `WasmMod.LastCallMs` records what the most recent
   call to a guest cost in wall clock, and the slow-dispatch warning names the
   guest that spent the frame. The aggregate cost said the frame was lost, not
-  who spent it, so the warning could not be acted on without a profiler.
+  who spent it, so the warning could not be acted on without a profiler. The
+  cost is read through `HordeForge.WasmHost.Core.MonotonicTimer`, and
+  `WasmModHost(api, config, timer)` takes one, so a run driven from a virtual
+  clock reports that clock's cost instead of the process stopwatch's. The
+  timer moved from the bridge into the host library for this: the per-call
+  cost lives in the host, so a bridge-owned timer could not reach it.
+  `BridgeHost.Timer` keeps the type and now governs both the dispatch
+  measurement and every guest call the host measures.
 - `wasm status` reports each module's `errors` count and total `fuel used`.
   Both were tracked per guest and printed nowhere, so a guest that burns its
   budget and reports errors read like one that traps.

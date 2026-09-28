@@ -53,6 +53,7 @@ namespace HordeForge.WasmHost.Core
 
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
+        private readonly MonotonicTimer _timer;
         private readonly Engine _engine;
         private readonly Linker _linker;
         // Serializes every entry point that touches the registry, the load
@@ -110,9 +111,23 @@ namespace HordeForge.WasmHost.Core
         /// a time across the whole host; see <see cref="Abi.IGameHostApi"/>.
         /// </summary>
         public WasmModHost(IGameHostApi api, WasmHostConfig config)
+            : this(api, config, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a host whose guest calls are measured against
+        /// <paramref name="timer"/>; null selects the process clock. Every
+        /// cost the run reports (<see cref="WasmMod.LastCallMs"/>, which
+        /// names the guest that spent a frame) comes from that one source, so
+        /// an embedder that steps virtual time gets a run whose cost figures
+        /// replay with the rest of it.
+        /// </summary>
+        public WasmModHost(IGameHostApi api, WasmHostConfig config, MonotonicTimer? timer)
         {
             _api = api ?? throw new ArgumentNullException(nameof(api));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _timer = timer ?? MonotonicTimer.Default;
             ValidateConfig(config);
 
             var engineConfig = new Wasmtime.Config()
@@ -373,7 +388,7 @@ namespace HordeForge.WasmHost.Core
                     throw new WasmModLoadException(id, "instantiation failed: " + ex.Message, ex);
                 }
 
-                var mod = new WasmMod(id, module, store, fuelPerCall, instance, _tick);
+                var mod = new WasmMod(id, module, store, fuelPerCall, instance, _tick, _timer);
                 _mods.Add(id, mod);
                 _modOrder.Add(id);
                 return mod;

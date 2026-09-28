@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 using HordeForge.WasmHost.Abi;
 using Wasmtime;
@@ -26,6 +25,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Store _store;
         private readonly Module _module;
         private readonly ulong _fuelPerCall;
+        private readonly MonotonicTimer _timer;
         private readonly Func<int> _init;
         private readonly Func<int> _tick;
         private readonly Func<int>? _shutdown;
@@ -35,15 +35,13 @@ namespace HordeForge.WasmHost.Core
         private bool _enabled;
         private bool _shutdownRun;
 
-        /// <summary>Stopwatch ticks converted to milliseconds.</summary>
-        private static readonly double MillisecondsPerTimestampTick = 1000.0 / Stopwatch.Frequency;
-
-        internal WasmMod(string id, Module module, Store store, ulong fuelPerCall, Instance instance, long initTick)
+        internal WasmMod(string id, Module module, Store store, ulong fuelPerCall, Instance instance, long initTick, MonotonicTimer timer)
         {
             Id = id;
             _module = module;
             _store = store;
             _fuelPerCall = fuelPerCall;
+            _timer = timer;
             InitTick = initTick;
 
             _shutdown = ResolveNoArg(instance, AbiConstants.ExportShutdown);
@@ -95,7 +93,9 @@ namespace HordeForge.WasmHost.Core
         // thread and the status thread at once. Fuel bounds the guest, but
         // only the clock says what a call cost the game frame, and the
         // aggregate dispatch cost reported by the embedder says nothing
-        // about which guest produced it.
+        // about which guest produced it. It is read through the host's
+        // MonotonicTimer, so a replay driven from a virtual clock names the
+        // same guest as the run it is compared against.
         private long _lastCallMs;
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace HordeForge.WasmHost.Core
         private ModRunResult Run(string callName, Func<int> invoke)
         {
             Interlocked.Increment(ref _totalCalls);
-            long startedAt = Stopwatch.GetTimestamp();
+            double startedAt = _timer.ReadMs();
             try
             {
                 // Inside the try: arming the budget touches the store, and a
@@ -327,17 +327,15 @@ namespace HordeForge.WasmHost.Core
         /// Publishes the cost of the call that just ended, on the failure
         /// path as well as the success one: a guest that traps or runs out of
         /// fuel is the one whose cost an operator needs, and the clock is
-        /// already read, so the figure is free. The measurement is a plain
-        /// Stopwatch pair, two reads per guest call, on the same path that
-        /// already arms a fuel budget and re-reads the store.
+        /// already read, so the figure is free. The cost comes from the
+        /// host's <see cref="MonotonicTimer"/>, two reads per guest call on
+        /// the same path that already arms a fuel budget and re-reads the
+        /// store, so a run driven from a virtual clock reports that clock's
+        /// cost rather than the process's.
         /// </summary>
-        private void RecordCallCost(long startedAt)
+        private void RecordCallCost(double startedAt)
         {
-            double elapsedMs = (Stopwatch.GetTimestamp() - startedAt) * MillisecondsPerTimestampTick;
-            if (elapsedMs < 0.0)
-            {
-                elapsedMs = 0.0;
-            }
+            double elapsedMs = _timer.ElapsedMs(startedAt);
             Interlocked.Exchange(ref _lastCallMs, BitConverter.DoubleToInt64Bits(elapsedMs));
         }
 

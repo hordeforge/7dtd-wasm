@@ -34,8 +34,9 @@ is try/caught so a host failure never breaks the game loop.
 ### What the operator sees
 
 Every tick dispatch is timed (one sample per tick, through
-`BridgeHost.Timer`, a `MonotonicTimer` over the process `Stopwatch` by
-default) and rolled into a one-minute window by
+`BridgeHost.Timer`, a `HordeForge.WasmHost.Core.MonotonicTimer` over the
+process `Stopwatch` by default, and the same timer measures each guest call
+inside the host) and rolled into a one-minute window by
 `HordeForge.WasmHost.Core.TickTelemetry`:
 
 | Signal | Level | When |

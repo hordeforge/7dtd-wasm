@@ -22,16 +22,18 @@
     <None Include="../fixtures/*.toml" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- GuestRateLimiter, MonotonicTimer, SenseRecordPicker, WorldTime, and
+  <!-- GuestRateLimiter, SenseRecordPicker, WorldTime, and
        WasmSettingsProvider are bridge code with no game references; link the
-       files so the caps, the dispatch timer, the sense record pick, the
-       world-clock conversion, and the shared settings file cache are covered
-       on net8. GameLogShim is the only stand-in for the game's global Log.
-       The net48 bridge itself builds against the dedicated install (make
-       bridge), not here. -->
+       files so the caps, the sense record pick, the world-clock conversion,
+       and the shared settings file cache are covered on net8. MonotonicTimer
+       is not here: it moved into HordeForge.WasmHost, which this project
+       already references, so the per-guest-call cost the host measures
+       shares one implementation with the bridge's dispatch measurement.
+       GameLogShim is the only stand-in for the game's global Log. The net48
+       bridge itself builds against the dedicated install (make bridge),
+       not here. -->
   <ItemGroup>
     <Compile Include="../../src/GameBridge/Bridge/GuestRateLimiter.cs" Link="GuestRateLimiter.cs" />
-    <Compile Include="../../src/GameBridge/Bridge/MonotonicTimer.cs" Link="MonotonicTimer.cs" />
     <Compile Include="../../src/GameBridge/Bridge/SenseRecordPicker.cs" Link="SenseRecordPicker.cs" />
     <Compile Include="../../src/GameBridge/Bridge/WasmSettingsProvider.cs" Link="WasmSettingsProvider.cs" />
     <Compile Include="../../src/GameBridge/Bridge/WorldTime.cs" Link="WorldTime.cs" />

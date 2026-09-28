@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using HordeForge.GameBridge.Bridge;
 using HordeForge.WasmHost.Core;
 using Xunit;
 
 namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
-    /// The dispatch cost the bridge prints into the heartbeat, "wasm status",
-    /// and shutdown lines is read through an injectable monotonic source, so
-    /// a run stepped from a virtual clock reports that clock's cost rather
-    /// than the host's. These tests pin both halves: the measurement is the
+    /// The cost the run prints (the bridge's heartbeat, "wasm status", and
+    /// shutdown lines, and each guest call's own cost the slow-dispatch
+    /// warning names) is read through an injectable monotonic source, so a
+    /// run stepped from a virtual clock reports that clock's cost rather than
+    /// the host's. These tests pin both halves: the measurement is the
     /// source's advance, and two runs of the same trace produce the same
     /// bytes.
     /// </summary>
@@ -59,6 +59,29 @@ namespace HordeForge.WasmHost.Tests
             int next = 0;
             var timer = new MonotonicTimer(() => readings[next++]);
             Assert.Equal(0.0, timer.ElapsedMs(() => { }), 6);
+        }
+
+        [Fact]
+        public void StartMarkFormMeasuresTheSameInterval()
+        {
+            // The form the host's per-guest-call cost uses: the work is
+            // already resolved and already finished (or already threw), so
+            // the cost is computed from two marks rather than a closure.
+            var clock = new VirtualClock();
+            var timer = new MonotonicTimer(clock.Read);
+            double startedAt = timer.ReadMs();
+            clock.Advance(7.5);
+            Assert.Equal(7.5, timer.ElapsedMs(startedAt), 6);
+            Assert.Equal(7.5, timer.ElapsedMs(startedAt), 6);
+        }
+
+        [Fact]
+        public void StartMarkFormClampsARewoundSource()
+        {
+            double[] readings = { 10.0, 4.0 };
+            int next = 0;
+            var timer = new MonotonicTimer(() => readings[next++]);
+            Assert.Equal(0.0, timer.ElapsedMs(10.0), 6);
         }
 
         [Fact]

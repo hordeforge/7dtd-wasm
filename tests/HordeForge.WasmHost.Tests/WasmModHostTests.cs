@@ -46,6 +46,35 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void GuestCallCostComesFromTheInjectedTimer()
+        {
+            // WasmMod.LastCallMs is the figure the bridge's slow-dispatch
+            // warning names a guest by, so a replay driven from a virtual
+            // clock has to read its cost from that clock. Measured off the
+            // process stopwatch it would be a real number in a run whose
+            // every other field replays, and two runs of the same trace would
+            // disagree on which guest was slow.
+            double nowMs = 100.0;
+            var timer = new MonotonicTimer(() =>
+            {
+                // Each call advances virtual time: the start mark reads one
+                // step, the cost mark the next, and the source never moves
+                // on its own.
+                double read = nowMs;
+                nowMs += 3.0;
+                return read;
+            });
+            var host = new WasmModHost(new TestGameHostApi(), new WasmHostConfig(), timer);
+            using (host)
+            {
+                WasmMod mod = host.LoadModule("strings", Fixture("strings"));
+                Assert.Equal(0.0, mod.LastCallMs);
+                host.DispatchInit();
+                Assert.Equal(3.0, mod.LastCallMs, 6);
+            }
+        }
+
+        [Fact]
         public void RepeatedEnableRunsOnEnableOnlyOnce()
         {
             // docs/ABI.md promises on_enable is "called once when the mod is

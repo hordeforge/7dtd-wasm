@@ -122,6 +122,12 @@ src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string ModId {
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ulong FuelConsumed { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: type ModRunResult
 src/HordeForge.WasmHost/Core/ModRunStatus.cs: type ModRunStatus
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: MonotonicTimer.public MonotonicTimer(Func<double>? readMs = null)
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: MonotonicTimer.public double ElapsedMs(Action work)
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: MonotonicTimer.public double ElapsedMs(double startedAtMs)
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: MonotonicTimer.public double ReadMs()
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: MonotonicTimer.public static MonotonicTimer Default { get; }
+src/HordeForge.WasmHost/Core/MonotonicTimer.cs: type MonotonicTimer
 src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public bool HeartbeatDue { get; }
 src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public bool IsSlow { get; }
 src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public const double SlowDispatchMs = 25.0
@@ -167,6 +173,7 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? In
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGameHostApi api, WasmHostConfig config)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGameHostApi api, WasmHostConfig config, MonotonicTimer? timer)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool InheritGuestStandardStreams
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public const long WasmPageBytes = 65536

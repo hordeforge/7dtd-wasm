@@ -41,7 +41,9 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
                               engine with and validates at construction
   Core/                      the host itself: WasmModHost, WasmMod, the
                               per-call result and status types, tick telemetry,
-                              and BotOwnershipRegistry (which module owns each
+                              MonotonicTimer (the one monotonic source every
+                              reported cost is measured on), and
+                              BotOwnershipRegistry (which module owns each
                               tracked bot id).
                               The only area that references Wasmtime
   Registry/                  mod metadata off disk: the bounded manifest read
@@ -62,10 +64,12 @@ src/GameBridge/              (net48) the in-game mod
   ModApi.cs                  the game's entry point
   Bridge/                    host wiring and the game side of the host API:
                               BridgeHost, GameHostApi, NativeBootstrap,
-                              BotServant, plus the five classes that carry
+                              BotServant, plus the four classes that carry
                               no game reference: GuestRateLimiter,
-                              MonotonicTimer, SenseRecordPicker,
-                              WasmSettingsProvider, WorldTime
+                              SenseRecordPicker, WasmSettingsProvider,
+                              WorldTime (the fifth, MonotonicTimer, lives in
+                              the host library, which measures guest calls
+                              on it)
   Hooks/                     the Harmony patches
   Commands/                  the "wasm" console command
 
@@ -134,11 +138,14 @@ The placement rules the layout exists to enforce:
 - `GameBridge` is net48 because it references game assemblies, so the net8
   test project cannot reference it. A bridge class that carries no game
   reference but needs suite coverage is source-linked into the test
-  project, as `GuestRateLimiter`, `MonotonicTimer`, `SenseRecordPicker`,
+  project, as `GuestRateLimiter`, `SenseRecordPicker`,
   `WasmSettingsProvider` and `WorldTime` are.
   That is the only accepted way to cover bridge code from the host suite,
   and the list is explicit: a new game-reference-free bridge class is
-  listed in the test csproj beside those five, not discovered.
+  listed in the test csproj beside those four, not discovered. A seam the
+  host itself reads on belongs in the host library instead, where the host
+  suite already reaches it without linking: `MonotonicTimer` moved to
+  `HordeForge.WasmHost.Core` for exactly that reason.
 - New host code goes in the folder that owns the concern, not in the
   nearest existing file. New guest-facing surface goes under `Abi/` alone,
   because [docs/ABI.md](ABI.md) is canonical for it. A new sample guest is
@@ -240,9 +247,11 @@ in CI, not only on a host that already has a toolchain config.
   (a test, or a simulation replaying a run) replaces it before `Start` and
   the whole bridge follows that time. The dispatch cost the telemetry prints
   is the sub-millisecond half of the same pair: `BridgeHost.Timer`
-  (`MonotonicTimer`) measures it and defaults to the process
-  `Stopwatch`, so a driver replaces both and the run's heartbeat, status,
-  and shutdown lines report the driver's time rather than the host's. One
+  (`HordeForge.WasmHost.Core.MonotonicTimer`) measures it, is handed to the
+  `WasmModHost` at `Start` so every guest call is measured on it too, and
+  defaults to the process `Stopwatch`, so a driver replaces both and the
+  run's heartbeat, status, and shutdown lines report the driver's time
+  rather than the host's. One
   input stays real by nature: the shared `wasm.toml`'s mtime decides when
   guests see new settings. It feeds a log and a file read, never a guest's
   tick.

@@ -56,19 +56,24 @@ namespace HordeForge.GameBridge.Bridge
         // Gate when it asks for the clock.
         private static volatile Func<int> _clockMs = () => Environment.TickCount;
 
-        // Monotonic source behind the per-tick dispatch measurement. Same
-        // rule as _clockMs and for the same reason: the measured cost is
-        // printed into the run's own heartbeat, status, and shutdown lines,
-        // so a replayed run must read its cost from the same clock the
-        // original did. Defaults to the process clock; a driver that steps
-        // virtual time replaces this and the whole bridge follows.
+        // Monotonic source behind every cost measurement the run reports: the
+        // per-tick dispatch, and each guest call's own cost inside the host
+        // (WasmMod.LastCallMs, which names the slowest guest in the
+        // slow-dispatch warning). Same rule as _clockMs and for the same
+        // reason: the measured cost is printed into the run's own heartbeat,
+        // status, and shutdown lines, so a replayed run must read its cost
+        // from the same clock the original did. Defaults to the process
+        // clock; a driver that steps virtual time replaces this and the whole
+        // bridge follows.
         private static MonotonicTimer _timer = MonotonicTimer.Default;
 
         /// <summary>
-        /// Timer the per-tick dispatch cost is measured with, the sub-
-        /// millisecond half of the pair <see cref="ClockMs"/> and this make
-        /// up. Set before <see cref="Start"/> to drive the bridge from a
-        /// virtual clock. Never null.
+        /// Timer every cost the run reports is measured with, the
+        /// sub-millisecond half of the pair <see cref="ClockMs"/> and this
+        /// make up. Set before <see cref="Start"/> to drive the bridge from a
+        /// virtual clock; the host is built with the timer in force at that
+        /// point, so a later swap governs the dispatch measurement only.
+        /// Never null.
         /// </summary>
         public static MonotonicTimer Timer
         {
@@ -212,7 +217,7 @@ namespace HordeForge.GameBridge.Bridge
                 _gameApi = new GameHostApi(_settings, _servant, config.LogSourcePrefix, () => ClockMs());
                 try
                 {
-                    _host = new WasmModHost(_gameApi, config);
+                    _host = new WasmModHost(_gameApi, config, Timer);
                 }
                 catch (Exception ex)
                 {
