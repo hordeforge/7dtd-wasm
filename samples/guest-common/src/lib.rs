@@ -12,9 +12,9 @@ pub const HOST_MODULE: &str = "hordeforge";
 pub const ZDTD_HOST_MODULE: &str = "zdtd";
 
 /// Guest export names. The host requires init and tick; shutdown, player
-/// join, and admin command are optional. The optional ones are not declared
-/// here yet: they have no Rust-side helper, and a guest writes the
-/// `#[export_name]` itself (see docs/GUEST_AUTHORS.md).
+/// join, and admin command are optional. The optional ones have no
+/// Rust-side helper, so a guest still writes the `#[export_name]` itself and
+/// can build it from the constant here instead of spelling the string.
 pub const EXPORT_INIT: &str = "on_enable";
 pub const EXPORT_TICK: &str = "on_tick";
 pub const EXPORT_SHUTDOWN: &str = "on_shutdown";

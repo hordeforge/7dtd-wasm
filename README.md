@@ -169,7 +169,12 @@ Code that embeds the host library in its own .NET project takes it as a NuGet
 package instead: `make pack` writes
 `artifacts/packages/HordeForge.WasmHost.<version>.nupkg` with a
 netstandard2.0 and a net8.0 assembly, the README, and the third-party
-notices for the shipped Wasmtime closure.
+notices for the shipped Wasmtime closure. The package is not on a public
+feed yet, so reference it from a local one (`dotnet nuget add source
+./artifacts/packages`, then `dotnet add package HordeForge.WasmHost`) or
+add a `ProjectReference` to `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj`.
+The Wasmtime binding comes along as a declared dependency of the package
+under both target frameworks, so nothing else has to be referenced.
 
 The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.

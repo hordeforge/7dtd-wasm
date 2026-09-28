@@ -91,6 +91,15 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Fixed
 
+- The public surface gate was red again: `tools/api-surface.txt` predated
+  `ModRunResult.GuestStatus` and its constructor overload,
+  `AbiConstants.StatusNotImplemented` and `StatusInternalError`,
+  `WasmMod.Enabled`, the limits `WasmModHost` reads back (`FuelPerCall`,
+  `StaticMemoryMaximumBytes`, `InheritGuestStandardStreams`), and the
+  `WasmManifestException` and `ManifestReadException` types, so
+  `apicheck.py` read the additive changes as a surface shrink. The baseline
+  is regenerated; every added member is documented under Added above, so no
+  member was removed and the version does not move.
 - `make check` failed on a clean tree. `tools/api-surface.txt` predated
   `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
   `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three

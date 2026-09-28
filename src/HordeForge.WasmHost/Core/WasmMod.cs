@@ -10,6 +10,14 @@ namespace HordeForge.WasmHost.Core
     /// owning the store is what makes unload reclaim native memory).
     /// Calls are budgeted with fuel; every call returns a
     /// <see cref="ModRunResult"/> and never throws for a guest fault.
+    ///
+    /// The guest entry points are public for the counters and the handler
+    /// probes, but an embedder must drive the module through
+    /// <see cref="WasmModHost"/>: get_setting, the raw config import and the
+    /// log source tag resolve against the mod the host is currently
+    /// dispatching, so a direct call here is served the wrong settings (or
+    /// none) and logs under the bare source prefix. See
+    /// <see cref="WasmModHost.InitModule"/> and the Dispatch* methods.
     /// </summary>
     public sealed class WasmMod : IDisposable
     {

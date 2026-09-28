@@ -355,7 +355,12 @@ namespace HordeForge.WasmHost.Core
             }
         }
 
-        /// <summary>Looks up a loaded mod by id.</summary>
+        /// <summary>
+        /// Looks up a loaded mod by id, for its counters, handler probes and
+        /// id. The returned instance is the host's, not a copy: drive it
+        /// through the methods on this class, not through
+        /// <see cref="WasmMod"/> directly (see <see cref="WasmMod"/> for why).
+        /// </summary>
         public bool TryGetMod(string id, out WasmMod? mod)
         {
             lock (_gate)
