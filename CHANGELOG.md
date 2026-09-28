@@ -158,6 +158,11 @@ operator, embedder, and guest author.
   net id to the module that armed it, the glide counterpart of
   `BotOwnershipRegistry`. The rule lives in the host so it is testable
   without a game.
+- The start log and `wasm status` name the shared `wasm.toml` the engine's
+  limits and cross-mod settings come from, or that no tree carries one. A
+  staged modlet supplies the file when the top-level `Mods/Wasm/wasm.toml`
+  is absent, so the limits line alone could not say whose configuration
+  the server is running under.
 
 ### Performance
 
@@ -191,6 +196,16 @@ operator, embedder, and guest author.
 
 ### Fixed
 
+- A per-mod `max_memory_bytes` above the effective cap is ignored by design
+  (a manifest can only tighten), and nothing said so: a module the operator
+  believed was capped tighter than the host cap ran under the host cap
+  silently. The load log now names the value asked for and the cap in
+  force, the same visibility a fuel override already had.
+- `ModuleRoots.IsLeafName` did not compile for the netstandard2.0 target:
+  `string.IsNullOrEmpty` carries no `NotNullWhen(false)` annotation on that
+  framework's reference assemblies, so the compiler kept the argument
+  nullable and every dereference below it failed the build
+  (CS8602). Replaced with explicit null and length tests.
 - A quoted string in `wasm.toml` or `wasm-mod.toml` accepted raw control
   characters, so a stray CR, NUL, ESC, NEL, or DEL rode the guest string ABI
   inside a setting value and, from there, into a log line or a chat message

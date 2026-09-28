@@ -172,6 +172,10 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         private static bool IsLeafName(string? fileName)
         {
+            // Explicit null and length tests, not string.IsNullOrEmpty: that
+            // one carries no NotNullWhen annotation on the netstandard2.0
+            // reference assemblies, so the compiler keeps fileName nullable
+            // here and the dereferences below fail the netstandard2.0 build.
             if (fileName == null
                 || fileName.Length == 0
                 || fileName.IndexOf('/') >= 0

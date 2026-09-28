@@ -19,9 +19,9 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   can raise it), and its `max_memory_bytes` can only tighten it.
   A mod that asks for more fuel than the shared value gets is named in the
   log at load, so the override is visible rather than inferred. A
-  `max_memory_bytes` above the effective ceiling is ignored without a word
-  in the log: the shared cap stays in force, so keep the per-mod value at
-  or below it.
+  `max_memory_bytes` above the effective ceiling does not bind and is named
+  in the load log as a warning: the shared cap stays in force, so keep the
+  per-mod value at or below it.
 - **Unknown keys** are tolerated outside `[limits]` (a manifest written for a
   newer host still loads) and rejected inside it, where a typo such as
   `fuel_percall` would otherwise leave the operator believing a cap is in
@@ -40,6 +40,14 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   per call, memory ceiling, module size cap, guest stdio), each module's
   effective fuel per call, and the same host line is logged at start. That is
   the check that the layering produced the limits the operator intended.
+- **The shared file in force is named, not assumed.** `wasm status` and the
+  start log both print the `wasm.toml` the limits and settings come from, or
+  `none, code defaults in force` when no tree carries one. A staged modlet
+  can supply the file when the top-level `Mods/Wasm/wasm.toml` is absent
+  (T5 in `docs/THREAT_MODEL.md`), so the limits line on its own cannot say
+  whose configuration the engine is running under. The answer is re-checked
+  against the filesystem at print time, so a file created after start shows
+  up without a restart.
 - A **new tunable is a new field**, not a new parse arm: the parser binds
   the file onto `ModManifest` struct fields, so adding a supported key means
   adding a field in one place, and adding one to `[limits]` also means adding

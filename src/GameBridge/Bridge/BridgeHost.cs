@@ -96,6 +96,18 @@ namespace HordeForge.GameBridge.Bridge
         public static string WasmRoot { get; private set; } = string.Empty;
 
         /// <summary>
+        /// The shared wasm.toml the engine's limits and cross-mod settings
+        /// come from: the top-level Mods/Wasm/wasm.toml, or the first
+        /// modlet-carried tree that has one when that file is absent. Empty
+        /// before Start and after Shutdown. Named in the start log and in
+        /// "wasm status" because the file in force is not always the one the
+        /// operator wrote: a staged modlet can set the limits for the whole
+        /// server (docs/THREAT_MODEL.md, T5), and the limits line alone
+        /// cannot say which file produced them.
+        /// </summary>
+        private static string _sharedTomlPath = string.Empty;
+
+        /// <summary>
         /// Ordered module trees: Mods/Wasm first, then each staged modlet's
         /// own Wasm/ folder (a managed instance stages whole modlets, never
         /// loose files under Mods/, so a guest tree that must survive
@@ -198,6 +210,11 @@ namespace HordeForge.GameBridge.Bridge
                         break;
                     }
                 }
+                // The path is also the probe target when no file exists at
+                // start, so one written later is picked up, and the file is
+                // named in the start log and in "wasm status" so the limits
+                // in force can be traced to the file that set them.
+                _sharedTomlPath = sharedTomlPath;
                 _settings = new WasmSettingsProvider(sharedTomlPath, () => ClockMs());
 
                 var config = new WasmHostConfig();
@@ -251,8 +268,11 @@ namespace HordeForge.GameBridge.Bridge
                 Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
                 // The limits actually in force, not the code defaults: they
                 // are the difference between the engine the operator meant
-                // and the one the layering produced.
-                Log.Out("[WasmHost] limits: " + EffectiveLimits());
+                // and the one the layering produced. The file they came from
+                // is named with them, since a staged modlet can be the one
+                // that supplied it.
+                Log.Out("[WasmHost] limits: " + EffectiveLimits() +
+                        " (shared config: " + SharedConfigDescription() + ")");
             }
         }
 
@@ -430,6 +450,7 @@ namespace HordeForge.GameBridge.Bridge
                     return lines;
                 }
                 lines.Add("host started, modules dir: " + WasmRoot);
+                lines.Add("shared config: " + SharedConfigDescription());
                 lines.Add("limits: " + EffectiveLimits());
                 foreach (string id in _host.ModIds)
                 {
@@ -754,6 +775,7 @@ namespace HordeForge.GameBridge.Bridge
             _gameApi?.RegisterConfig(id, ReadRawConfig(id));
             LogIgnoredKeys("manifest for " + id, manifest);
             LogFuelOverride(id, manifest, host.FuelPerCall);
+            LogMemoryCapOverride(id, manifest, host.StaticMemoryMaximumBytes);
             reason = string.Empty;
             return true;
         }
@@ -792,6 +814,24 @@ namespace HordeForge.GameBridge.Bridge
             {
                 Log.Out("[WasmHost] " + id + " raises fuel/call to " + manifest.FuelPerCall.Value +
                         " over the host default " + hostFuel);
+            }
+        }
+
+        /// <summary>
+        /// Logs a manifest that asks for a memory cap above the host cap.
+        /// A per-mod max_memory_bytes can only tighten, so a larger one is
+        /// ignored and the host cap stays in force: the same silent
+        /// misconfiguration the fuel override is named to catch, since a
+        /// module the operator believed was capped at, say, 128 MiB runs
+        /// under a larger ceiling without a word in the log.
+        /// </summary>
+        private static void LogMemoryCapOverride(string id, ModManifest? manifest, ulong hostMax)
+        {
+            if (manifest != null && manifest.MaxMemoryBytes.HasValue && manifest.MaxMemoryBytes.Value > hostMax)
+            {
+                Log.Warning("[WasmHost] " + id + " asks for memory cap " + manifest.MaxMemoryBytes.Value +
+                            " bytes, above the host cap " + hostMax +
+                            "; the host cap stays in force (a manifest can only tighten it)");
             }
         }
 
@@ -987,6 +1027,22 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
+        /// The shared config file in force, or that there is none. Checked
+        /// against the filesystem rather than reported from the stored path,
+        /// because the host also keeps that path as its probe target when no
+        /// file was there at start: a file written since then is picked up
+        /// and the answer changes without a restart.
+        /// </summary>
+        private static string SharedConfigDescription()
+        {
+            if (_sharedTomlPath.Length == 0 || !File.Exists(_sharedTomlPath))
+            {
+                return "none, code defaults in force";
+            }
+            return TextSanitizer.Clean(_sharedTomlPath);
+        }
+
+        /// <summary>
         /// The limits the engine is actually running under, for "wasm
         /// status". Values come from the live host, so a shared file that
         /// moved them and a per-mod manifest that tightened them are both
@@ -1096,6 +1152,7 @@ namespace HordeForge.GameBridge.Bridge
                 _servant = null;
                 _settings = null;
                 _moduleTreeRoots = Array.Empty<string>();
+                _sharedTomlPath = string.Empty;
                 _failures.Reset();
                 Started = false;
             }
