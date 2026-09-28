@@ -20,7 +20,7 @@ against the code instead of against this document.
 |---|---|---|---|---|
 | T1 | Any console operator can load arbitrary guest code from disk into the live game process | operator to host | High | Unmitigated here; gated only by the game's console auth |
 | T2 | A loaded guest makes the bot servant deal damage to any living entity, players included | guest to game | High | Shooter is ownership-gated, target is not |
-| T3 | A guest rewrites world state for entities it does not own (glide flags) | guest to game | High | Target class gated to players; no per-guest ownership |
+| T3 | A guest rewrites world state for entities it does not own (glide flags) | guest to game | High | Target class gated to players, and a flag belongs to the module that armed it |
 | T4 | Guest-controlled volume (module count x fuel per tick) is unbounded by module count, and a module's own manifest may raise its fuel ceiling | guest to availability | High | Fuel per call, rate caps, telemetry; no module-count cap |
 | T5 | An installed modlet, not the operator, can supply the module tree and the shared `wasm.toml` that sets the engine's limits | build to runtime | High | Unmitigated; every staged `Wasm/` folder is scanned |
 | T6 | The game process is the sandbox host, and a bridge bug runs with game privileges | bridge to game | High | Out of scope by design, stated in `SECURITY.md` |
@@ -194,9 +194,13 @@ named here and mapped in section 7; gaps are in section 8.
   file from a module tree and runs its `on_enable` in the game process
   (`src/GameBridge/Bridge/BridgeHost.cs:788`). Telnet access is the only
   credential required.
-- *Spoofing*: no operator identity is captured. `CmdWasm.Execute` ignores
-  `CommandSenderInfo` (`src/GameBridge/Commands/CmdWasm.cs:55`), so a reload
-  leaves no record of the sender beyond the game's own console log.
+- *Spoofing*: the bridge does not authenticate the operator itself, it reads
+  the sender the game hands it. `wasm load`, `wasm reload`, and `wasm unload`
+  name that sender (player name and address, or the local console) in the
+  server log, so the change is attributable while the log survives
+  (`src/GameBridge/Commands/CmdWasm.cs:181`). It is not a credential: any
+  sender the game accepts runs the command, and the name is the sender's
+  own claim.
 - *Tampering*: a module id differing only in case resolves to the same folder
   on Windows and macOS; the code refuses it by confirming the on-disk
   spelling (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:194`), which
@@ -206,10 +210,10 @@ named here and mapped in section 7; gaps are in section 8.
   there. `ModId.IsValid` rejects both, so an id is either a folder on every
   platform or reported as not one
   (`src/HordeForge.WasmHost/Registry/ModId.cs:50`).
-- *Repudiation*: `Reload` and `Unload` report their outcome, and the reason
-  a load was refused, to the console
-  (`src/GameBridge/Commands/CmdWasm.cs:55`); nothing durable records the
-  change.
+- *Repudiation*: `Reload` and `Unload` report success or failure and the
+  reason a call was refused to the console, and the server log records the
+  same call with its sender; nothing outside that log files the change
+  (`src/GameBridge/Commands/CmdWasm.cs:61`).
 - *Information disclosure*: `wasm status` prints module ids, counters, the
   effective limits, and armed glide net ids to whoever can run it
   (`src/GameBridge/Bridge/BridgeHost.cs:358`).
@@ -249,9 +253,12 @@ named here and mapped in section 7; gaps are in section 8.
   (`src/GameBridge/Bridge/BotServant.cs:1019`,
   `src/GameBridge/Bridge/GuestRateLimiter.cs:48`).
 - *Tampering*: `glide <net_id> 1` arms a descent clamp and a buff on a player
-  the guest does not own, and any guest can clear another guest's flag,
-  because the table is global and keyed by net id alone with no owning module
-  (`src/GameBridge/Bridge/BotServant.cs:221`, `:129`).
+  the guest does not own, which stays the open part of T3. One guest can no
+  longer clear another's flag: the flag table is keyed by net id and the
+  ownership registry beside it by the module that armed it, and a command
+  from another module is refused before the table is written
+  (`src/GameBridge/Bridge/BotServant.cs:302`,
+  `src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs:24`).
 - *Tampering, bounded*: `bot move` and `bot look` act only on ids the module
   owns (`src/GameBridge/Bridge/BotServant.cs:949`, `:969`, `:1020`), and
   `bot remove` only despawns owned bots
@@ -287,8 +294,9 @@ named here and mapped in section 7; gaps are in section 8.
 - *Information disclosure*: `get_join_player_name` hands the joining player's
   name to every guest that exports `on_player_join`, not only the one that
   asked for it (`src/HordeForge.WasmHost/Core/WasmModHost.cs:492`).
-- *Tampering*: one guest can clear another's glide flag through the same
-  global table.
+- *Tampering*: the `glide` verb writes a flag only for the module that holds
+  it, so a second guest cannot clear another's glide
+  (`src/GameBridge/Bridge/BotServant.cs:302`).
 
 **B6 build to runtime**
 
@@ -325,33 +333,29 @@ named here and mapped in section 7; gaps are in section 8.
    a second. Nothing in the path checks that the target is a zombie; the
    shooter gate is ownership, not permission
    (`src/GameBridge/Bridge/BotServant.cs:988`).
-2. **Guest-to-guest glide denial.** The parachute plugin's flag table is
-   global and ownerless; a second module issuing `glide <net_id> 0` for a
-   player removes the first module's armed flag and its descent clamp
-   (`src/GameBridge/Bridge/BotServant.cs:251`).
-3. **Shared settings as a config oracle.** A guest loops `get_setting` over
+2. **Shared settings as a config oracle.** A guest loops `get_setting` over
    candidate keys and learns the operator's shared configuration, which
    describes the deployment (limits, other mod names, connection hints).
-4. **Presence harvesting.** A guest exporting `on_player_join` receives every
+3. **Presence harvesting.** A guest exporting `on_player_join` receives every
    player's name and entity id, including respawns, and can keep them.
-5. **World scraping.** A guest polling `sense` within its per-module cap
+4. **World scraping.** A guest polling `sense` within its per-module cap
    reconstructs entity positions and health for the lowest 41 net ids, enough
    to expose base layouts to a second account on the same server.
-6. **Tick-budget capture.** Several modules each burn their full fuel budget
+5. **Tick-budget capture.** Several modules each burn their full fuel budget
    every tick, and a module author may set that budget 50x over the default
    from its own manifest. Per call the fuel stops them; per tick nothing caps
    the total. The cost shows up as a slow-dispatch warning once a second
    (`src/HordeForge.WasmHost/Core/TickTelemetry.cs:35`)
    and in the heartbeat.
-7. **Console-to-code.** An operator with the telnet password runs
+6. **Console-to-code.** An operator with the telnet password runs
    `wasm reload <id>` after a module file has been replaced, giving the file
    full game-process authority with no per-load decision point.
-8. **Modlet-to-limits.** A third-party modlet ships `Wasm/hostile/module.wasm`
+7. **Modlet-to-limits.** A third-party modlet ships `Wasm/hostile/module.wasm`
    plus `Wasm/wasm.toml` raising the memory and fuel ceilings. On a server
    whose own `Mods/Wasm/wasm.toml` is absent, the next start loads the module
    under the modlet's limits and the operator sees only the effective-limits
    line in the log (`src/GameBridge/Bridge/BridgeHost.cs:231`).
-9. **Log and console forgery attempts.** A guest sends escape sequences, C1
+8. **Log and console forgery attempts.** A guest sends escape sequences, C1
    controls, or bidi overrides in `log` or `send_chat`. The sanitizer
    replaces them with '?' and the rate caps bound volume
    (`src/HordeForge.WasmHost/Registry/TextSanitizer.cs:24`).
@@ -371,7 +375,8 @@ named here and mapped in section 7; gaps are in section 8.
 | game-side work outside the fuel budget | per-module caps on `queue` (200/s) and `sense` (200/s) | `src/GameBridge/Bridge/GameHostApi.cs:266`, `:309` |
 | entity multiplication | 16 live bot ceiling across all modules, top-up throttled to 1/s | `src/GameBridge/Bridge/BotServant.cs:40`, `:135` |
 | one guest driving another guest's bots | every bot id is checked against the module that asked for it, in the ownership registry, before move, look, shoot, despawn, count, and the `is_self` sense bit | `src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs:51`, `src/GameBridge/Bridge/BotServant.cs:1025` |
-| glide armed on a non-player | the target must resolve to a live `EntityPlayer` | `src/GameBridge/Bridge/BotServant.cs:1039` |
+| glide armed on a non-player | the target must resolve to a live `EntityPlayer` | `src/GameBridge/Bridge/BotServant.cs:268` |
+| one guest clearing another's glide flag | the flag belongs to the module that first armed or cleared it; another module's command is refused, and unloading the module drops the flags it armed | `src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs:24`, `src/GameBridge/Bridge/BotServant.cs:297` |
 | NaN or overflow through SimCommand numbers | invariant parsing, finite-float check | `src/GameBridge/Bridge/BotServant.cs:1054` |
 | path traversal through a mod id or a module file name | id validation, plain-leaf-name file name, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:28`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:137`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:194` |
 | manifest slurping | 1 MiB read bound, re-checked after the read, strict UTF-8 decode | `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:24` |
@@ -406,40 +411,42 @@ Recorded here, not fixed here. Each names the code that would have to change.
    `src/GameBridge/Bridge/BridgeHost.cs:168`. A third-party modlet changes
    what loads and under which ceilings, and the only trace is the
    effective-limits line at start.
-4. **No operator identity or durable record for load, reload, and unload**
-   (T1, repudiation). `src/GameBridge/Commands/CmdWasm.cs:55` ignores
-   `CommandSenderInfo`; success is reported to the console only.
-5. **Glide state has no owning module** (T3).
-   `src/GameBridge/Bridge/BotServant.cs:129`. Bot bodies are keyed by owning
-   module and checked everywhere; glide flags are keyed by net id alone, so
-   one guest can clear another's.
-6. **Committed telnet credential** (T9).
+4. **No permission level and no durable record for load, reload, and
+   unload** (T1, repudiation). Each names its sender in the server log
+   (`src/GameBridge/Commands/CmdWasm.cs:181`), so the change is attributable
+   while the log survives, but the bridge checks no level on the sender and
+   nothing outside that log files the change.
+5. **Committed telnet credential** (T9).
    `evidence/playtest-1/serverconfig.playtest.xml:8` carries the playtest
    password in plaintext and `evidence/playtest-1/run_server.sh:29` documents
    the loopback binding it was used under. The file is the record of a past
    run, so it should not be edited in place; a follow-up that rotates and
    redacts it is the right move.
-7. **Unsigned native engine and modules** (T13). `Makefile:303` stages them
+6. **Unsigned native engine and modules** (T13). `Makefile:303` stages them
    and the host loads them without any integrity check.
-8. **Engine version lag** (T7), tracked in `SECURITY.md`; recheck when the
+7. **Engine version lag** (T7), tracked in `SECURITY.md`; recheck when the
    binding updates.
-9. **Join spam is not rate limited** (B1). Each spawn and respawn is a full
+8. **Join spam is not rate limited** (B1). Each spawn and respawn is a full
    dispatch with fuel budget per guest, and there is no per-player join cap in
    this repository (`src/GameBridge/Bridge/BridgeHost.cs:314`).
-10. **No documented path from report to fix.** `SECURITY.md` names no channel
+9. **No documented path from report to fix.** `SECURITY.md` names no channel
     beyond "report to the repository maintainers" and no severity handling.
 
 ## 9. Response readiness
 
-- Events with an audit trail: guest log lines are sanitized and attributed to
+- Events with an audit trail: `wasm load`, `wasm reload <id>`, and
+  `wasm unload <id>` name their sender in the server log, by player name and
+  address or as the local console, so a guest entering or leaving the game
+  process is attributable (`src/GameBridge/Commands/CmdWasm.cs:33`).
+  Guest log lines are sanitized and attributed to
   `wasm/<mod id>`; per-module drop totals, per-mod call, trap, and fuel
   counters, the effective limits, armed glide net ids, dispatch cost, and a
   once-a-minute heartbeat are all in `wasm status` and in the log
   (`src/GameBridge/Bridge/BridgeHost.cs:358`, `:294`).
-- Events without one: who ran a console command, when a module file was
-  replaced, which modlet tree a module came from, and a per-guest view of
-  which guest issued which SimCommand (the servant log lines name the verb
-  and ids, not the calling mod).
+- Events without one: when a module file was replaced, which modlet tree a
+  module came from, and a per-guest view of which guest issued which
+  SimCommand (the servant log lines name the verb and ids, not the calling
+  mod).
 - No documented disclosure-to-fix path beyond the paragraph in `SECURITY.md`.
 
 ## 10. Review metadata

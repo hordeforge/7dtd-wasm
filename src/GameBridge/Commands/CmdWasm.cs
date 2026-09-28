@@ -12,10 +12,16 @@ namespace HordeForge.GameBridge.Commands
     ///   wasm unload &lt;id&gt;  unload one module (runs its shutdown export)
     ///   wasm status    host health and per-module counters (the default)
     ///   wasm help      the same list this class documents
+    ///
     /// Every subcommand says what it did: which ids loaded, which were
     /// skipped and why, and which ids exist after a mistyped or unloaded id,
     /// so an operator reading the console does not have to open the server
     /// log to find out whether the command took effect.
+    ///
+    /// The three that put guest code in or take it out of the game process
+    /// (load, reload, unload) log their sender to the server log; see
+    /// <see cref="Describe"/>. The console echo is the operator's immediate
+    /// answer, not a record that outlives the session.
     /// </summary>
     public class CmdWasm : ConsoleCmdAbstract
     {
@@ -74,7 +80,7 @@ namespace HordeForge.GameBridge.Commands
                     break;
 
                 case "load":
-                    LoadModules();
+                    LoadModules(_senderInfo);
                     break;
 
                 case "reload":
@@ -89,10 +95,13 @@ namespace HordeForge.GameBridge.Commands
                     string id = TextSanitizer.Clean(_params[1]);
                     if (BridgeHost.Reload(_params[1], out string reason))
                     {
+                        Log.Out("[WasmHost] wasm reload " + id + " by " + Describe(_senderInfo) + ": reloaded");
                         Output("reloaded " + id);
                     }
                     else
                     {
+                        Log.Out("[WasmHost] wasm reload " + id + " by " + Describe(_senderInfo) +
+                                ": refused: " + TextSanitizer.Clean(reason));
                         Output("reload failed for " + id + ": " + reason);
                         OutputLoadedIds();
                     }
@@ -108,6 +117,8 @@ namespace HordeForge.GameBridge.Commands
                     string target = TextSanitizer.Clean(_params[1]);
                     if (BridgeHost.Unload(_params[1], out string detail))
                     {
+                        Log.Out("[WasmHost] wasm unload " + target + " by " + Describe(_senderInfo) +
+                                ": unloaded" + (detail.Length > 0 ? " (shutdown export failed: " + detail + ")" : string.Empty));
                         Output("unloaded " + target);
                         // The module is gone either way, so a failing
                         // shutdown export is a note on the same command
@@ -119,6 +130,8 @@ namespace HordeForge.GameBridge.Commands
                     }
                     else
                     {
+                        Log.Out("[WasmHost] wasm unload " + target + " by " + Describe(_senderInfo) +
+                                ": not loaded: " + TextSanitizer.Clean(detail));
                         Output("unload failed for " + target + ": " + detail);
                         OutputLoadedIds();
                     }
@@ -154,6 +167,30 @@ namespace HordeForge.GameBridge.Commands
         private string Usage()
         {
             return "usage: " + getHelp().Replace("\n", "\n       ");
+        }
+
+        /// <summary>
+        /// Who ran a load, reload, or unload. These three compile and start
+        /// guest code in the game process, so each one names its sender in the
+        /// server log, which outlives the session the way the module tree
+        /// does. The game marks a command issued at the local console
+        /// (IsLocalGame) and carries a remote client for anything typed over
+        /// telnet or in game. The name and address come from the client, so
+        /// they are cleaned like any other client-derived text.
+        /// </summary>
+        private static string Describe(CommandSenderInfo senderInfo)
+        {
+            if (senderInfo.IsLocalGame)
+            {
+                return "local console";
+            }
+            ClientInfo client = senderInfo.RemoteClientInfo;
+            if (client == null)
+            {
+                return "remote sender (no client)";
+            }
+            string name = client.playerName ?? string.Empty;
+            return "player '" + TextSanitizer.Clean(name) + "' (" + TextSanitizer.Clean(client.ip) + ")";
         }
 
         private static void Output(string line)
@@ -192,7 +229,7 @@ namespace HordeForge.GameBridge.Commands
         /// a module that sits in Mods/Wasm and never appears is otherwise
         /// only explained in a log file they have to go and open.
         /// </summary>
-        private static void LoadModules()
+        private static void LoadModules(CommandSenderInfo senderInfo)
         {
             if (!BridgeHost.Started)
             {
@@ -200,6 +237,8 @@ namespace HordeForge.GameBridge.Commands
                 return;
             }
             ModuleLoadScan scan = BridgeHost.LoadAllModules();
+            Log.Out("[WasmHost] wasm load by " + Describe(senderInfo) + ": loaded " +
+                    scan.LoadedIds.Count + ", skipped " + scan.Skipped.Count);
             if (scan.LoadedIds.Count == 0)
             {
                 Output("no new modules found in " + TextSanitizer.Clean(BridgeHost.WasmRoot));

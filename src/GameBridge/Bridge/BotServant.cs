@@ -133,6 +133,12 @@ namespace HordeForge.GameBridge.Bridge
         // tracked as the mod's authority state and surfaced in "wasm status";
         // the parachute deploy/land state machine still runs correctly.
         private readonly Dictionary<int, bool> _glide = new Dictionary<int, bool>();
+        // Which module armed each glide flag. Guests share one world, so an
+        // armed flag is one module's authority over a player: only the module
+        // that armed it may change it, or one guest could clear another's
+        // flag and its descent clamp. Same chokepoint as the bot bodies
+        // above (see GlideOwnershipRegistry).
+        private readonly GlideOwnershipRegistry _glideOwners = new GlideOwnershipRegistry();
 
         // Minimum interval between floor top-up passes. EnsureSpawned runs
         // from every sense request; without the throttle a world where
@@ -250,7 +256,7 @@ namespace HordeForge.GameBridge.Bridge
                 // the guest's error counters.
                 try
                 {
-                    return TryQueueGlide(command);
+                    return TryQueueGlide(modId, command);
                 }
                 catch (Exception ex)
                 {
@@ -279,10 +285,13 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>
         /// Handles `glide &lt;net_id&gt; &lt;0|1|on|true|off|false&gt;` (zdtd ADR 0037,
         /// the parachute mod's queue verb): tracks the player's glide flag.
-        /// The parse mirrors zdtd exactly (arm values "1"/"on"/"true", clear
-        /// values "0"/"off"/"false", anything else is malformed and dropped).
+        /// The net id belongs to the calling module: the first module to arm
+        /// or clear a flag holds it, and another module's command is refused
+        /// rather than applied. The parse mirrors zdtd exactly (arm values
+        /// "1"/"on"/"true", clear values "0"/"off"/"false", anything else is
+        /// malformed and dropped).
         /// </summary>
-        private bool TryQueueGlide(string command)
+        private bool TryQueueGlide(string modId, string command)
         {
             string[] parts = command.Split(' ');
             if (parts.Length != 3)
@@ -318,6 +327,15 @@ namespace HordeForge.GameBridge.Bridge
             else
             {
                 WriteCapped("glide/parse", "glide (bad flag): " + command);
+                return true;
+            }
+            // The flag is one module's authority state, so a second module's
+            // "glide <id> 0" must not strip the first module's buff and
+            // descent clamp. The claim is idempotent for the holder, so
+            // re-arming and clearing both pass it.
+            if (!_glideOwners.Claim(modId, netId))
+            {
+                WriteCapped("glide/claim", "glide (not owner of " + netId + "): " + command);
                 return true;
             }
             _glide[netId] = armed;
@@ -647,6 +665,10 @@ namespace HordeForge.GameBridge.Bridge
             foreach (int id in gone)
             {
                 _glide.Remove(id);
+                // The claim goes with the flag: a net id the world has
+                // handed to something else is not a player this module
+                // holds authority over.
+                _glideOwners.Forget(id);
             }
         }
 
@@ -972,6 +994,7 @@ namespace HordeForge.GameBridge.Bridge
             IReadOnlyList<int> released = _botOwners.Release(modId);
             _countFloors.Remove(modId);
             _lastTopUpMs.Remove(modId);
+            ReleaseModuleGlide(modId);
             if (released.Count == 0)
             {
                 return;
@@ -1053,6 +1076,28 @@ namespace HordeForge.GameBridge.Bridge
                 return;
             }
             Despawn(modId, removeId);
+        }
+
+        /// <summary>
+        /// Drops the glide flags <paramref name="modId"/> armed, and the buff
+        /// that went with them. The authority to soften a fall belongs to the
+        /// module that asked for it, so an unloaded module leaves no flag
+        /// behind: the player it was holding up falls the way the rest of the
+        /// world does, and the claim is free for the module that reloads.
+        /// </summary>
+        private void ReleaseModuleGlide(string modId)
+        {
+            IReadOnlyList<int> released = _glideOwners.Release(modId);
+            if (released.Count == 0)
+            {
+                return;
+            }
+            foreach (int id in released)
+            {
+                _glide.Remove(id);
+                ApplyGlideBuff(id, false);
+            }
+            Log.Out("[WasmHost] released " + released.Count + " glide flag(s) armed by " + modId);
         }
 
         private void Despawn(string modId, int entityId)

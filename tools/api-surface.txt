@@ -96,6 +96,12 @@ src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.publi
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public int CountOf(string owner)
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public string? OwnerOf(int entityId)
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: type BotOwnershipRegistry
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public IReadOnlyList<int> Release(string owner)
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public bool Claim(string owner, int netId)
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public bool Owns(string owner, int netId)
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public string? OwnerOf(int netId)
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public void Forget(int netId)
+src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: type GlideOwnershipRegistry
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed, int guestStatus)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunStatus Status { get; }

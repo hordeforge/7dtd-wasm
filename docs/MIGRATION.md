@@ -142,6 +142,14 @@ rebuild and run.
   id let a guest steer entities it does not own, other players included. A
   non-player net id is now refused with a `glide (not a player)` line. A
   guest that armed a non-player id has to arm its own player instead.
+- **A glide flag belongs to the module that armed it.** The flag table was
+  keyed by net id alone, so a second module could clear the first one's
+  armed flag and its descent clamp. The first module to change a player's
+  flag holds it, and another module's `glide <net_id> 0` is refused and
+  logged as `glide (not owner of <net_id>)`. A guest that shared a player's
+  flag with another module, or cleared a flag another module armed, has to
+  keep to its own. Unloading or reloading a module drops the flags it armed,
+  so a fresh instance starts from an empty set.
 - **Invisible text in log, chat, and set-name output is replaced.** The
   Unicode line and paragraph separators (U+2028, U+2029), the bidi controls
   (U+202A to U+202E, U+2066 to U+2069), and the zero-width no-break space

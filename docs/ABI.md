@@ -137,10 +137,13 @@ ascending net id, and a snapshot carries at most 41 records, the number a
 2048-byte guest sense buffer holds; when more alive entities exist than that,
 the lowest net ids are the ones reported, so the same entity set
 always produces the same snapshot bytes. Only a net id that names a live
-player in the world can be armed. That gate is not ownership: any module may
-arm or clear the flag on any live player (SECURITY.md, "What is NOT
-sandboxed"). Bot verbs, in contrast, act only on the calling module's bots.
-The descent clamp is anchored to the last observed position and
+player in the world can be armed, and a flag belongs to the module that
+first armed or cleared it: a second module's `glide <net_id> 0` is refused
+and logged as `glide (not owner of <id>)`, so a guest cannot steer an
+entity it does not own and cannot strip another guest's glide. A module
+that unloads or reloads drops the flags it armed. Bot verbs, in contrast,
+act only on the calling module's bots. The descent clamp is
+anchored to the last observed position and
 applies only when that observation is the previous tick, so a gap in sense
 polling never snaps a player upward. `query` (cover/path) and
 `on_admin_command` console wiring are stage 3.

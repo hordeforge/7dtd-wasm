@@ -260,7 +260,9 @@ in CI, not only on a host that already has a toolchain config.
 - `CmdWasm` implements the V3 console command contract
   (`getCommands()`, `getDescription()`, `getHelp()`, `Execute(List<string>,
   CommandSenderInfo)`) with subcommands list, load, reload, unload, status
-  (the default when none is given), and help.
+  (the default when none is given), and help. Load, reload, and unload also
+  log their sender to the server log, so a change to what runs in the game
+  process is attributable after the session ends.
 - Threading: tick and player-join dispatch run on the game main loop, but
   console commands execute on the telnet/console thread. Every
   `BridgeHost` entry point therefore serializes on one internal gate, so a

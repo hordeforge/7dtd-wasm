@@ -136,6 +136,9 @@ namespace TargetCheck
             {
                 CheckFieldOrProperty(md, t, "playerName", isStatic: false);
                 CheckFieldOrProperty(md, t, "entityId", isStatic: false);
+                // CmdWasm names the remote sender of a load, reload, or
+                // unload by name and address.
+                CheckProperty(md, t, "ip", isStatic: false);
             });
 
             // Bot servant entity APIs (BotServant.cs).
@@ -212,6 +215,15 @@ namespace TargetCheck
                 CheckMethod(md, t, "getDescription", "string()", isStatic: false);
                 CheckMethod(md, t, "getHelp", "string()", isStatic: false);
                 CheckMethod(md, t, "Execute", "void(List`1<string>, CommandSenderInfo)", isStatic: false);
+            });
+
+            CheckType(md, "CommandSenderInfo", t =>
+            {
+                // CmdWasm names the sender of a load, reload, or unload in the
+                // server log, so both the local-console flag and the remote
+                // client are load-bearing after a game update.
+                CheckFieldOrProperty(md, t, "IsLocalGame", isStatic: false);
+                CheckFieldOrProperty(md, t, "RemoteClientInfo", isStatic: false);
             });
 
             CheckType(md, "SdtdConsole", t =>

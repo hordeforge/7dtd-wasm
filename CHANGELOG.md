@@ -141,6 +141,10 @@ operator, embedder, and guest author.
   without ever running them. The job calls `dotnet` directly because the
   Windows runner image has no GNU make; the Makefile targets are unchanged
   and README still records them as unproven there.
+- `HordeForge.WasmHost.Core.GlideOwnershipRegistry` maps each armed glide
+  net id to the module that armed it, the glide counterpart of
+  `BotOwnershipRegistry`. The rule lives in the host so it is testable
+  without a game.
 
 ### Performance
 
@@ -186,6 +190,20 @@ operator, embedder, and guest author.
   (and resized the table) was reading `Dictionary.Count` against a table in
   flux. It reads under the limiter gate like the rest of the type, and
   `SharedStateConcurrencyTests` covers the read beside concurrent writers.
+- `wasm load`, `wasm reload <id>`, and `wasm unload <id>` now name their
+  sender in the server log, by player name and address for a remote sender
+  and as the local console otherwise. They compile and start guest code in
+  the game process, and the only record of who asked was the console echo,
+  which is gone with the session. The game targets this reads
+  (`CommandSenderInfo.IsLocalGame`, `RemoteClientInfo`, `ClientInfo.ip`) are
+  now in `make bridge-check`.
+- `glide <net_id> <0|1>` accepted a flag on any player from any module, and
+  the flag table was keyed by net id alone, so a second guest could clear
+  the first one's armed flag and its descent clamp (docs/THREAT_MODEL.md,
+  gap 5). The first module to change a player's flag holds it, and another
+  module's command is refused with a `glide (not owner of <id>)` line. A
+  module that unloads or reloads drops the flags it armed, with the buff
+  that went with them, so no flag outlives the module that owned it.
 - `tests/HordeForge.WasmHost.Tests/LogShim.cs` was excluded from the test
   compile by an explicit `<Compile Remove>`, so neither type in it was in the
   suite: a second `Log` that `GameLogShim` already provides, and a
