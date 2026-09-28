@@ -442,7 +442,7 @@ namespace HordeForge.GameBridge.Bridge
                     foreach (string dir in dirs)
                     {
                         string id = Path.GetFileName(dir);
-                        if (!IsValidModId(id))
+                        if (!ModId.IsValid(id))
                         {
                             // A folder name with path separators or control
                             // characters (both legal on some filesystems) must
@@ -583,23 +583,12 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        /// <summary>
-        /// True when the id is a plain folder name under WasmRoot. Ids arrive
-        /// from console input ("wasm reload &lt;id&gt;") and from directory
-        /// names on disk, so this keeps module paths inside Mods/Wasm and
-        /// control characters out of log output; see ModId.IsValid.
-        /// </summary>
-        public static bool IsValidModId(string id)
-        {
-            return ModId.IsValid(id);
-        }
-
         public static bool Reload(string id)
         {
             lock (Gate)
             {
                 WasmModHost? host = _host;
-                if (host == null || !IsValidModId(id))
+                if (host == null || !ModId.IsValid(id))
                 {
                     return false;
                 }

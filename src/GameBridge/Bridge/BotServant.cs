@@ -101,7 +101,8 @@ namespace HordeForge.GameBridge.Bridge
         // pooled and refilled per call instead of being reallocated every
         // time (single main-loop thread by contract).
         private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
-        private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
+        private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords =
+            new SenseSnapshotWriter.EntityRecord[MaxSenseRecords];
         // Armed gliders (zdtd ADR 0037 `glide <net_id> <0|1>`): net id -> armed.
         // The real game has no C2S movement envelope to exempt, so this is
         // tracked as the mod's authority state and surfaced in "wasm status";
@@ -162,16 +163,6 @@ namespace HordeForge.GameBridge.Bridge
             {
                 Log.Warning("[WasmHost] suppressed " + dropped + " " + sourceKey + " failure log(s)");
             }
-        }
-
-        private static SenseSnapshotWriter.EntityRecord[] CreateSenseRecords()
-        {
-            var records = new SenseSnapshotWriter.EntityRecord[MaxSenseRecords];
-            for (int i = 0; i < records.Length; i++)
-            {
-                records[i] = new SenseSnapshotWriter.EntityRecord();
-            }
-            return records;
         }
 
         /// <summary>
@@ -614,11 +605,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            if (vy >= -SinkVyMps || elapsedTicks <= 0)
-            {
-                return;
-            }
-            if (elapsedTicks != 1)
+            if (vy >= -SinkVyMps || elapsedTicks != 1)
             {
                 return;
             }
