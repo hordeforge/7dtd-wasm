@@ -127,8 +127,15 @@ budget does not cover game-side work):
   live world entity list on the host side, work the wasm fuel budget does
   not cover. Excess requests report no world data (0) and are counted,
   visible in `wasm status`.
-- Live servant bots are capped at 16; spawn requests beyond the cap are
-  refused. `bot remove` only ever despawns the servant's own bots.
+- Live servant bots are capped at 16 across all modules; spawn requests
+  beyond the cap are refused. `bot remove` only ever despawns the servant's
+  own bots.
+- A bot belongs to the module that asked for it. `bot move`, `bot look`,
+  `bot shoot`, `bot remove` (including `remove all`), and `bot count` act
+  only on that module's bots, and a sense record's `is_self` bit marks only
+  the calling module's bots. Another module's bots are still reported as
+  bots, so a guest is not handed bodies it may not drive. Unloading or
+  reloading a module despawns its bots and drops its `bot count` floor.
 
 Modules without a declared memory maximum are treated as declaring the
 wasm32 ceiling (4 GiB) and load only when the effective cap allows it; an

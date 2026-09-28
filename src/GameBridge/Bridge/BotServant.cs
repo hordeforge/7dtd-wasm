@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using HordeForge.WasmHost.Abi;
+using HordeForge.WasmHost.Core;
 
 namespace HordeForge.GameBridge.Bridge
 {
@@ -85,6 +86,16 @@ namespace HordeForge.GameBridge.Bridge
         private readonly GuestRateLimiter _commandLogLimiter;
         private readonly HashSet<int> _bots = new HashSet<int>();
         private readonly Dictionary<int, float> _botYaw = new Dictionary<int, float>();
+        // Which module owns each tracked bot. Guests share one world, so a
+        // bot id names a principal's object: only the owner may move, aim,
+        // shoot, or despawn it. The map is the single ownership chokepoint
+        // for the whole bot surface (see BotOwnershipRegistry).
+        private readonly BotOwnershipRegistry _botOwners = new BotOwnershipRegistry();
+        // Per-module bot count floor ("bot count N"). One module's floor
+        // never raises or lowers another's, and the live ceiling stays
+        // global (MaxBotCount) because the entity cost is shared.
+        private readonly Dictionary<string, int> _countFloors = new Dictionary<string, int>(StringComparer.Ordinal);
+        private readonly HashSet<string> _botOwnersWithFloor = new HashSet<string>(StringComparer.Ordinal);
         // Sense runs once per
         // tick per calling brain; the snapshot and its entity records are
         // pooled and refilled per call instead of being reallocated every
@@ -96,7 +107,6 @@ namespace HordeForge.GameBridge.Bridge
         // tracked as the mod's authority state and surfaced in "wasm status";
         // the parachute deploy/land state machine still runs correctly.
         private readonly Dictionary<int, bool> _glide = new Dictionary<int, bool>();
-        private int _countFloor = DefaultBotCount;
 
         // Minimum interval between floor top-up passes. EnsureSpawned runs
         // from every sense request; without the throttle a world where
@@ -165,23 +175,25 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Handles one queued SimCommand. Returns true when the command was
+        /// Handles one queued SimCommand from <paramref name="modId"/>. The
+        /// module id is the caller's identity: every bot verb is scoped to
+        /// the bots that module owns. Returns true when the command was
         /// accepted. <paramref name="handled"/> reports whether the command
         /// belonged to the servant surface (bot or glide verbs) at all, so
         /// the caller can tell a rejected servant command from text that was
         /// never ours (chat announce).
         /// </summary>
-        public bool TryQueue(string command, out bool handled)
+        public bool TryQueue(string modId, string command, out bool handled)
         {
             handled = false;
-            if (command == null)
+            if (command == null || modId == null)
             {
                 return false;
             }
             if (command.StartsWith("bot ", StringComparison.Ordinal))
             {
                 handled = true;
-                return TryQueueBot(command);
+                return TryQueueBot(modId, command);
             }
             if (command.StartsWith("glide ", StringComparison.Ordinal))
             {
@@ -284,7 +296,7 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        private bool TryQueueBot(string command)
+        private bool TryQueueBot(string modId, string command)
         {
             string[] parts = command.Split(' ');
             string verb = parts.Length > 1 ? parts[1] : string.Empty;
@@ -293,26 +305,27 @@ namespace HordeForge.GameBridge.Bridge
                 switch (verb)
                 {
                     case "spawn":
-                        SpawnOne();
+                        SpawnOne(modId);
                         return true;
                     case "remove":
-                        RemoveBots(parts);
+                        RemoveBots(modId, parts);
                         return true;
                     case "count":
                         if (parts.Length > 2 && TryParseId(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
                         {
-                            _countFloor = n;
-                            EnsureSpawned();
+                            _countFloors[modId] = n;
+                            _botOwnersWithFloor.Add(modId);
+                            EnsureSpawned(modId);
                         }
                         return true;
                     case "move":
-                        MoveBot(parts);
+                        MoveBot(modId, parts);
                         return true;
                     case "look":
-                        LookBot(parts);
+                        LookBot(modId, parts);
                         return true;
                     case "shoot":
-                        ShootBot(parts);
+                        ShootBot(modId, parts);
                         return true;
                     case "skill":
                     case "cfg":
@@ -352,13 +365,15 @@ namespace HordeForge.GameBridge.Bridge
         /// buffer and returns the byte count, or 0 when there is no world
         /// data or it does not fit. Records cover the lowest net ids in
         /// ascending order, so the same set of alive entities always yields
-        /// the same bytes. The snapshot, its records, and the
+        /// the same bytes. A record's is_self bit marks a bot owned by
+        /// <paramref name="modId"/>, so a guest is never handed another
+        /// guest's bodies as its own. The snapshot, its records, and the
         /// scratch id sets are pooled and refilled per call, so a sense
         /// request at tick rate does not allocate.
         /// </summary>
-        public int WriteSense(Span<byte> buffer)
+        public int WriteSense(string modId, Span<byte> buffer)
         {
-            EnsureSpawned();
+            EnsureSpawned(modId);
             var game = GameManager.Instance;
             if (game == null || game.World == null)
             {
@@ -415,12 +430,16 @@ namespace HordeForge.GameBridge.Bridge
                     SenseSnapshotWriter.EntityRecord record = records[snapshot.Records.Count];
                     // One membership probe feeds both the kind and the
                     // is_self bit: the sense scan visits every live entity on
-                    // every request, and a second HashSet lookup per entity is
-                    // pure repeat work at tick rate.
-                    bool isBot = _bots.Contains(e.entityId);
+                    // every request, and a second lookup per entity is pure
+                    // repeat work at tick rate. is_self means "a bot this
+                    // module owns", so another module's bots are still
+                    // reported as bots (the brain must not mistake one for a
+                    // zombie) but are not the caller's to drive.
+                    string? botOwner = _botOwners.OwnerOf(e.entityId);
+                    bool isBot = botOwner != null;
                     record.NetId = e.entityId;
                     record.Kind = Classify(e, isBot);
-                    record.IsSelf = isBot;
+                    record.IsSelf = string.Equals(botOwner, modId, StringComparison.Ordinal);
                     record.Alive = true;
                     record.X = e.position.x;
                     record.Y = e.position.y;
@@ -676,7 +695,7 @@ namespace HordeForge.GameBridge.Bridge
             return SenseSnapshotWriter.KindBot;
         }
 
-        private void EnsureSpawned()
+        private void EnsureSpawned(string modId)
         {
             var game = GameManager.Instance;
             if (game == null || game.World == null)
@@ -689,7 +708,8 @@ namespace HordeForge.GameBridge.Bridge
             // TopUpIntervalMs) and idempotent, so calling it per sense
             // request costs nothing in steady state. Unchecked int
             // subtraction stays correct across TickCount wraparound (same
-            // reasoning as GuestRateLimiter).
+            // reasoning as GuestRateLimiter). Only the calling module's bots
+            // are topped up: one module's floor is not another module's.
             int nowMs = _clockMs();
             if (_lastTopUpMs != int.MinValue && nowMs - _lastTopUpMs < TopUpIntervalMs)
             {
@@ -701,14 +721,15 @@ namespace HordeForge.GameBridge.Bridge
             // every attempt is guarded inside SpawnOne and a partially failed
             // round is repaired by the next pass instead of stacking another
             // batch on top of the bots that already spawned.
-            int target = Math.Min(_countFloor, MaxBotCount);
+            int floor = _countFloors.TryGetValue(modId, out int configured) ? configured : DefaultBotCount;
+            int target = Math.Min(floor, MaxBotCount);
             PruneDeadBots();
-            while (_bots.Count < target && SpawnOne())
+            while (_botOwners.CountOf(modId) < target && SpawnOne(modId))
             {
             }
         }
 
-        private bool SpawnOne()
+        private bool SpawnOne(string modId)
         {
             // Free cap slots held by bots that died in the world so the
             // ceiling bounds live bodies, not history.
@@ -739,7 +760,11 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 game.World.SpawnEntityInWorld(e);
                 _bots.Add(e.entityId);
-                Log.Out("[WasmHost] bot spawned entity " + e.entityId + " at " + pos.x + "," + pos.y + "," + pos.z);
+                // The world owns the id now; tracking it makes it the
+                // calling module's bot, and no other module may drive it.
+                _botOwners.Add(modId, e.entityId);
+                Log.Out("[WasmHost] bot spawned entity " + e.entityId + " for " + modId +
+                        " at " + pos.x + "," + pos.y + "," + pos.z);
                 return true;
             }
             catch (Exception ex)
@@ -777,6 +802,10 @@ namespace HordeForge.GameBridge.Bridge
             foreach (int id in dead)
             {
                 _bots.Remove(id);
+                if (_botOwners.OwnerOf(id) is string owner)
+                {
+                    _botOwners.Remove(owner, id);
+                }
                 _botYaw.Remove(id);
             }
         }
@@ -794,36 +823,81 @@ namespace HordeForge.GameBridge.Bridge
             return new UnityEngine.Vector3(0, 60, 0);
         }
 
-        private void RemoveBots(string[] parts)
+        /// <summary>
+        /// Despawns <paramref name="modId"/>'s bots. A module that is
+        /// unloaded leaves the world, so the bodies and its share of the bot
+        /// budget go with it; a reload gets a fresh set from the new
+        /// instance's own floor.
+        /// </summary>
+        public void ReleaseModule(string modId)
+        {
+            IReadOnlyList<int> released = _botOwners.Release(modId);
+            _countFloors.Remove(modId);
+            _botOwnersWithFloor.Remove(modId);
+            if (released.Count == 0)
+            {
+                return;
+            }
+            var game = GameManager.Instance;
+            foreach (int id in released)
+            {
+                _bots.Remove(id);
+                _botYaw.Remove(id);
+                if (game != null && game.World != null && game.World.GetEntity(id) is EntityAlive alive)
+                {
+                    try
+                    {
+                        alive.SetDead();
+                    }
+                    catch (Exception ex)
+                    {
+                        WarnCapped("bot/release", "despawn of released bot " + id + " failed: " + ex.Message);
+                    }
+                }
+            }
+            Log.Out("[WasmHost] released " + released.Count + " bot(s) owned by " + modId);
+        }
+
+        private void RemoveBots(string modId, string[] parts)
         {
             if (parts.Length > 2 && parts[2] == "all")
             {
-                // Despawn mutates _bots, so the ids are collected first and
-                // removed after the loop (see PruneDeadBots).
+                // "all" means every bot this module owns, not every bot in the
+                // world. Despawn mutates _bots, so the ids are collected first
+                // and removed after the loop (see PruneDeadBots).
                 var ids = _despawnIds;
                 ids.Clear();
-                ids.AddRange(_bots);
+                foreach (int id in _botOwners.EntityIds())
+                {
+                    if (_botOwners.Owns(modId, id))
+                    {
+                        ids.Add(id);
+                    }
+                }
                 foreach (int id in ids)
                 {
-                    Despawn(id);
+                    Despawn(modId, id);
                 }
                 return;
             }
             if (parts.Length > 2 && TryParseId(parts[2], out int removeId))
             {
-                Despawn(removeId);
+                Despawn(modId, removeId);
             }
         }
 
-        private void Despawn(int entityId)
+        private void Despawn(string modId, int entityId)
         {
-            // Only our own bots may be despawned. The id comes from a guest
-            // command; without this gate "bot remove <player entity id>"
-            // would kill any world entity, players included.
-            if (!_bots.Remove(entityId))
+            // Only a bot the calling module owns may be despawned. The id
+            // comes from a guest command; without this gate "bot remove
+            // <player entity id>" would kill any world entity, players
+            // included, and without the owner check one module could clear
+            // another module's bots.
+            if (!_botOwners.Owns(modId, entityId) || !_bots.Remove(entityId))
             {
                 return;
             }
+            _botOwners.Remove(modId, entityId);
             var game = GameManager.Instance;
             if (game != null && game.World != null)
             {
@@ -841,6 +915,7 @@ namespace HordeForge.GameBridge.Bridge
                         // silently half-happened would leave a live zombie
                         // nobody can prune, move, or despawn again.
                         _bots.Add(entityId);
+                        _botOwners.Add(modId, entityId);
                         Log.Warning("[WasmHost] bot despawn of " + entityId + " failed: " + ex.Message +
                                     "; bot stays in the world");
                         return;
@@ -850,7 +925,7 @@ namespace HordeForge.GameBridge.Bridge
             _botYaw.Remove(entityId);
         }
 
-        private void MoveBot(string[] parts)
+        private void MoveBot(string modId, string[] parts)
         {
             if (parts.Length < 6)
             {
@@ -863,14 +938,14 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            Entity? e = FindBot(id);
+            Entity? e = FindBot(modId, id);
             if (e != null)
             {
                 e.SetPosition(new UnityEngine.Vector3(x, y, z), true);
             }
         }
 
-        private void LookBot(string[] parts)
+        private void LookBot(string modId, string[] parts)
         {
             if (parts.Length < 4)
             {
@@ -880,7 +955,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            Entity? e = FindBot(id);
+            Entity? e = FindBot(modId, id);
             if (e != null)
             {
                 // The brain emits radians; the game uses degrees.
@@ -889,7 +964,7 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        private void ShootBot(string[] parts)
+        private void ShootBot(string modId, string[] parts)
         {
             if (parts.Length < 4)
             {
@@ -899,11 +974,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            // Only a live servant bot may fire (zdtd BotManager.shoot parity:
-            // find(shooter) orelse return). Without this gate any guest id
-            // would deal game-side damage attributed to an entity that is
-            // not ours, players included.
-            Entity? shooter = FindBot(botId);
+            // Only a live servant bot the calling module owns may fire (zdtd
+            // BotManager.shoot parity: find(shooter) orelse return). Without
+            // this gate any guest id would deal game-side damage attributed to
+            // an entity that is not ours, players included; without the owner
+            // check one module would shoot through another module's bots.
+            Entity? shooter = FindBot(modId, botId);
             if (shooter == null)
             {
                 return;
@@ -925,9 +1001,9 @@ namespace HordeForge.GameBridge.Bridge
             WriteCapped("bot/shot", "bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
         }
 
-        private Entity? FindBot(int entityId)
+        private Entity? FindBot(string modId, int entityId)
         {
-            if (!_bots.Contains(entityId))
+            if (!_bots.Contains(entityId) || !_botOwners.Owns(modId, entityId))
             {
                 return null;
             }

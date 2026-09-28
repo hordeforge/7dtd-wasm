@@ -273,7 +273,8 @@ named here and mapped in section 7; gaps are in section 8.
 | trap isolation | every call returns a `ModRunResult`; the tick walk continues | `src/HordeForge.WasmHost/Core/WasmModHost.cs:445`, `src/GameBridge/Hooks/GameTickHook.cs:14` |
 | log and chat flooding | per-source rate caps, every 100th drop reported, totals in `wasm status` | `src/GameBridge/Bridge/GuestRateLimiter.cs:22`, `src/GameBridge/Bridge/GameHostApi.cs:78` |
 | game-side work outside the fuel budget | per-module caps on `queue` (200/s) and `sense` (200/s) | `src/GameBridge/Bridge/GameHostApi.cs:195`, `:238` |
-| entity multiplication | 16 live bot ceiling, top-up throttled to 1/s | `src/GameBridge/Bridge/BotServant.cs:29`, `:628` |
+| entity multiplication | 16 live bot ceiling across all modules, top-up throttled to 1/s | `src/GameBridge/Bridge/BotServant.cs:29`, `:628` |
+| one guest driving another guest's bots | every bot id is checked against the module that asked for it, in the ownership registry, before move, look, shoot, despawn, count, and the `is_self` sense bit | `src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs:19`, `src/GameBridge/Bridge/BotServant.cs` |
 | path traversal through a mod id | id validation, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:25`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:146` |
 | manifest slurping | 1 MiB read bound, re-checked after the read | `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:24` |
 | wrong-signature exports silently dropped | every optional export validated at load | `src/HordeForge.WasmHost/Core/WasmModHost.cs:242` |
@@ -300,9 +301,12 @@ Recorded here, not fixed here. Each names the code that would have to change.
 3. **No operator identity or durable record for load, reload, and unload**
    (T1, repudiation). `src/GameBridge/Commands/CmdWasm.cs:32` ignores
    `CommandSenderInfo`; success is reported to the console only.
-4. **Cross-guest state has no ownership** (T3). Glide flags, bot bodies, and
-   the sense snapshot are keyed by net id alone, with no per-guest
-   partitioning (`src/GameBridge/Bridge/BotServant.cs:177`).
+4. **Cross-guest state that is not an object** (T3). Bot bodies are keyed
+   by owning module (`BotOwnershipRegistry`, checked in
+   `src/GameBridge/Bridge/BotServant.cs`), so one guest cannot move, shoot
+   through, or despawn another guest's bots. Glide flags remain keyed by
+   net id alone: a glide is a player's own request, not a module's object,
+   so its owner is the player named by the id.
 5. **Committed telnet credential** (T8).
    `evidence/playtest-1/serverconfig.playtest.xml:8` carries the playtest
    password in plaintext, and `evidence/playtest-1/run_server.sh:22` documents

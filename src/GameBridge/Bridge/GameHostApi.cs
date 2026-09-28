@@ -211,7 +211,7 @@ namespace HordeForge.GameBridge.Bridge
             // broadcast this way, matching the mod's config: "announce via
             // the stock chat broadcast"). A rejected chat falls back to a
             // log line and still counts as accepted (the bytes were read).
-            if (_servant.TryQueue(command, out bool handled))
+            if (_servant.TryQueue(modId, command, out bool handled))
             {
                 return true;
             }
@@ -247,7 +247,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return 0;
             }
-            return _servant.WriteSense(buffer);
+            return _servant.WriteSense(modId, buffer);
         }
 
         public string? TryQuery(string request)

@@ -612,6 +612,10 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 _settings?.RemoveMod(id);
                 _gameApi?.UnregisterConfig(id);
+                // The outgoing instance's bots leave the world with it, so
+                // the reloaded module starts from an empty share of the bot
+                // budget and cannot inherit the old one's bodies.
+                _servant?.ReleaseModule(id);
                 if (!TryLoadFromDisk(host, id))
                 {
                     return false;
@@ -639,6 +643,7 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 _settings?.RemoveMod(id);
                 _gameApi?.UnregisterConfig(id);
+                _servant?.ReleaseModule(id);
                 if (!shutdown.Ok)
                 {
                     // Fail soft: the mod is gone either way, but a trapped or

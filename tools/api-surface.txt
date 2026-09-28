@@ -87,6 +87,15 @@ src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public string L
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong FuelPerCall { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong StaticMemoryMaximumBytes { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: type WasmHostConfig
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public IReadOnlyList<int> EntityIds()
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public IReadOnlyList<int> Release(string owner)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public bool Add(string owner, int entityId)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public bool Owns(string owner, int entityId)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public bool Remove(string owner, int entityId)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public int Count
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public int CountOf(string owner)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public string? OwnerOf(int entityId)
+src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: type BotOwnershipRegistry
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed, int guestStatus)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunStatus Status { get; }
