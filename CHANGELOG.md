@@ -182,10 +182,9 @@ operator, embedder, and guest author.
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so
   `results.Add(result)` had no conversion to use. The pattern match on the
-  return value states the same thing and compiles, but the call was left
-  reading `results.Add(result.Value)` on the matched, already non-nullable
-  `result`, where `.Value` is a member that does not exist. The library, the
-  net48 bridge, and the test suite were unbuildable at this commit.
+  return value states the same thing and compiles: the pattern binds the
+  unwrapped `ModRunResult`, so the result is added directly. The library,
+  the net48 bridge, and the test suite were unbuildable at this commit.
 - The C# style rules in `.editorconfig` were editor suggestions: nothing
   promoted them, so a rule set that a developer silently ignored was the
   only thing a CI run saw. `EnforceCodeStyleInBuild` is on, and
@@ -585,6 +584,10 @@ operator, embedder, and guest author.
   and the existing notices drift gate covers them too. Their license stays
   `NOASSERTION`, since this repository does not vendor the sources that
   declare it.
+- `BotServant.TryQueue` called `TryQueueBot` from two branches of the same
+  three-way split on the command prefix, so one verb had two entry paths
+  through the same lock. The split is now glide against everything else,
+  with one call site per handler.
 - The CI ruff install resolves nothing beside the pinned wheel
   (`--no-deps --only-binary=:all:`): ruff ships no runtime dependencies, so
   a transitive resolution was pure added surface, and a source build of the
@@ -725,6 +728,12 @@ operator, embedder, and guest author.
   so a malformed one fails the load, but nothing reads array elements: no
   manifest field is an array, and `AsString` and its siblings reject an
   array value either way.
+- `BotServant`'s `_botOwnersWithFloor` set, written when a module sets a bot
+  count floor and cleared on release, and never read: the floor itself lives
+  in `_countFloors`, which is what the spawn path consults.
+- `WasmModHost.LogSource()`, a one-line accessor over `_currentLogSource`
+  that the field's own comment already explains; the three call sites read
+  the field.
 
 ## [0.3.1] - 2026-09-21
 

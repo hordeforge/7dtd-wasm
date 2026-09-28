@@ -747,7 +747,7 @@ namespace HordeForge.WasmHost.Core
                 }
                 catch (Exception ex)
                 {
-                    _api.Log(LogSource(), AbiConstants.LogError, "config failed: " + ex.Message);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: " + ex.Message);
                     return 0;
                 }
                 return copy;
@@ -779,7 +779,7 @@ namespace HordeForge.WasmHost.Core
                     // The wire contract is "0 = no data", but a host-side
                     // failure must not leave the brain silently blind: report
                     // through the capped log path so it can be diagnosed.
-                    _api.Log(LogSource(), AbiConstants.LogError, "sense failed: " + ex.Message);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: " + ex.Message);
                     return 0;
                 }
             });
@@ -805,7 +805,7 @@ namespace HordeForge.WasmHost.Core
             _linker.DefineFunction<int, int, int>(hostModule, "log", (Caller caller, int level, int ptr, int len) =>
             {
                 string message = ReadGuestString(caller, ptr, len);
-                _api.Log(LogSource(), level, message);
+                _api.Log(_currentLogSource, level, message);
             });
 
             _linker.DefineFunction<long>(hostModule, AbiConstants.ImportTick, caller =>
@@ -837,18 +837,6 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
-        /// Source tag for guest log lines: the configured prefix plus the
-        /// calling mod's id, so log attribution and the bridge's per-module
-        /// rate cap (ADR 0006) key on the module, not on the shared prefix.
-        /// Served from the tag built when the current mod was set, so a
-        /// guest looping the log import allocates no string per call.
-        /// </summary>
-        private string LogSource()
-        {
-            return _currentLogSource;
-        }
-
-        /// <summary>
         /// The tag a guest called under <paramref name="modId"/> logs under:
         /// <paramref name="prefix"/> alone for an empty id, otherwise the
         /// prefix, a slash, and the id. Public and static because the host
@@ -858,6 +846,7 @@ namespace HordeForge.WasmHost.Core
         /// itself would silently fail to drop the window of a module reloaded
         /// inside the second its previous generation saturated the cap, so
         /// the one place this host names a module is the one place to ask.
+        /// Built once per guest call rather than per log line.
         /// </summary>
         public static string LogSourceFor(string prefix, string modId)
         {
