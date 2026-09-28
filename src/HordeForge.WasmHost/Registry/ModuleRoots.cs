@@ -103,7 +103,7 @@ namespace HordeForge.WasmHost.Registry
             foreach (string root in roots)
             {
                 string dir = Path.Combine(root, id);
-                if (Directory.Exists(dir))
+                if (Directory.Exists(dir) && ChildNameMatches(root, id))
                 {
                     return dir;
                 }
@@ -124,12 +124,47 @@ namespace HordeForge.WasmHost.Registry
             foreach (string root in roots)
             {
                 string path = Path.Combine(root, id, fileName);
-                if (File.Exists(path))
+                if (File.Exists(path) && ChildNameMatches(root, id))
                 {
                     return path;
                 }
             }
             return string.Empty;
+        }
+
+        /// <summary>
+        /// True when <paramref name="root"/> holds a directory whose name is
+        /// spelled exactly as <paramref name="id"/>. Windows and macOS match
+        /// file names case-insensitively, so on those a bare Exists check
+        /// resolves "wasm reload HELLO" to the "hello" module and registers it
+        /// under a second id: two entries reading one module.wasm, with their
+        /// own limits, settings, and log source. Confirming the on-disk
+        /// spelling keeps the outcome the same everywhere, where a wrong-case
+        /// id is the "not found" Linux already reports.
+        ///
+        /// Enumeration runs only after the direct path resolved, which is the
+        /// load and reload path plus one config lookup per module, never a
+        /// per-tick call.
+        /// </summary>
+        private static bool ChildNameMatches(string root, string id)
+        {
+            string[] children;
+            try
+            {
+                children = Directory.GetDirectories(root);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            foreach (string child in children)
+            {
+                if (string.Equals(Path.GetFileName(child), id, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static bool Contains(List<string> ordered, string candidate)

@@ -143,6 +143,15 @@ server console. The staged native engine (`Native/libwasmtime.so`,
 Windows; macOS has no dedicated server). The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
+The Makefile drives a POSIX shell (GNU make plus `sh`): `cargo`/`rustup` for
+the Rust guests, `zig` for the C and Zig guests, and Python 3 for the tools
+gate, resolved as `python3` or as `python` where that is the interpreter
+name. `GAME_DIR` defaults to the Steam library root of the platform
+(`C:\Program Files (x86)\Steam\steamapps\common` on Windows,
+`$HOME/.local/share/Steam/steamapps/common` elsewhere); pass
+`GAME_DIR=/path/to/install` when Steam lives elsewhere. CI exercises Linux
+only, so a Windows run of these targets is unproven.
+
 ### Embedding the host library
 
 `HordeForge.WasmHost` is a plain .NET library (netstandard2.0 + net8.0);

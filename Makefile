@@ -9,6 +9,10 @@
 DOTNET ?= $(shell test -x $(HOME)/.cache/dotnet-sdk/dotnet && echo $(HOME)/.cache/dotnet-sdk/dotnet || command -v dotnet 2>/dev/null || echo $(HOME)/.cache/dotnet-sdk/dotnet)
 CARGO  ?= $(PWD)/.cargo/bin/cargo
 ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
+# The tools gate is Python, and the interpreter is spelled differently per
+# platform: Windows installs it as "python" and has no "python3" at all, so a
+# hardcoded python3 breaks every target that runs tools/ (dist, check-ci).
+PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
 
@@ -24,6 +28,11 @@ UNAME_S := $(shell uname -s 2>/dev/null || echo Windows_NT)
 UNAME_M := $(shell uname -m 2>/dev/null)
 ifeq ($(OS),Windows_NT)
   WASMTIME_OS := win
+  # uname is missing from a plain Windows shell, so the architecture comes from
+  # the environment there. Both variables matter: a 32-bit process on x64
+  # reports the emulated one through PROCESSOR_ARCHITEW6432.
+  WIN_ARCH := $(if $(PROCESSOR_ARCHITEW6432),$(PROCESSOR_ARCHITEW6432),$(PROCESSOR_ARCHITECTURE))
+  UNAME_M := $(if $(filter ARM64,$(WIN_ARCH)),arm64,x64)
 else ifeq ($(UNAME_S),Darwin)
   WASMTIME_OS := osx
 else
@@ -43,8 +52,21 @@ else
   WASMTIME_NATIVE := libwasmtime.so
 endif
 
+# Steam's library root, per platform family: Windows keeps games under
+# Program Files (x86), Linux under the user's home. Both are defaults; every
+# target below takes GAME_DIR=... on the command line.
+ifeq ($(OS),Windows_NT)
+  # GNU make cannot reference an environment variable whose name contains
+  # parentheses, and Steam keeps games under "Program Files (x86)", so the
+  # conventional root is spelled out here. A Steam on another drive is a
+  # GAME_DIR=... on the command line.
+  STEAM_ROOT ?= C:/Program Files (x86)/Steam/steamapps/common
+else
+  STEAM_ROOT ?= $(HOME)/.local/share/Steam/steamapps/common
+endif
+
 # Dedicated server install used for the net48 bridge build and target check.
-GAME_DIR ?= $(HOME)/.local/share/Steam/steamapps/common/7 Days to Die Dedicated Server
+GAME_DIR ?= $(STEAM_ROOT)/7 Days to Die Dedicated Server
 
 SLN = HordeForge.WasmHost.sln
 
@@ -55,7 +77,7 @@ SLN = HordeForge.WasmHost.sln
 # targets that stage the native engine: an eagerly evaluated $(shell) starts
 # a python interpreter on every "make", including "make clean", and fails
 # those targets outright when the lock file has not been restored yet.
-WASMTIME_VERSION = $(shell python3 -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
+WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
 .PHONY: help build test samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
 
@@ -175,7 +197,7 @@ dist: build fixtures bridge
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	# SBOM: CycloneDX inventory built from the committed lock files, so
 	# consumers and vuln scanners know exactly what shipped.
-	python3 tools/sbom.py --root . -o dist/SBOM.json
+	$(PYTHON) tools/sbom.py --root . -o dist/SBOM.json
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
 check: export RESTORE_LOCKED := true
@@ -189,9 +211,9 @@ check: check-ci
 # because a skipped gate reads like a passed one.
 check-ci: export RESTORE_LOCKED := true
 check-ci:
-	python3 tools/doccheck.py
-	python3 tools/versioncheck.py
-	python3 -m unittest discover -s tools
+	$(PYTHON) tools/doccheck.py
+	$(PYTHON) tools/versioncheck.py
+	$(PYTHON) -m unittest discover -s tools
 	ruff check tools
 	ruff format --check tools
 	$(MAKE) samples-check

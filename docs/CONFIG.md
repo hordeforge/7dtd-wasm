@@ -48,7 +48,10 @@ version = "0.1.0"
 
 # The mod id (the folder name under Mods/Wasm) must be a plain folder name:
 # no path separators, no colons, no dot-only segments, no control
-# characters. Invalid folders are skipped with a warning at load.
+# characters. Invalid folders are skipped with a warning at load. Ids are
+# matched to folders by exact spelling on every platform, so a console
+# command for "Hello" does not load the "hello" module on a
+# case-insensitive filesystem.
 
 # Host-enforced caps. fuel_per_call overrides the effective default
 # (rejected above the 50,000,000 ceiling); max_memory_bytes can only

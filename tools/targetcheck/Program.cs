@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Runtime.InteropServices;
 
 namespace TargetCheck
 {
@@ -58,18 +59,7 @@ namespace TargetCheck
             string? gameDir = args.Length > 0 ? args[0] : null;
             if (gameDir == null)
             {
-                // Same lookup as NativeAssets.GetUserProfileDirectory: HOME
-                // everywhere Unix-like, USERPROFILE as the Windows fallback,
-                // so the not-found message names a real path on both.
-                string? home = Environment.GetEnvironmentVariable("HOME") ??
-                               Environment.GetEnvironmentVariable("USERPROFILE");
-                if (home == null)
-                {
-                    Console.Error.WriteLine("targetcheck: neither HOME nor USERPROFILE is set, " +
-                                             "so the default game directory is unknown; pass GAME_DIR");
-                    return 2;
-                }
-                gameDir = Path.Combine(home, ".local", "share", "Steam", "steamapps", "common", "7 Days to Die Dedicated Server");
+                gameDir = Path.Combine(DefaultSteamRoot(), "7 Days to Die Dedicated Server");
             }
 
             string managed = Path.Combine(gameDir, "7DaysToDieServer_Data", "Managed");
@@ -270,6 +260,30 @@ namespace TargetCheck
                 return;
             }
             Fail("enum " + typeName + " not found");
+        }
+
+        /// <summary>
+        /// Steam's library root on this platform: Program Files (x86) under
+        /// Windows, the user profile under Linux and macOS. Resolved through
+        /// the framework's own folder API rather than an environment variable,
+        /// so a Windows machine without HOME still finds its install and the
+        /// not-found message names a real path on every platform.
+        /// </summary>
+        private static string DefaultSteamRoot()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+                if (!string.IsNullOrEmpty(programFilesX86))
+                {
+                    return Path.Combine(programFilesX86, "Steam", "steamapps", "common");
+                }
+            }
+
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Path.Combine(
+                string.IsNullOrEmpty(home) ? "." : home,
+                ".local", "share", "Steam", "steamapps", "common");
         }
 
         private static void ReportGameVersion(MetadataReader md, string asmPath)

@@ -120,6 +120,23 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void IdSpelledDifferentlyFromTheFolderDoesNotResolve()
+        {
+            // Windows and macOS match folder names case-insensitively, so
+            // without the exact-spelling check "HELLO" would resolve the
+            // "hello" module there and not on Linux. The outcome must be the
+            // same on every platform: not found.
+            string primary = Dir("primary");
+            Directory.CreateDirectory(Path.Combine(primary, "hello"));
+            File.WriteAllText(Path.Combine(primary, "hello", "module.wasm"), "m");
+            var roots = ModuleRoots.Order(primary, Array.Empty<string>());
+            Assert.Equal(string.Empty, ModuleRoots.ResolveDir(roots, "HELLO"));
+            Assert.Equal(string.Empty, ModuleRoots.ResolveFile(roots, "HELLO", "module.wasm"));
+            Assert.Equal(Path.Combine(primary, "hello", "module.wasm"),
+                ModuleRoots.ResolveFile(roots, "hello", "module.wasm"));
+        }
+
+        [Fact]
         public void InvalidIdResolvesToEmpty()
         {
             string primary = Dir("primary");

@@ -1,11 +1,14 @@
-# Line-ending policy. The repo is edited across platforms; these files
-# break when checked out with CRLF, so they are pinned to LF everywhere.
-* text=auto
-*.sh text eol=lf
-*.py text eol=lf
-*.rs text eol=lf
-Makefile text eol=lf
-*.mk text eol=lf
+# Line-ending policy. The repo is edited across platforms and .editorconfig
+# pins end_of_line = lf for every file, so a Windows checkout must not
+# reintroduce CRLF: a CRLF shell script or Dockerfile line ending lands
+# inside the shebang and the "apt-get install \" style continuations and
+# breaks them there.
+* text=auto eol=lf
 
-# Binaries: never normalize.
+# Visual Studio writes a solution with CRLF, and the committed blob is CRLF;
+# -text keeps git from normalizing it, so editing the .sln on any platform
+# does not rewrite every line of it.
+*.sln -text
+
+# Binaries: never normalize, and never give them an end of line.
 *.wasm binary
