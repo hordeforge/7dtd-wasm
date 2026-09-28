@@ -366,13 +366,15 @@ namespace HordeForge.GameBridge.Bridge
         /// (disconnected players, removed bots), so the history stays
         /// proportional to the live entity list instead of every id ever
         /// seen. Runs inside the sense scan, which already visits them all.
+        /// Membership decides, not a size comparison: in a tick where
+        /// entities leave and others join the counts can match while ids
+        /// differ, and a history entry left behind is served to whatever
+        /// entity the game later reuses that net id for, as a vy derived
+        /// from the previous occupant's position. The walk allocates
+        /// nothing, so running it unconditionally costs only the iteration.
         /// </summary>
         private void PrunePositionHistory(HashSet<int> seen)
         {
-            if (_lastPos.Count <= seen.Count)
-            {
-                return;
-            }
             var stale = _staleIds;
             stale.Clear();
             foreach (int id in _lastPos.Keys)

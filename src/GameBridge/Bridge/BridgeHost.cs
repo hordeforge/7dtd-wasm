@@ -415,11 +415,15 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         private static void InitOne(string id)
         {
-            if (_host == null || !_host.TryGetMod(id, out WasmMod? mod) || mod == null)
+            // Through the host, not mod.Init(): the guest reads its settings,
+            // its config.toml, and its log attribution from the mod the host
+            // is currently calling, and only the host knows which that is.
+            ModRunResult? maybeResult = _host?.InitModule(id);
+            if (!maybeResult.HasValue)
             {
                 return;
             }
-            ModRunResult result = mod.Init();
+            ModRunResult result = maybeResult.GetValueOrDefault();
             if (!result.Ok)
             {
                 Log.Warning("[WasmHost] on_enable of " + id + ": " + Describe(result));

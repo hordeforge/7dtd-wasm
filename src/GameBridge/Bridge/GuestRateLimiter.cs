@@ -41,6 +41,21 @@ namespace HordeForge.GameBridge.Bridge
 
         private const int WindowMs = 1000;
 
+        /// <summary>
+        /// A source that has not written for this long is dropped from the
+        /// table. Windows exist to bound a live source, so keeping the ones
+        /// for modules an operator already unloaded only grows the table:
+        /// nothing ever read a window without first writing through it.
+        /// </summary>
+        private const int IdleSourceEvictionMs = 300000;
+
+        /// <summary>
+        /// Table size above which idle sources are swept. Below it the sweep
+        /// is skipped, since a live server has a handful of sources and the
+        /// walk would only cost time.
+        /// </summary>
+        private const int MaxTrackedSources = 128;
+
         private readonly int _maxPerSecond;
 
         // Monotonic millisecond clock, injectable for tests. Defaults to
@@ -56,6 +71,10 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         private readonly Dictionary<string, Window> _windows = new Dictionary<string, Window>(StringComparer.Ordinal);
+
+        // Pooled removal list for the idle sweep, so bounding the table
+        // never allocates on the guest's log path.
+        private readonly List<string> _idle = new List<string>();
 
         /// <summary>
         /// Creates a limiter whose cap is fixed at construction, so the
@@ -105,6 +124,11 @@ namespace HordeForge.GameBridge.Bridge
             {
                 window.StartTickMs = nowMs;
                 window.Count = 0;
+                // A window is reset at most once a second per source, so the
+                // sweep runs at most that often no matter how hard a guest
+                // writes. Doing it here, not on every call, keeps the log
+                // path allocation free and O(1) in the common case.
+                EvictIdleSources(nowMs);
             }
             if (window.Count >= _maxPerSecond)
             {
@@ -115,6 +139,34 @@ namespace HordeForge.GameBridge.Bridge
             window.Count++;
             droppedTotal = window.Dropped;
             return true;
+        }
+
+        /// <summary>
+        /// Drops windows for sources that have gone quiet, so the table
+        /// tracks live sources rather than every id ever seen. Unchecked int
+        /// subtraction matches the window reset above. Dropping a window
+        /// drops its dropped-item count too: an idle source is no longer
+        /// being throttled, so reporting it as dropped would be wrong.
+        /// </summary>
+        private void EvictIdleSources(int nowMs)
+        {
+            if (_windows.Count <= MaxTrackedSources)
+            {
+                return;
+            }
+            List<string> idle = _idle;
+            idle.Clear();
+            foreach (var pair in _windows)
+            {
+                if (nowMs - pair.Value.StartTickMs >= IdleSourceEvictionMs)
+                {
+                    idle.Add(pair.Key);
+                }
+            }
+            foreach (string source in idle)
+            {
+                _windows.Remove(source);
+            }
         }
 
         /// <summary>One-line summary of dropped items per source, for "wasm status".</summary>

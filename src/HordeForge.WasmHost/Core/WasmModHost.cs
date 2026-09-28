@@ -278,6 +278,35 @@ namespace HordeForge.WasmHost.Core
             }
         }
 
+        /// <summary>
+        /// Runs on_enable on one loaded mod and returns its result, or null
+        /// when the id is not loaded. Single-module init (the bridge start
+        /// scan, "wasm reload") must go through here and never through
+        /// <see cref="WasmMod.Init"/> directly: get_setting, config, and the
+        /// log source tag all resolve against the mod currently being
+        /// called, so a direct call would serve the previously dispatched
+        /// mod's settings and config to this one.
+        /// </summary>
+        public ModRunResult? InitModule(string id)
+        {
+            ThrowIfDisposed();
+            if (!_mods.TryGetValue(id, out WasmMod? mod))
+            {
+                return null;
+            }
+            _currentModId = mod.Id;
+            try
+            {
+                return mod.Init();
+            }
+            finally
+            {
+                // The call is over; no mod is current until the next one
+                // starts, so a later direct guest call cannot inherit this id.
+                _currentModId = string.Empty;
+            }
+        }
+
         /// <summary>Looks up a loaded mod by id.</summary>
         public bool TryGetMod(string id, out WasmMod? mod)
         {
@@ -368,18 +397,28 @@ namespace HordeForge.WasmHost.Core
             _results.Clear();
             List<string> order = _modOrder;
             Dictionary<string, WasmMod> mods = _mods;
-            for (int i = 0; i < order.Count; i++)
+            try
             {
-                if (!mods.TryGetValue(order[i], out WasmMod? mod))
+                for (int i = 0; i < order.Count; i++)
                 {
-                    continue;
+                    if (!mods.TryGetValue(order[i], out WasmMod? mod))
+                    {
+                        continue;
+                    }
+                    _currentModId = mod.Id;
+                    ModRunResult? result = invoke(mod);
+                    if (result.HasValue)
+                    {
+                        _results.Add(result.GetValueOrDefault());
+                    }
                 }
-                _currentModId = mod.Id;
-                ModRunResult? result = invoke(mod);
-                if (result.HasValue)
-                {
-                    _results.Add(result.GetValueOrDefault());
-                }
+            }
+            finally
+            {
+                // The last mod walked stays current otherwise, and its id
+                // would then answer get_setting and the log source tag for
+                // any later single-module call that forgot to set one.
+                _currentModId = string.Empty;
             }
             return _resultsView;
         }

@@ -16,6 +16,21 @@ Codename: Quarantine (7dtd-wasm).
   binaries it covers and the `HordeForge.WasmHost` NuGet package embeds it,
   so Apache-2.0 redistribution requirements travel with the artifacts.
 
+### Fixed
+
+- A module initialized on its own (the start scan, `wasm reload`) read its
+  settings, its `config.toml`, and its log attribution from whichever mod
+  the host happened to have called last, or from no mod at all on a fresh
+  start. `WasmModHost.InitModule(id)` runs `on_enable` with the calling mod
+  set, and the host clears that state after every dispatch.
+- The sense position history is pruned by entity membership instead of a
+  size comparison. A tick where entities left while others joined kept the
+  departed ids, and a net id the game later reused was reported with a
+  vertical velocity derived from the previous occupant.
+- Guest rate limiter windows for sources that stopped writing are swept
+  once the table grows past its threshold, so unloading and reloading
+  modules no longer leaves one window per id ever seen.
+
 ### Changed
 
 - Decision and requirement documents that had drifted from the code:

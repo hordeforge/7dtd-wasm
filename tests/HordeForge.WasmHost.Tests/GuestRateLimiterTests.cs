@@ -54,6 +54,32 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void IdleSourcesAreSweptWhileActiveOnesSurvive()
+        {
+            // Sources only exist while a guest writes through them, so the
+            // table must track live sources and not every module id an
+            // operator ever loaded. Filling past the sweep threshold and
+            // then keeping one source writing drops the quiet ones.
+            int nowMs = 0;
+            var limiter = new GuestRateLimiter(1, () => nowMs);
+            for (int i = 0; i < 200; i++)
+            {
+                limiter.TryWrite("mod" + i, out _);
+            }
+            // Two writes inside the first second, so the live source has a
+            // drop on record and DescribeDropped can report it either way.
+            limiter.TryWrite("live", out _);
+            for (nowMs = 0; nowMs <= 600000; nowMs += 1000)
+            {
+                limiter.TryWrite("live", out _);
+            }
+            string summary = limiter.DescribeDropped("lines");
+            Assert.Contains("live=", summary);
+            Assert.DoesNotContain("mod0=", summary);
+            Assert.DoesNotContain("mod199=", summary);
+        }
+
+        [Fact]
         public void WindowResetsAfterOneSecond()
         {
             int nowMs = 1000;

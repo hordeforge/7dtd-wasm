@@ -601,6 +601,38 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void InitModuleAttributesHostImportsToTheModBeingInitialized()
+        {
+            // "wasm reload" and the start scan initialize one module at a
+            // time while the host still has another mod current from the
+            // last dispatch. get_setting, config, and the log source tag
+            // must follow the mod actually being called, not that leftover.
+            var (host, api) = NewHost();
+            using (host)
+            {
+                host.LoadModule("alpha", Fixture("strings"));
+                host.LoadModule("beta", Fixture("strings"));
+                host.DispatchTick(1);
+
+                Assert.True(host.InitModule("alpha")!.Value.Ok);
+                Assert.True(host.InitModule("beta")!.Value.Ok);
+
+                Assert.Contains(api.Logs, l => l.Message.Contains("fixture init") && l.Source.EndsWith("/alpha"));
+                Assert.Contains(api.Logs, l => l.Message.Contains("fixture init") && l.Source.EndsWith("/beta"));
+            }
+        }
+
+        [Fact]
+        public void InitModuleReturnsNullForAnUnknownId()
+        {
+            var (host, _) = NewHost();
+            using (host)
+            {
+                Assert.Null(host.InitModule("not-loaded"));
+            }
+        }
+
+        [Fact]
         public void PerModSettingsResolveBeforeShared()
         {
             // get_setting is calling-mod aware: a mod's own [settings] win
