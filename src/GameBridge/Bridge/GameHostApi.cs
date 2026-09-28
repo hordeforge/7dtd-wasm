@@ -118,7 +118,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0L;
                 }
-                return (long)game.World.GetWorldTime();
+                return WorldTime.ToAbi(game.World.GetWorldTime());
             }
             catch (Exception ex)
             {

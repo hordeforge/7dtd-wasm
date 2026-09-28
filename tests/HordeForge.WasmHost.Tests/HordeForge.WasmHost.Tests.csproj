@@ -22,13 +22,15 @@
     <None Include="../fixtures/*.toml" CopyToOutputDirectory="PreserveNewest" Link="fixtures/%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- GuestRateLimiter and SenseRecordPicker are bridge code with no game
-       references; link the files so the caps and the sense record pick are
-       covered on net8. The net48 bridge itself builds against the dedicated
-       install (make bridge), not here. -->
+  <!-- GuestRateLimiter, SenseRecordPicker, and WorldTime are bridge code
+       with no game references; link the files so the caps, the sense record
+       pick, and the world-clock conversion are covered on net8. The net48
+       bridge itself builds against the dedicated install (make bridge), not
+       here. -->
   <ItemGroup>
     <Compile Include="../../src/GameBridge/Bridge/GuestRateLimiter.cs" Link="GuestRateLimiter.cs" />
     <Compile Include="../../src/GameBridge/Bridge/SenseRecordPicker.cs" Link="SenseRecordPicker.cs" />
+    <Compile Include="../../src/GameBridge/Bridge/WorldTime.cs" Link="WorldTime.cs" />
   </ItemGroup>
 
 </Project>

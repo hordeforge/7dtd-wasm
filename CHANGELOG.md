@@ -107,6 +107,18 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   record. ADR 0007's hook list now carries the fifth hook
   (`on_admin_command`, resolved and signature-checked at load), and ADR
   0006 records why guest standard streams are discarded by default.
+- A memory ceiling past the wasm32 address space is rejected where it is
+  read. `max_memory_bytes` was bounded below by one wasm page and not above,
+  so a limits file naming a byte count past 4 GiB became the engine's static
+  memory maximum and failed the host construction instead of the documented
+  "invalid file, keep defaults" path. Both the manifest parser and
+  `WasmModHost`'s config validation now name the bound; 4294967296 (the
+  value `make dist` stages) is still accepted.
+- The game world clock reached the guest ABI through a `(long)` cast of an
+  `ulong`. A value past `long.MaxValue` arrived as a time before the world
+  started, which a guest computing a day/night phase reads as a plausible
+  answer to the wrong question. `get_world_time` and the sense v4 header now
+  read the clock through `WorldTime.ToAbi`, which saturates.
 - `make check` failed on a clean tree. `tools/api-surface.txt` predated
   `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
   `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three

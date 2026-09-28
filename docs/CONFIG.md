@@ -73,7 +73,8 @@ version = "0.1.0"
 
 # Host-enforced caps. fuel_per_call overrides the effective default
 # (rejected above the 50,000,000 ceiling); max_memory_bytes can only
-# tighten the effective cap and is rejected below one wasm page (65536).
+# tighten the effective cap and must sit between one wasm page (65536)
+# and the wasm32 address space (4294967296).
 # These two keys are the whole [limits] schema: any other key here (a
 # misspelling included) fails the load with the supported names, because
 # a limit that does not bind leaves the host cap in force instead.

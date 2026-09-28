@@ -807,6 +807,8 @@ greeting = ""hello""
         [InlineData("[limits]\nmax_memory_bytes = \"big\"\n")]
         [InlineData("[limits]\nmax_memory_bytes = 0\n")]
         [InlineData("[limits]\nmax_memory_bytes = 65535\n")]
+        [InlineData("[limits]\nmax_memory_bytes = 4294967297\n")]
+        [InlineData("[limits]\nmax_memory_bytes = 9223372036854775807\n")]
         [InlineData("[settings]\nbad = [1, 2]\n")]
         [InlineData("key without equals\n")]
         [InlineData("future = [abc\n")]

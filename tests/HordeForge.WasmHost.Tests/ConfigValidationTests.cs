@@ -42,6 +42,32 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Theory]
+        [InlineData(4294967297UL)]
+        [InlineData(ulong.MaxValue)]
+        public void MemoryCeilingPastTheWasm32AddressSpaceIsRejected(ulong bytes)
+        {
+            // A ceiling above the 4 GiB wasm32 address space names memory no
+            // guest can reach, and the engine cannot honor it: without this
+            // bound a limits file with such a value fails the host
+            // construction instead of being reported as an invalid file.
+            var config = new WasmHostConfig { StaticMemoryMaximumBytes = bytes };
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new WasmModHost(new TestGameHostApi(), config));
+            Assert.Contains("StaticMemoryMaximumBytes", ex.Message);
+        }
+
+        [Fact]
+        public void TheWholeWasm32AddressSpaceIsAnAcceptedMemoryCeiling()
+        {
+            // 4 GiB exactly is the bound, not a rejection: a module built
+            // without --max-memory declares no maximum and is treated as
+            // declaring the full address space, so this is the only ceiling
+            // that runs it.
+            var config = new WasmHostConfig { StaticMemoryMaximumBytes = 4294967296UL };
+            using var host = new WasmModHost(new TestGameHostApi(), config);
+        }
+
+        [Theory]
         [InlineData(0)]
         [InlineData(-1)]
         public void NonPositiveModuleSizeCapIsRejected(int bytes)

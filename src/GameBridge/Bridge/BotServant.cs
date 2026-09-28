@@ -377,7 +377,7 @@ namespace HordeForge.GameBridge.Bridge
                 long tick = _tickProvider();
                 snapshot.Tick = tick;
                 snapshot.SelfNetId = 0;
-                snapshot.WorldTime = (long)game.World.GetWorldTime();
+                snapshot.WorldTime = WorldTime.ToAbi(game.World.GetWorldTime());
                 snapshot.BloodMoon = false;
                 var records = _senseRecords;
                 var seen = _seenIds;

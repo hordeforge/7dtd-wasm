@@ -32,8 +32,13 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Size of one wasm page, the smallest memory a module can declare (64 KiB).</summary>
         public const long WasmPageBytes = 65536;
 
-        /// <summary>wasm32 memory ceiling: 65536 pages of 64 KiB.</summary>
-        private const ulong Wasm32MemoryCeiling = 65536UL * 65536;
+        /// <summary>
+        /// wasm32 memory ceiling: 65536 pages of 64 KiB (4 GiB). The largest
+        /// memory any wasm32 module can declare, so it bounds the host's
+        /// static memory maximum as well: a ceiling above it describes an
+        /// address space no guest can reach.
+        /// </summary>
+        internal const ulong Wasm32MemoryCeilingBytes = 65536UL * 65536;
 
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
@@ -105,6 +110,19 @@ namespace HordeForge.WasmHost.Core
                 throw new ArgumentOutOfRangeException(nameof(config), config.StaticMemoryMaximumBytes,
                     "StaticMemoryMaximumBytes must be at least one wasm page (" + (ulong)WasmPageBytes + " bytes); " +
                     "smaller ceilings reject every module.");
+            }
+            if (config.StaticMemoryMaximumBytes > Wasm32MemoryCeilingBytes)
+            {
+                // Without this bound a limits file naming a byte count past
+                // the wasm32 address space (a copy-pasted size, a value in
+                // the wrong unit) reaches the engine, which cannot honor it:
+                // the engine build throws and takes the whole host start
+                // down instead of the documented "invalid file, keep
+                // defaults" path. A module declaring no maximum is already
+                // treated as the full 4 GiB, so nothing above it can load.
+                throw new ArgumentOutOfRangeException(nameof(config), config.StaticMemoryMaximumBytes,
+                    "StaticMemoryMaximumBytes must be at most the wasm32 address space (" +
+                    Wasm32MemoryCeilingBytes + " bytes).");
             }
             if (config.MaxModuleSizeBytes <= 0)
             {
@@ -241,7 +259,7 @@ namespace HordeForge.WasmHost.Core
             // (ADR 0004 amendment). This is how third-party plugins built
             // without --max-memory (for example the sibling zdtd fps_bot)
             // run unmodified.
-            ulong effectiveMax = declaredMax ?? Wasm32MemoryCeiling;
+            ulong effectiveMax = declaredMax ?? Wasm32MemoryCeilingBytes;
             ulong memoryCeiling = _config.StaticMemoryMaximumBytes;
             if (manifest != null && manifest.MaxMemoryBytes.HasValue && manifest.MaxMemoryBytes.Value < memoryCeiling)
             {

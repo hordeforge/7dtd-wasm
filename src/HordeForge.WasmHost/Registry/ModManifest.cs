@@ -24,7 +24,7 @@ namespace HordeForge.WasmHost.Registry
     ///
     ///   [limits]                       (host-enforced caps)
     ///   fuel_per_call = 1000000        (optional, must be >= 1)
-    ///   max_memory_bytes = 33554432    (optional, at least one wasm page)
+    ///   max_memory_bytes = 33554432    (optional, one wasm page to the wasm32 ceiling)
     ///
     ///   [settings]                     (operator policy served to the guest
     ///   boss_name = "maci"              through the get_setting host import)
@@ -153,6 +153,16 @@ namespace HordeForge.WasmHost.Registry
             {
                 throw new FormatException("limits.max_memory_bytes must be at least one wasm page (" +
                     WasmModHost.WasmPageBytes + " bytes); smaller ceilings reject every module");
+            }
+            // The ceiling is the wasm32 address space. A value past it is a
+            // byte count no wasm32 module can reach, and as a shared limit it
+            // reaches the engine, where it fails the host construction
+            // instead of this parser. Rejecting it here names the bound
+            // instead of leaving the operator with an engine error.
+            if ((ulong)value > WasmModHost.Wasm32MemoryCeilingBytes)
+            {
+                throw new FormatException("limits.max_memory_bytes must be at most the wasm32 address space (" +
+                    WasmModHost.Wasm32MemoryCeilingBytes + " bytes)");
             }
             return value;
         }

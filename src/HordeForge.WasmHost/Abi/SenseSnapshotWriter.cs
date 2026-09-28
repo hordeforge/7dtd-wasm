@@ -115,7 +115,7 @@ namespace HordeForge.WasmHost.Abi
         /// <summary>World snapshot to serialize (header fields plus records and events).</summary>
         public sealed class Snapshot
         {
-            /// <summary>Game tick of the snapshot.</summary>
+            /// <summary>Game tick of the snapshot (low 32 bits on the wire).</summary>
             public long Tick;
             /// <summary>Net id of the calling bot.</summary>
             public int SelfNetId;
@@ -163,6 +163,9 @@ namespace HordeForge.WasmHost.Abi
             int pos = 0;
             WriteU32(buffer, ref pos, Magic);
             WriteU32(buffer, ref pos, (uint)snapshot.Records.Count);
+            // tick and world_time are u32 on the wire, so both wrap to their
+            // low 32 bits; the guests read them as unsigned. A 4 GiB-scaled
+            // field would be unreachable, so the wrap is the contract.
             WriteU32(buffer, ref pos, (uint)snapshot.Tick);
             WriteI32(buffer, ref pos, snapshot.SelfNetId);
             WriteU32(buffer, ref pos, (uint)snapshot.WorldTime);
