@@ -178,6 +178,47 @@ operator, embedder, and guest author.
   `--help` with any other argument is now a usage error (exit 2).
 - `make help` left out `make ruff-version`, which CI calls to install the
   pinned ruff. It is listed now.
+- A mod whose store or compiled module would not release aborted the whole
+  teardown. `Unload` released the handles after removing the mod from the
+  registry, so the exception escaped before `BridgeHost` released the
+  module's settings, rate-limit budget, and bots; `Dispose` had the same
+  hole, which left every module after the failing one without its shutdown
+  export and its engine memory, and reported them as cleanly stopped. Both
+  now report the release failure as a `ModRunResult` and carry on.
+- A module whose `config.toml` could not be read at load was remembered as
+  having no config for the life of the server. The load path registered an
+  empty string, which the config import served from its cache, so the
+  documented "nothing is cached on a failed read, retry on the next call"
+  path was never reached and the mod ran on host defaults with one log line
+  at load and nothing after it.
+- A guest that exports no linear memory named `memory` was answered with
+  `0` from the config and sense imports and with a too-small-buffer status
+  from the string returns, so it grew its buffer forever and the host said
+  nothing. The string returns now trap and name the missing export, matching
+  what the read path already did; the two imports log the cause and still
+  return `0`, which is their wire contract.
+- A modlet whose path could not be resolved was dropped from the modlet
+  scan with no report, so staged modules vanished the way a modlet that
+  carries no guest would. `ModuleRoots.CollectExtra` names it through the
+  failure reason its callers already log.
+- A bot despawn that threw during a module release left the body alive in
+  the world with nothing tracking it, while `Despawn` already returned the
+  id to the servant on the same failure. The release path does the same and
+  counts the bodies it could not remove.
+- The glide command reached live game state outside the per-verb catch the
+  bot verbs have, so a fault while the world was unloading surfaced as a
+  guest trap and was charged to the guest's error counters.
+- Malformed `bot move`, `bot look`, `bot shoot`, and `bot remove` commands
+  were dropped without a log line, while a malformed `glide` was reported.
+- `wasm reload <id>` reported a reload that had already unloaded the
+  previous instance the same way as a reload of an id that was never
+  loaded. It now says which happened, since the first cost the operator a
+  running module and the second cost nothing.
+- A manifest read failure reported the underlying exception message with no
+  file, and for a file that is not UTF-8 no position either. The reason now
+  names the path, and a decode failure names the line and byte.
+- The manifest parser accepted table names holding characters the key path
+  rejects, and value errors named the line but not the key.
 - `WasmModHost.Dispatch` did not compile. The result was narrowed through a
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so

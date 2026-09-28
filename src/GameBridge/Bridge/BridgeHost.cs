@@ -981,6 +981,24 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
+        /// Whether an id is currently loaded. The console command needs it
+        /// because a reload that fails after the outgoing instance was
+        /// unloaded leaves the module not loaded, which is a different event
+        /// from a reload that failed because the id was never loaded: the
+        /// first cost the operator a working module, the second costs
+        /// nothing. The boolean return of Reload alone cannot tell them
+        /// apart, and reporting them the same way makes a failed reload read
+        /// as a no-op.
+        /// </summary>
+        internal static bool IsLoaded(string id)
+        {
+            lock (Gate)
+            {
+                return _host != null && _host.TryGetMod(id, out _);
+            }
+        }
+
+        /// <summary>
         /// First tree holding the module's directory, or empty when none
         /// does. Mods/Wasm wins over modlet-carried trees.
         /// </summary>

@@ -26,6 +26,15 @@ namespace HordeForge.WasmHost.Registry
         private static readonly Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
         /// <summary>
+        /// Marker the strict decoder puts in its message before the index of
+        /// the byte it could not translate; the exception itself carries no
+        /// public position.
+        /// </summary>
+        private const string ByteIndexMarker = "index ";
+
+        private const byte LineFeed = (byte)'\n';
+
+        /// <summary>
         /// Reads the whole file when it exists, is readable, and fits the
         /// size bound; returns false otherwise. <paramref name="failureReason"/>
         /// then says which bound failed (missing file, oversize, or the IO
@@ -37,6 +46,9 @@ namespace HordeForge.WasmHost.Registry
             content = string.Empty;
             failureReason = string.Empty;
             string oversize = "the file is larger than " + MaxBytes + " bytes";
+            // Kept in scope for the catch: a decode failure can only be
+            // located by counting into the bytes that failed to decode.
+            byte[] bytes = Array.Empty<byte>();
             try
             {
                 var info = new FileInfo(path);
@@ -50,7 +62,7 @@ namespace HordeForge.WasmHost.Registry
                     failureReason = oversize;
                     return false;
                 }
-                byte[] bytes = File.ReadAllBytes(path);
+                bytes = File.ReadAllBytes(path);
                 if (bytes.Length > MaxBytes)
                 {
                     // The file grew between the stat and the read.
@@ -67,9 +79,72 @@ namespace HordeForge.WasmHost.Registry
             catch (Exception ex)
             {
                 content = string.Empty;
-                failureReason = ex.Message;
+                // The path is in the reason because a decoder or filesystem
+                // message names neither the file nor a position in it, and a
+                // failure without them is not actionable for the operator.
+                failureReason = path + ": " + DescribeFailure(ex, bytes);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// The exception text, with the 1-based line and byte column of the
+        /// offending byte appended for a decode failure; without them a
+        /// non-UTF-8 manifest only reports a byte index the operator cannot
+        /// map to a line.
+        /// </summary>
+        private static string DescribeFailure(Exception ex, byte[] bytes)
+        {
+            if (!(ex is DecoderFallbackException) || !TryReadByteIndex(ex.Message, out int byteIndex))
+            {
+                return ex.Message;
+            }
+            int line = 1;
+            int column = 1;
+            for (int i = 0; i < byteIndex && i < bytes.Length; i++)
+            {
+                if (bytes[i] == LineFeed)
+                {
+                    line++;
+                    column = 1;
+                }
+                else
+                {
+                    column++;
+                }
+            }
+            return ex.Message + " (line " + line + ", byte " + column + ")";
+        }
+
+        /// <summary>
+        /// Reads the byte index out of a decoder message of the form
+        /// "Unable to translate bytes from index N to Unicode."; false when
+        /// the message carries none, or when the value cannot be a position
+        /// in a file that passed the size bound.
+        /// </summary>
+        private static bool TryReadByteIndex(string message, out int index)
+        {
+            index = 0;
+            int at = message.IndexOf(ByteIndexMarker, StringComparison.Ordinal);
+            if (at < 0)
+            {
+                return false;
+            }
+            at += ByteIndexMarker.Length;
+            int digits = 0;
+            int value = 0;
+            while (at < message.Length && message[at] >= '0' && message[at] <= '9')
+            {
+                if (value > MaxBytes)
+                {
+                    return false;
+                }
+                value = (value * 10) + (message[at] - '0');
+                at++;
+                digits++;
+            }
+            index = value;
+            return digits > 0;
         }
 
         /// <summary>

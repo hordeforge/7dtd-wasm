@@ -68,7 +68,21 @@ namespace HordeForge.GameBridge.Commands
                     // The id is echoed back to the console and telnet clients;
                     // clean it like log text so control characters typed at
                     // the console cannot drive terminals.
-                    Output(BridgeHost.Reload(_params[1]) ? "reloaded " + TextSanitizer.Clean(_params[1]) : "reload failed or module not found: " + TextSanitizer.Clean(_params[1]));
+                    string reloadId = TextSanitizer.Clean(_params[1]);
+                    if (BridgeHost.Reload(_params[1]))
+                    {
+                        Output("reloaded " + reloadId);
+                        break;
+                    }
+                    // Reload unloads the outgoing instance before it loads the
+                    // new one, so a failure here has already cost the
+                    // operator a running module. Saying so is the difference
+                    // between "look in the log" and "try again", and it must
+                    // not be reported the same way as an id that was never
+                    // loaded at all.
+                    Output(BridgeHost.IsLoaded(_params[1])
+                        ? "reload failed, " + reloadId + " is now unloaded; see the log for the reason"
+                        : "reload failed, " + reloadId + " was not loaded; see the log for the reason");
                     break;
 
                 case "unload":

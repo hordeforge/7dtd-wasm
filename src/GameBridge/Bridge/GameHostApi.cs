@@ -178,13 +178,36 @@ namespace HordeForge.GameBridge.Bridge
         /// Registers a module's raw config (its config.toml, verbatim) so the
         /// zdtd config import can serve it. Called by BridgeHost as modules
         /// load; reload replaces the entry, unload removes it.
+        ///
+        /// An empty registration is ambiguous: a module that ships no
+        /// config.toml and a module whose config.toml could not be read at
+        /// load both arrive here as an empty string, and only the second one
+        /// is worth retrying. So an empty registration is resolved against the
+        /// same trees the loader read through (one lookup per load) and is
+        /// dropped when the file is there: the module then falls through to
+        /// <see cref="TryGetRawConfig"/>, which reports the read failure and
+        /// retries on the next call. Caching it here would remember a locked
+        /// or mid-write file as absent for the life of the server.
         /// </summary>
         public void RegisterConfig(string modId, string content)
         {
             lock (_gate)
             {
+                if (content.Length == 0 && HasConfigFile(modId))
+                {
+                    return;
+                }
                 _rawConfigs[modId] = content;
             }
+        }
+
+        /// <summary>
+        /// True when the module's config.toml resolves to a file, through the
+        /// same multi-root trees the loader and the config fallback use.
+        /// </summary>
+        private static bool HasConfigFile(string modId)
+        {
+            return ModId.IsValid(modId) && BridgeHost.ResolveModuleFile(modId, "config.toml").Length > 0;
         }
 
         /// <summary>Drops a module's cached config; called on unload and before reload.</summary>
@@ -238,9 +261,11 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return content.Length > 0;
                 }
-                // Not registered (for example a module loaded outside the normal
-                // scan): read the file once and remember the outcome so a guest
-                // loop on the config import does not hit the disk per call.
+                // Not registered: a module loaded outside the normal scan, or
+                // one whose load-time read failed (RegisterConfig drops that
+                // entry on purpose). Read the file once and remember the
+                // outcome so a guest loop on the config import does not hit
+                // the disk per call.
                 // Resolved through the same multi-root trees as the loader, so
                 // a modlet-carried module finds its config too. The read happens
                 // under the lock because the alternative is two threads
@@ -323,7 +348,7 @@ namespace HordeForge.GameBridge.Bridge
                 // guest as rejected (queue -> -1), not as accepted.
                 return false;
             }
-            if (!SendChat(command))
+            if (!SendChat(modId, command))
             {
                 if (ChatRejectLimiter.TryWrite(modId, out long dropped))
                 {
@@ -361,6 +386,19 @@ namespace HordeForge.GameBridge.Bridge
 
         public bool SendChat(string message)
         {
+            // The send_chat import carries no mod id (IGameHostApi.SendChat
+            // takes the message alone), so this call cannot name the module
+            // and the failure line below says so instead of guessing. The
+            // paths that do have the id in hand pass it.
+            return SendChat(null, message);
+        }
+
+        /// <summary>
+        /// <see cref="SendChat(string)"/> with the calling module's id
+        /// attached, for the paths that have one in hand.
+        /// </summary>
+        private bool SendChat(string? modId, string message)
+        {
             try
             {
                 var game = GameManager.Instance;
@@ -391,9 +429,15 @@ namespace HordeForge.GameBridge.Bridge
             catch (Exception ex)
             {
                 // The guest only sees ChatRejected; an unexpected game-side
-                // failure must stay visible in the server log. Rate is
-                // bounded by the chat limiter check above.
-                global::Log.Warning("[WasmHost] send_chat failed: " + ex.Message);
+                // failure must stay visible in the server log, and a log
+                // line naming no module is undiagnosable when several guests
+                // are loaded. Rate is bounded by the chat limiter check above.
+                // The id is guest-derived, so it is cleaned like every other
+                // mod-derived line.
+                string from = modId != null && modId.Length > 0
+                    ? " from guest " + TextSanitizer.Clean(modId)
+                    : " (no mod id on this call)");
+                global::Log.Warning("[WasmHost] send_chat failed" + from + ": " + ex.Message);
                 return false;
             }
         }

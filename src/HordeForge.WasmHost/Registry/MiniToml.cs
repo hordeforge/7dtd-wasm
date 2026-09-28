@@ -87,7 +87,7 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("line " + (i + 1) + ": duplicate key '" + key + "' in this table");
                 }
-                current.Add(key, ParseValue(valueText, i + 1));
+                current.Add(key, ParseValue(valueText, key, i + 1));
             }
             return root;
         }
@@ -165,6 +165,12 @@ namespace HordeForge.WasmHost.Registry
                 {
                     throw new FormatException("line " + lineNumber + ": empty table header part");
                 }
+                // Held to the key rules as well, so a table cannot be named
+                // with a name the equivalent key would be rejected for.
+                if (!IsValidKey(name))
+                {
+                    throw new FormatException("line " + lineNumber + ": invalid table name '" + name + "'");
+                }
                 parts.Add(name);
             }
             return parts.ToArray();
@@ -190,11 +196,17 @@ namespace HordeForge.WasmHost.Registry
             return true;
         }
 
-        private static TomlValue ParseValue(string text, int lineNumber, int depth = 0)
+        /// <summary>
+        /// Parses the right-hand side of <paramref name="key"/>. The key is
+        /// named in a parse failure so the operator does not have to count
+        /// lines to find the setting they mistyped; an array item carries
+        /// the key of the array it sits in.
+        /// </summary>
+        private static TomlValue ParseValue(string text, string key, int lineNumber, int depth = 0)
         {
             if (text.Length == 0)
             {
-                throw new FormatException("line " + lineNumber + ": empty value");
+                throw new FormatException("line " + lineNumber + ": empty value" + KeyContext(key));
             }
             if (depth > MaxDepth)
             {
@@ -207,7 +219,7 @@ namespace HordeForge.WasmHost.Registry
             }
             if (first == '[')
             {
-                return ParseArray(text, lineNumber, depth);
+                return ParseArray(text, lineNumber, depth, key);
             }
             if (text == "true")
             {
@@ -217,7 +229,16 @@ namespace HordeForge.WasmHost.Registry
             {
                 return TomlBool.False;
             }
-            return ParseNumber(text, lineNumber);
+            return ParseNumber(text, lineNumber, key);
+        }
+
+        /// <summary>
+        /// The " for key 'x'" suffix a value parse failure ends with, so
+        /// every such message names the setting as the [limits] messages do.
+        /// </summary>
+        private static string KeyContext(string key)
+        {
+            return " for key '" + key + "'";
         }
 
         private static string ParseString(string text, int lineNumber)
@@ -317,7 +338,7 @@ namespace HordeForge.WasmHost.Registry
             return 1;
         }
 
-        private static TomlArray ParseArray(string text, int lineNumber, int depth)
+        private static TomlArray ParseArray(string text, int lineNumber, int depth, string key)
         {
             if (text[text.Length - 1] != ']')
             {
@@ -331,7 +352,7 @@ namespace HordeForge.WasmHost.Registry
                 // a value used as a scalar is rejected by AsString below.
                 foreach (string item in SplitArrayItems(inner))
                 {
-                    ParseValue(item.Trim(), lineNumber, depth + 1);
+                    ParseValue(item.Trim(), key, lineNumber, depth + 1);
                 }
             }
             return new TomlArray();
@@ -359,7 +380,7 @@ namespace HordeForge.WasmHost.Registry
             return items;
         }
 
-        private static TomlValue ParseNumber(string text, int lineNumber)
+        private static TomlValue ParseNumber(string text, int lineNumber, string key)
         {
             if (text.IndexOf('.') >= 0 || text.IndexOf('e') >= 0 || text.IndexOf('E') >= 0)
             {
@@ -367,13 +388,13 @@ namespace HordeForge.WasmHost.Registry
                 {
                     return new TomlDouble(d);
                 }
-                throw new FormatException("line " + lineNumber + ": invalid float '" + text + "'");
+                throw new FormatException("line " + lineNumber + ": invalid float '" + text + "'" + KeyContext(key));
             }
             if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out long value))
             {
                 return new TomlLong(value);
             }
-            throw new FormatException("line " + lineNumber + ": invalid value '" + text + "'");
+            throw new FormatException("line " + lineNumber + ": invalid value '" + text + "'" + KeyContext(key));
         }
     }
 

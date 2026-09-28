@@ -95,8 +95,21 @@ namespace HordeForge.WasmHost.Registry
                         continue;
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
+                    // The modlet is skipped either way: its own path is
+                    // unresolvable, so it cannot be compared against the
+                    // bridge's, and including it could add the bridge's own
+                    // Wasm/ tree a second time under a different spelling.
+                    // The reason is still reported: dropping a modlet's tree
+                    // here is the same silent loss of staged modules the
+                    // out-parameter exists to name, and the skip that follows
+                    // is what the operator would otherwise read as "that
+                    // modlet carries no guest".
+                    if (failureReason.Length == 0)
+                    {
+                        failureReason = "cannot resolve the modlet path " + modlet + " (" + ex.Message + ")";
+                    }
                     continue;
                 }
                 found.Add(candidate);

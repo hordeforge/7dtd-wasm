@@ -461,8 +461,7 @@ namespace HordeForge.WasmHost.Core
                         ModRunResult shutdown = mod.Shutdown();
                         _mods.Remove(id);
                         _modOrder.Remove(id);
-                        mod.Dispose();
-                        return shutdown;
+                        return ReleaseStore(mod) ?? shutdown;
                     }
                     finally
                     {
@@ -739,6 +738,11 @@ namespace HordeForge.WasmHost.Core
                 Memory? memory = caller.GetMemory("memory");
                 if (memory == null)
                 {
+                    // 0 is also what "no config" returns, so without this the
+                    // module runs on host defaults for the life of the server
+                    // with an empty log. The adjacent catch reports the same
+                    // class of host-side failure the same way.
+                    _api.Log(LogSource(), AbiConstants.LogError, "config failed: guest has no exported memory named 'memory'");
                     return 0;
                 }
                 try
@@ -768,6 +772,10 @@ namespace HordeForge.WasmHost.Core
                 Memory? memory = caller.GetMemory("memory");
                 if (memory == null)
                 {
+                    // Same reason the catch below reports: 0 reads as "empty
+                    // world" to the guest, so a miscompiled module would sense
+                    // nothing forever with nothing to explain it.
+                    _api.Log(LogSource(), AbiConstants.LogError, "sense failed: guest has no exported memory named 'memory'");
                     return 0;
                 }
                 try
@@ -881,19 +889,30 @@ namespace HordeForge.WasmHost.Core
         /// <summary>
         /// Writes a UTF-8 string into guest linear memory. Returns the byte
         /// count written, or <paramref name="tooSmallStatus"/> when the
-        /// guest buffer cannot hold it or the guest exports no 'memory'.
+        /// guest buffer cannot hold it.
+        ///
+        /// A guest that exports no 'memory' throws, exactly as
+        /// <see cref="ReadGuestString"/> does for the same condition. Reporting
+        /// it as a too-small buffer instead was the wrong answer twice over:
+        /// the guest, which cannot know its own module is malformed, obeys
+        /// the ABI and grows its buffer on every call, so the module never
+        /// works and nothing in the log says why; and the outcome then
+        /// depends on the answer length, so the same defect looks like a
+        /// too-small buffer or a success at random.
         /// </summary>
         private static int WriteGuestString(Caller caller, int outPtr, int outCap, string value, int tooSmallStatus)
         {
+            // Checked before the size test so the diagnosis does not depend
+            // on how much the guest happened to ask for.
+            Memory? memory = caller.GetMemory("memory");
+            if (memory == null)
+            {
+                throw new InvalidOperationException("guest has no exported memory named 'memory'");
+            }
             // Measure with a length pass only: encoding to a byte[] just to
             // count would allocate and encode twice (here and in WriteString).
             int byteCount = Encoding.UTF8.GetByteCount(value);
             if (byteCount > outCap)
-            {
-                return tooSmallStatus;
-            }
-            Memory? memory = caller.GetMemory("memory");
-            if (memory == null)
             {
                 return tooSmallStatus;
             }
@@ -948,6 +967,40 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
+        /// Releases a removed mod's store and compiled module, reporting a
+        /// failure instead of throwing.
+        ///
+        /// Both handles are native engine resources. Wasmtime throws from
+        /// Dispose when a store is still in use, and an exception here would
+        /// escape Unload after the mod was already dropped from the registry:
+        /// BridgeHost would never reach its own per-mod state release, leaving
+        /// the module's settings, rate-limit budget, and bots registered
+        /// against an id that is no longer loaded. The same applies inside
+        /// Dispose, where one throw would strand every mod still in the loop.
+        /// The mod is out of the registry either way, so the caller's cleanup
+        /// chain must run; the caller gets the failure as a result instead.
+        /// Returns null when the release succeeded, so a caller that already
+        /// holds a failed shutdown result does not record it twice.
+        /// </summary>
+        private static ModRunResult? ReleaseStore(WasmMod mod)
+        {
+            try
+            {
+                mod.Dispose();
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return new ModRunResult(
+                    mod.Id,
+                    ModRunStatus.Error,
+                    "engine resources could not be released: " + ex.Message,
+                    string.Empty,
+                    0UL);
+            }
+        }
+
+        /// <summary>
         /// Shuts down every loaded mod (best effort), releases each mod's
         /// store and compiled module, and releases the engine and linker.
         /// Safe to call more than once.
@@ -962,27 +1015,52 @@ namespace HordeForge.WasmHost.Core
                 }
                 for (int i = 0; i < _modOrder.Count; i++)
                 {
-                    if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
+                    if (!_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
                     {
-                        SetCurrentMod(mod.Id);
-                        try
+                        continue;
+                    }
+                    SetCurrentMod(mod.Id);
+                    try
+                    {
+                        ModRunResult shutdown = mod.Shutdown();
+                        if (!shutdown.Ok)
                         {
-                            ModRunResult shutdown = mod.Shutdown();
-                            if (!shutdown.Ok)
-                            {
-                                // Kept rather than dropped: the embedder reads them
-                                // after Dispose to report a failed goodbye.
-                                _shutdownFailures.Add(shutdown);
-                            }
-                            mod.Dispose();
+                            // Kept rather than dropped: the embedder reads them
+                            // after Dispose to report a failed goodbye.
+                            _shutdownFailures.Add(shutdown);
                         }
-                        finally
+                        // ReleaseStore reports rather than throws, so a mod
+                        // whose store or module would not release cannot
+                        // strand every mod after it in this loop: those would
+                        // never run their shutdown export, never free their
+                        // engine memory, and would still be reported to the
+                        // embedder as cleanly stopped. Null means the release
+                        // succeeded, so a shutdown result already recorded
+                        // above is not recorded twice.
+                        ModRunResult? releaseFailure = ReleaseStore(mod);
+                        if (releaseFailure.HasValue)
                         {
-                            // Same rule as Unload and Dispatch: no mod is current
-                            // once the call is over, so nothing after the loop can
-                            // resolve settings or a log tag against the last one.
-                            ClearCurrentMod();
+                            _shutdownFailures.Add(releaseFailure.Value);
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        // The same blast radius seen from the shutdown call
+                        // itself: one mod must not end the loop and leak the
+                        // engine for the life of the process.
+                        _shutdownFailures.Add(new ModRunResult(
+                            mod.Id,
+                            ModRunStatus.Error,
+                            "dispose failed: " + ex.Message,
+                            string.Empty,
+                            0UL));
+                    }
+                    finally
+                    {
+                        // Same rule as Unload and Dispatch: no mod is current
+                        // once the call is over, so nothing after the loop can
+                        // resolve settings or a log tag against the last one.
+                        ClearCurrentMod();
                     }
                 }
                 _mods.Clear();

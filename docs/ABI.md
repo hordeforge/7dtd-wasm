@@ -51,6 +51,12 @@ never touches guest memory beyond that range. For `get_setting`, the guest
 provides the output buffer and the host writes at most `out_cap` bytes into
 it. No host pointer is ever handed to a guest.
 
+A module that exports no linear memory named `memory` is a malformed module,
+not a small buffer: the host traps the call and names the missing export in
+the server log rather than answering `0` or `-2`. Reporting a too-small
+buffer instead left a guest growing its buffer forever with nothing in the
+log to say why.
+
 ## Guest exports
 
 | Export | Signature | Required | Meaning |

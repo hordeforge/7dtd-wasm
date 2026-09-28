@@ -220,7 +220,28 @@ namespace HordeForge.GameBridge.Bridge
             handled = true;
             lock (_gate)
             {
-                return isBot ? TryQueueBot(modId, command) : TryQueueGlide(command);
+                if (isBot)
+                {
+                    return TryQueueBot(modId, command);
+                }
+                // The glide branch reaches live game state (IsPlayer looks
+                // the net id up in the world), which throws while the world
+                // unloads, so it gets the same per-verb catch the bot verbs
+                // have: the fault is game-side, and letting it escape into
+                // the guest would be reported as a guest trap and charged to
+                // the guest's error counters.
+                try
+                {
+                    return TryQueueGlide(command);
+                }
+                catch (Exception ex)
+                {
+                    // The command is guest-written text, cleaned at the entry
+                    // point, and the key it lands in is held by the limiter for
+                    // as long as the process lives, so it goes in bounded.
+                    WarnCapped("glide", "glide failed (" + command + "): " + ex.Message);
+                    return false;
+                }
             }
         }
 
@@ -344,7 +365,7 @@ namespace HordeForge.GameBridge.Bridge
                         SpawnOne(modId);
                         return true;
                     case "remove":
-                        RemoveBots(modId, parts);
+                        RemoveBots(modId, parts, command);
                         return true;
                     case "count":
                         if (parts.Length > 2 && TryParseId(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
@@ -354,13 +375,13 @@ namespace HordeForge.GameBridge.Bridge
                         }
                         return true;
                     case "move":
-                        MoveBot(modId, parts);
+                        MoveBot(modId, parts, command);
                         return true;
                     case "look":
-                        LookBot(modId, parts);
+                        LookBot(modId, parts, command);
                         return true;
                     case "shoot":
-                        ShootBot(modId, parts);
+                        ShootBot(modId, parts, command);
                         return true;
                     case "skill":
                     case "cfg":
@@ -906,7 +927,9 @@ namespace HordeForge.GameBridge.Bridge
         /// Despawns <paramref name="modId"/>'s bots. A module that is
         /// unloaded leaves the world, so the bodies and its share of the bot
         /// budget go with it; a reload gets a fresh set from the new
-        /// instance's own floor.
+        /// instance's own floor. A body whose despawn throws goes back under
+        /// the servant's tracking, as Despawn does, and the summary line
+        /// counts it as left in the world.
         /// </summary>
         public void ReleaseModule(string modId)
         {
@@ -916,6 +939,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
+            int kept = 0;
             var game = GameManager.Instance;
             foreach (int id in released)
             {
@@ -929,14 +953,37 @@ namespace HordeForge.GameBridge.Bridge
                     }
                     catch (Exception ex)
                     {
-                        WarnCapped("bot/release", "despawn of released bot " + id + " failed: " + ex.Message);
+                        // The body is still alive in the world, so it must go
+                        // back under the servant's tracking: a release that
+                        // silently half-happened would leave a live zombie
+                        // nobody can prune, move, or despawn again, and the
+                        // module it belonged to is gone.
+                        _bots.Add(id);
+                        _botOwners.Add(modId, id);
+                        // Capped like the sibling failure: this loop walks
+                        // every bot the module owned, so a world that refuses
+                        // to despawn any of them would otherwise emit one
+                        // line per bot.
+                        WarnCapped("bot/release", "despawn of released bot " + id + " failed: " + ex.Message +
+                                                 "; bot stays in the world");
+                        kept++;
                     }
                 }
+            }
+            if (kept > 0)
+            {
+                Log.Warning("[WasmHost] released " + (released.Count - kept) + " of " + released.Count +
+                            " bot(s) owned by " + modId + "; " + kept + " could not be despawned");
+                return;
             }
             Log.Out("[WasmHost] released " + released.Count + " bot(s) owned by " + modId);
         }
 
-        private void RemoveBots(string modId, string[] parts)
+        // Every bot verb that parses arguments takes the command text
+        // alongside the split parts, so a rejected command is reported the
+        // way the glide path reports one: the whole guest-written line
+        // through the capped log, bounded per verb.
+        private void RemoveBots(string modId, string[] parts, string command)
         {
             if (parts.Length > 2 && parts[2] == "all")
             {
@@ -958,10 +1005,17 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 return;
             }
-            if (parts.Length > 2 && TryParseId(parts[2], out int removeId))
+            if (parts.Length <= 2)
             {
-                Despawn(modId, removeId);
+                WriteCapped("bot/remove", "bot remove (malformed): " + command);
+                return;
             }
+            if (!TryParseId(parts[2], out int removeId))
+            {
+                WriteCapped("bot/remove", "bot remove (bad id): " + command);
+                return;
+            }
+            Despawn(modId, removeId);
         }
 
         private void Despawn(string modId, int entityId)
@@ -1003,10 +1057,11 @@ namespace HordeForge.GameBridge.Bridge
             _botYaw.Remove(entityId);
         }
 
-        private void MoveBot(string modId, string[] parts)
+        private void MoveBot(string modId, string[] parts, string command)
         {
             if (parts.Length < 6)
             {
+                WriteCapped("bot/move", "bot move (malformed): " + command);
                 return;
             }
             if (!TryParseId(parts[2], out int id) ||
@@ -1014,6 +1069,7 @@ namespace HordeForge.GameBridge.Bridge
                 !TryParseFloat(parts[4], out float y) ||
                 !TryParseFloat(parts[5], out float z))
             {
+                WriteCapped("bot/move", "bot move (bad args): " + command);
                 return;
             }
             Entity? e = FindBot(modId, id);
@@ -1023,14 +1079,16 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        private void LookBot(string modId, string[] parts)
+        private void LookBot(string modId, string[] parts, string command)
         {
             if (parts.Length < 4)
             {
+                WriteCapped("bot/look", "bot look (malformed): " + command);
                 return;
             }
             if (!TryParseId(parts[2], out int id) || !TryParseFloat(parts[3], out float yaw))
             {
+                WriteCapped("bot/look", "bot look (bad args): " + command);
                 return;
             }
             Entity? e = FindBot(modId, id);
@@ -1042,14 +1100,16 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        private void ShootBot(string modId, string[] parts)
+        private void ShootBot(string modId, string[] parts, string command)
         {
             if (parts.Length < 4)
             {
+                WriteCapped("bot/shoot", "bot shoot (malformed): " + command);
                 return;
             }
             if (!TryParseId(parts[2], out int botId) || !TryParseId(parts[3], out int targetId))
             {
+                WriteCapped("bot/shoot", "bot shoot (bad id): " + command);
                 return;
             }
             // Only a live servant bot the calling module owns may fire (zdtd
