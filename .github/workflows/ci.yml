@@ -32,9 +32,13 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           # global.json is the machine-readable declaration of the SDK the
-          # tree builds against; this is the same 8.0 feature band, spelled
-          # out so the runner resolves it without reading the manifest.
-          dotnet-version: "8.0.x"
+          # tree builds against, so the runner installs what that file pins
+          # instead of a version spelled out here. A literal "8.0.x" is a
+          # floating toolchain: the newest 8.0 SDK appears in the runner
+          # image the day Microsoft ships it, and a build that used to
+          # produce one assembly produces a different one with no diff in
+          # the tree. Reading the manifest keeps one declaration.
+          global-json-file: global.json
           # Every project restores from a committed, SHA512-hashed
           # packages.lock.json, so the cache key is exact: a package bump
           # misses the cache, an unchanged tree restores from it instead of
@@ -61,7 +65,10 @@ jobs:
       # dependencies), and --only-binary refuses a source distribution,
       # which would build the linter from a fetched sdist here.
       - name: Install ruff (pinned)
-        run: python3 -m pip install --quiet --no-deps --only-binary=:all: "ruff==$(make ruff-version)"
+        # Quoted because the bare form carries a ": " free but colon-dense
+        # argument (--only-binary=:all:), which stricter YAML readers reject
+        # as a mapping inside a plain scalar.
+        run: 'python3 -m pip install --quiet --no-deps --only-binary=:all: "ruff==$(make ruff-version)"'
       # check-ci is the game-free half of check: doccheck, the tools unit
       # tests, the tools lint and format gates, the guest lint gate, the
       # host build,
@@ -90,7 +97,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
-          dotnet-version: "8.0.x"
+          # The same manifest-pinned SDK the linux job installs, so the
+          # two platforms compile the library with one toolchain.
+          global-json-file: global.json
           cache: true
           cache-dependency-path: "**/packages.lock.json"
       - name: Build the host library

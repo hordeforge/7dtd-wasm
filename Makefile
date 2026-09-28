@@ -18,6 +18,16 @@ ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
 PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
+# An ambient RUSTFLAGS in the environment silently replaces the
+# [target.wasm32-wasip1] rustflags in samples/.cargo/config.toml (cargo
+# prefers the environment over config, and CARGO_ENCODED_RUSTFLAGS over
+# both). That config is where the guest memory maximum and stack size are
+# declared, so a machine exporting either variable builds modules the host
+# refuses to load at the default cap, and two machines produce different
+# wasm from the same source. Unexporting both leaves the checked-in config
+# the one declaration, in a checkout and on a CI runner alike.
+unexport RUSTFLAGS
+unexport CARGO_ENCODED_RUSTFLAGS
 
 # Every dotnet target below builds with ContinuousIntegrationBuild on. The
 # property is what makes the SDK normalize source paths (DeterministicSourcePaths)
@@ -221,7 +231,8 @@ build:
 	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 # Where the test run's output is staged so the no-match check below can read
-# it. .scratch/ is gitignored and wiped by "make clean".
+# it. .scratch/ is gitignored; "make clean" removes the log, not the rest of
+# the directory, so a developer's other scratch survives a rebuild.
 TEST_LOG ?= $(CURDIR)/.scratch/test.log
 
 # The edit-test loop. TEST_FILTER is a VSTest filter expression over
@@ -278,9 +289,15 @@ ruff-version:
 # Compile guests from inside samples/ on purpose: cargo discovers
 # config by walking up from the current directory, and the workspace
 # [lints] in samples/Cargo.toml deny every default rustc warning.
+# --locked on every cargo call, for the same reason the dotnet targets
+# pass RestoreLockedMode: a Cargo.toml that gains a dependency without a
+# matching samples/Cargo.lock entry fails the build by name instead of
+# cargo silently re-resolving and rewriting the lock file under the
+# tree, which is how a guest build starts depending on whatever the
+# registry offered that day.
 samples:
 	$(call require_cargo)
-	cd samples && $(CARGO) build --release --target wasm32-wasip1
+	cd samples && $(CARGO) build --locked --release --target wasm32-wasip1
 
 # Guest lint gate: a plain build already fails on any default rustc
 # warning (workspace [lints]); clippy then runs its default set at deny
@@ -288,8 +305,8 @@ samples:
 # check so guest code cannot regress silently between fixture rebuilds.
 samples-check:
 	$(call require_cargo)
-	cd samples && $(CARGO) build --release --target wasm32-wasip1
-	cd samples && $(CARGO) clippy --release --target wasm32-wasip1
+	cd samples && $(CARGO) build --locked --release --target wasm32-wasip1
+	cd samples && $(CARGO) clippy --locked --release --target wasm32-wasip1
 
 # The C guest (samples/guest-boss) is compiled with zig to wasm32-wasi
 # (preview 1). -nostdlib keeps it free of WASI libc imports; --max-memory
