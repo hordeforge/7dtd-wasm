@@ -47,7 +47,10 @@ layout our v3 writer could not feed.
    queue text that is not a servant verb is broadcast as chat, which is how
    the parachute deploy message reaches players ("announce via the stock
    chat broadcast"). The real game has no C2S movement envelope to exempt,
-   so the glide flag is tracked authority state, not a physics clamp.
+   so the glide flag is tracked authority state, not a movement-packet
+   exemption. The armed flag does drive authority state the guest cannot
+   set itself: it applies the glide buff and clamps the descent (amendment
+   below).
 4. **The equipment/item-tag surface the `wearing_glider` bit reads is
    pinned in targetcheck** (`Equipment.GetItems`, `ItemValue.ItemClass`,
    `ItemClass.HasAnyTags`) so a real `make bridge-check` validates that
@@ -59,7 +62,8 @@ layout our v3 writer could not feed.
 
 - The unmodified parachute mod loads, reads its config, watches the v4
   sense view, and arms/clears the glide exemption for falling worn players
-  (covered by host tests against the real module).
+  (covered by host tests against the real module). The armed flag applies
+  the glide buff and pins the descent (amendment below).
 - The fps_bot fixture is refreshed to the sibling's v4 build; `make
   fixtures` now stages both sibling modules.
 - The sense layout change is a breaking ABI change for any guest built
@@ -68,3 +72,22 @@ layout our v3 writer could not feed.
 - A config.toml is optional: a mod without one keeps its built-in defaults
   (the `config` import returns 0, as it also does for an empty `out_cap` or
   a buffer too small for the first character).
+
+## Amendment (2026-09-28): the armed flag also applies a buff and clamps descent
+
+The decision text above originally ended "the glide flag is tracked
+authority state, not a physics clamp", and the code contradicted it from the
+commit that added this record: an armed flag applies the
+`buffParachuteGlide` buff and pins the entity's descent to the sink rate
+(`ClampGlideDescent` in `src/GameBridge/Bridge/BotServant.cs`, driven off
+the sense scan). The buff is what the client slow-fall patch keys on, the
+clamp is its authority-side half. The changelog, docs/ABI.md, and
+`make bridge-check` (which pins `EntityAlive.Buffs`,
+`EntityBuffs.AddBuff/RemoveBuff/HasBuff`) describe what the code does, so
+the decision text was the wrong half. The sense v4 decision stands.
+
+An armed flag reaches any live player, not only the calling module's, so
+`glide <net_id> 1` on another player's net id steers that player. That is
+recorded, not endorsed: docs/THREAT_MODEL.md, "Tampering", and
+docs/ABI.md name it as a known capability of the queue import, gated to
+live players only.

@@ -94,8 +94,9 @@ with nothing to do this tick returns 0. When verdict-style hooks are added
 >0 percent-adjust.
 
 Hook names are exactly zdtd's plugin hooks (`on_enable`, `on_tick`,
-`on_player_join`, `on_shutdown`), so a guest author familiar with one host
-recognizes the other. Two deliberate differences, both documented:
+`on_player_join`, `on_shutdown`, `on_admin_command`), so a guest author
+familiar with one host recognizes the other. Two deliberate differences,
+both documented:
 
 - zdtd's `on_player_join(slot, entity_id)` passes a player slot and the
   entity id; we have no ECS slot, so we pass only `(entity_id)` and the

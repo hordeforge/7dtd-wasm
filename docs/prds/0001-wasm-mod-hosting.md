@@ -10,9 +10,11 @@ run succeeded (see [ACCEPTANCE.md](../ACCEPTANCE.md)), but the native
 install on this machine crashes at boot and Windows/long-soak remain
 unproven.
 Since implementation the surface grew beyond this PRD's original scope
-(zdtd compatibility imports, the on_player_join hook, TOML config); those
-additions are owned by [docs/ABI.md](../ABI.md), [docs/CONFIG.md](../CONFIG.md),
-and [ADR 0007](../adrs/0007-toml-config-schema.md).
+(zdtd compatibility imports and the on_player_join hook, TOML config); those
+additions are owned by [docs/ABI.md](../ABI.md),
+[ADR 0009](../adrs/0009-align-abi-with-zdtd-server.md) (the hook), and
+[docs/CONFIG.md](../CONFIG.md) with
+[ADR 0007](../adrs/0007-toml-config-schema.md) (the config format).
 
 ## Problem
 
@@ -43,7 +45,7 @@ are net8; any C# mod forces EAC off.
 ## Non-goals
 
 - Not a general-purpose mod runtime. The v0 surface had no event hooks;
-  the optional `on_player_join` hook has since shipped (ADR 0007), and the
+  the optional `on_player_join` hook has since shipped (ADR 0009), and the
   wider event surface, the init boot payload, and ABI versioning remain
   future work (see docs/ABI.md).
 - Not a measurement, anti-cheat, or optimization product (workspace
