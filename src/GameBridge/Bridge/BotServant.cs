@@ -385,7 +385,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("glidebuff/" + netId, "glide buff " + netId + " failed: " + ex.Message);
+                WarnCapped("glidebuff/" + netId, "glide buff " + netId + " failed: " + ex);
             }
         }
 
@@ -567,7 +567,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("sense", "sense failed: " + ex.Message);
+                WarnCapped("sense", "sense failed: " + ex);
                 return 0;
             }
             return SenseSnapshotWriter.Write(snapshot, buffer);
@@ -796,7 +796,7 @@ namespace HordeForge.GameBridge.Bridge
                 // fires when the whole snapshot fails, so a read that fails
                 // on every entity would otherwise report 0 for wearing_glider
                 // on every snapshot with nothing in the log to explain it.
-                WarnCapped("sense/worn", "worn-item read failed: " + ex.Message);
+                WarnCapped("sense/worn", "worn-item read failed: " + ex);
             }
             return 0;
         }
@@ -918,7 +918,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + ex.Message);
+                WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + ex);
                 return false;
             }
         }

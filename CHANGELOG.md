@@ -15,6 +15,12 @@ operator, embedder, and guest author.
 
 ### Added
 
+- The heartbeat names the guests that failed since the previous one
+  (`HordeForge.WasmHost.Core.FailureTally`). The per-tick failure lines are
+  rate capped and the per-mod counters in `wasm status` are lifetime
+  totals, so neither separates a guest failing on every tick from one that
+  trapped once an hour ago: a reader of the log had no way to tell which
+  guest the next warning belongs to.
 - `WasmModHost.LogSourceFor(prefix, modId)` names the log source tag the
   host attributes a module's guest lines under. The bridge keyed its per
   module log rate limiter on the same string and recomposed it, so the two

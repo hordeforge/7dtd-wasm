@@ -752,7 +752,7 @@ namespace HordeForge.WasmHost.Core
                 }
                 catch (Exception ex)
                 {
-                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: " + ex.Message);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: " + ex);
                     return 0;
                 }
                 return copy;
@@ -788,7 +788,7 @@ namespace HordeForge.WasmHost.Core
                     // The wire contract is "0 = no data", but a host-side
                     // failure must not leave the brain silently blind: report
                     // through the capped log path so it can be diagnosed.
-                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: " + ex.Message);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: " + ex);
                     return 0;
                 }
             });

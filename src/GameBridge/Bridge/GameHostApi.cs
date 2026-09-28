@@ -160,7 +160,12 @@ namespace HordeForge.GameBridge.Bridge
                 // persistently throwing game state cannot flood it.
                 if (WorldTimeErrorLimiter.TryWrite("world_time", out long dropped))
                 {
-                    global::Log.Warning("[WasmHost] get_world_time failed (" + ex.Message + "); guests read 0 until it recovers");
+                    // The exception, not just its message: the game state
+                    // that throws here is a long-running server's, and the
+                    // stack names the call that broke, which the message
+                    // alone does not. The line is rate capped, so the stack
+                    // cannot cost more than one write per second.
+                    global::Log.Warning("[WasmHost] get_world_time failed: " + ex + "; guests read 0 until it recovers");
                 }
                 else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
                 {
@@ -441,6 +446,7 @@ namespace HordeForge.GameBridge.Bridge
                     ? " from guest " + TextSanitizer.Clean(modId)
                     : " (no mod id on this call)");
                 global::Log.Warning("[WasmHost] send_chat failed" + from + ": " + ex.Message);
+
                 return false;
             }
         }

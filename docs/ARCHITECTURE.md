@@ -219,7 +219,11 @@ in CI, not only on a host that already has a toolchain config.
   one per second, and a per-mod failure line capped like guest log output.
   `wasm status` prints the same totals, and so does the shutdown summary,
   which runs only when an embedder calls `BridgeHost.Shutdown()` (nothing in
-  the mod does, so a live server never prints it).
+  the mod does, so a live server never prints it). The heartbeat also
+  carries the guests that failed since the previous one (`FailureTally`),
+  because the capped per-mod lines and the lifetime counters in
+  `wasm status` cannot tell a guest failing every tick from one that trapped
+  once and recovered.
 - `GameHostApi` implements the ABI over live game services: log via the game
   logger (rate capped per module), world time via `GameManager.Instance.World.GetWorldTime()`,
   chat via `ChatMessageServer(..., EChatType.Global, ..., EMessageSender.Server,

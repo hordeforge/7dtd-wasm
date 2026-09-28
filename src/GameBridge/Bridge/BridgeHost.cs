@@ -131,6 +131,12 @@ namespace HordeForge.GameBridge.Bridge
         // often a mod failed, never how much of the game frame it ate.
         private static readonly TickTelemetry _telemetry = new TickTelemetry();
 
+        // Which guests gained failures since the last heartbeat, so the
+        // periodic line names the guests failing now instead of leaving a
+        // reader of the log with capped per-tick warnings and totals that
+        // never separate an old fault from a current one.
+        private static readonly FailureTally _failures = new FailureTally();
+
         public static void Start()
         {
             lock (Gate)
@@ -221,6 +227,7 @@ namespace HordeForge.GameBridge.Bridge
                     return;
                 }
                 _telemetry.Reset();
+                _failures.Reset();
 
                 // LoadAllModules runs each newly loaded module's on_enable (see
                 // there), so start and "wasm load" initialize exactly once.
@@ -315,9 +322,28 @@ namespace HordeForge.GameBridge.Bridge
                     // mod is otherwise ambiguous between a healthy host and
                     // a tick hook that stopped firing.
                     Log.Out("[WasmHost] heartbeat tick " + _tick + ", " + ids.Count + " module(s); " +
-                            _telemetry.Describe());
+                            _telemetry.Describe() + "; failed since last heartbeat: " + FailingSinceLastHeartbeat(ids, host));
                 }
             }
+        }
+
+        /// <summary>
+        /// The loaded modules' current failure counts, reduced to the
+        /// guests that gained failures since the previous heartbeat. Empty
+        /// when nothing is loaded, in which case the heartbeat says "none"
+        /// rather than an empty list.
+        /// </summary>
+        private static string FailingSinceLastHeartbeat(IReadOnlyList<string> ids, WasmModHost host)
+        {
+            var counts = new List<ModuleFailure>(ids.Count);
+            for (int i = 0; i < ids.Count; i++)
+            {
+                if (host.TryGetMod(ids[i], out WasmMod? mod) && mod != null)
+                {
+                    counts.Add(ModuleFailure.Of(mod));
+                }
+            }
+            return _failures.Record(counts);
         }
 
         /// <summary>
@@ -1033,6 +1059,7 @@ namespace HordeForge.GameBridge.Bridge
                 _servant = null;
                 _settings = null;
                 _moduleTreeRoots = Array.Empty<string>();
+                _failures.Reset();
                 Started = false;
             }
         }

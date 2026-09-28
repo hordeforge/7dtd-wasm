@@ -96,6 +96,15 @@ src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.publi
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public int CountOf(string owner)
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: BotOwnershipRegistry.public string? OwnerOf(int entityId)
 src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs: type BotOwnershipRegistry
+src/HordeForge.WasmHost/Core/FailureTally.cs: FailureTally.public const string NoFailures = ""
+src/HordeForge.WasmHost/Core/FailureTally.cs: FailureTally.public string Record(IReadOnlyList<ModuleFailure> modules)
+src/HordeForge.WasmHost/Core/FailureTally.cs: FailureTally.public void Reset()
+src/HordeForge.WasmHost/Core/FailureTally.cs: ModuleFailure.public ModuleFailure(string id, long failures)
+src/HordeForge.WasmHost/Core/FailureTally.cs: ModuleFailure.public long Failures { get; }
+src/HordeForge.WasmHost/Core/FailureTally.cs: ModuleFailure.public static ModuleFailure Of(WasmMod mod)
+src/HordeForge.WasmHost/Core/FailureTally.cs: ModuleFailure.public string Id { get; }
+src/HordeForge.WasmHost/Core/FailureTally.cs: type FailureTally
+src/HordeForge.WasmHost/Core/FailureTally.cs: type ModuleFailure
 src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public IReadOnlyList<int> Release(string owner)
 src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public bool Claim(string owner, int netId)
 src/HordeForge.WasmHost/Core/GlideOwnershipRegistry.cs: GlideOwnershipRegistry.public bool Owns(string owner, int netId)
