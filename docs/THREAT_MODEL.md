@@ -39,13 +39,13 @@ against the code instead of against this document.
 | Entry point | Where | Reachable by |
 |---|---|---|
 | Mod entry `ModApi.InitMod` (mod load by the game) | `src/GameBridge/ModApi.cs:27` | the game mod loader, on dedicated servers only |
-| Console command `wasm list/load/reload/unload/status/help` | `src/GameBridge/Commands/CmdWasm.cs:33` | telnet console and in-game console, whoever the game lets run console commands |
+| Console command `wasm list/load/reload/unload/status/help` | `src/GameBridge/Commands/CmdWasm.cs:20` | telnet console and in-game console, whoever the game lets run console commands |
 | Harmony patch application by name (`GameManager.Update`, `RequestToSpawnPlayer`) | `src/GameBridge/ModApi.cs:66` | the game assembly; a rename in a game update silently removes the patch |
-| Module tree scan at start and on `wasm load` | `src/GameBridge/Bridge/BridgeHost.cs:446` | filesystem under `Mods/Wasm` and every staged modlet's `Wasm/` |
+| Module tree scan at start and on `wasm load` | `src/GameBridge/Bridge/BridgeHost.cs:548` | filesystem under `Mods/Wasm` and every staged modlet's `Wasm/` |
 | Extra root collection (every modlet under `Mods/` with a `Wasm/` folder) | `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:53` | any installed modlet, not only the operator's own tree |
 | Shared `wasm.toml` selection (top level, else the first modlet tree that has one) | `src/GameBridge/Bridge/BridgeHost.cs:168` | filesystem; sets the engine's fuel and memory ceilings |
-| `module.wasm`, `wasm-mod.toml`, `config.toml` files | `src/GameBridge/Bridge/BridgeHost.cs:527`, `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:35` | filesystem |
-| Mod id from console input | `src/GameBridge/Commands/CmdWasm.cs:50`, validated by `src/HordeForge.WasmHost/Registry/ModId.cs:28` and `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:111` | console |
+| `module.wasm`, `wasm-mod.toml`, `config.toml` files | `src/GameBridge/Bridge/BridgeHost.cs:1047`, `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:35` | filesystem |
+| Mod id from console input | `src/GameBridge/Commands/CmdWasm.cs:55`, validated by `src/HordeForge.WasmHost/Registry/ModId.cs:28` and `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:111` | console |
 | Harmony postfix on `GameManager.Update` (tick) | `src/GameBridge/Hooks/GameTickHook.cs:14` | the game loop, 20 calls per second |
 | Harmony postfix on `GameManager.RequestToSpawnPlayer` (join) | `src/GameBridge/Hooks/PlayerSpawnHook.cs:14` | a remote player joining or respawning |
 | Player name from `ClientInfo` | `src/GameBridge/Bridge/BridgeHost.cs:327` | a remote player, through the join hook |
@@ -81,7 +81,7 @@ Every row of the "What the sandbox guarantees" table resolves:
   wasm32 ceiling (`src/HordeForge.WasmHost/Core/WasmModHost.cs:98`,
   `:292`).
 - Module size: file length checked before the read, then byte length in
-  `LoadModule` (`src/GameBridge/Bridge/BridgeHost.cs:543`,
+  `LoadModule` (`src/GameBridge/Bridge/BridgeHost.cs:681`,
   `src/HordeForge.WasmHost/Core/WasmModHost.cs:246`).
 - Stack: engine maximum stack size, validated non-zero
   (`src/HordeForge.WasmHost/Core/WasmModHost.cs:99`).
@@ -113,18 +113,18 @@ mention. Sections 3, 5, and 8 name them.
   parsed by a hand-written TOML reader
   (`src/HordeForge.WasmHost/Registry/MiniToml.cs:19`); `config.toml` is never
   parsed by the host and is served verbatim to the guest that owns it
-  (`src/GameBridge/Bridge/BridgeHost.cs:629`).
+  (`src/GameBridge/Bridge/BridgeHost.cs:745`).
 - A manifest may set `fuel_per_call` and `max_memory_bytes`. Both are
   bounded: fuel at or below 50,000,000 instructions
   (`src/HordeForge.WasmHost/Registry/ModManifest.cs:46`, `:189`) and memory
   only tightens (`src/HordeForge.WasmHost/Core/WasmModHost.cs:293`). Fuel can
   still be raised 50x over the 1,000,000 default by the module author, which
-  is logged once at load (`src/GameBridge/Bridge/BridgeHost.cs:612`).
+  is logged once at load (`src/GameBridge/Bridge/BridgeHost.cs:728`).
 - A modlet-carried `wasm.toml` becomes the shared limits file when the
   top-level one is absent, so a third-party modlet can set the engine's fuel
   and memory ceilings the whole server runs under
   (`src/GameBridge/Bridge/BridgeHost.cs:168`,
-  `src/GameBridge/Bridge/BridgeHost.cs:735`).
+  `src/GameBridge/Bridge/BridgeHost.cs:890`).
 - The two zdtd guest modules the modlet ships are copied unmodified out of a
   sibling `zdtd-server` checkout (`ZDTD_SERVER` in the Makefile) with no
   checksum over either binary, so what a built modlet carries is whatever
@@ -138,7 +138,7 @@ mention. Sections 3, 5, and 8 name them.
 | Boundary | Inside | Outside | Crossing point |
 |---|---|---|---|
 | B1 player to game server | game process | remote player, no identity beyond the game session | join hook `src/GameBridge/Hooks/PlayerSpawnHook.cs:14` |
-| B2 operator to host | bridge and host library | telnet console operator, filesystem writer | `src/GameBridge/Commands/CmdWasm.cs:33`, `src/GameBridge/Bridge/BridgeHost.cs:446` |
+| B2 operator to host | bridge and host library | telnet console operator, filesystem writer | `src/GameBridge/Commands/CmdWasm.cs:20`, `src/GameBridge/Bridge/BridgeHost.cs:548` |
 | B3 guest to host | Wasmtime store, linear memory | guest code, untrusted by contract | `src/HordeForge.WasmHost/Core/WasmModHost.cs:233` |
 | B4 guest to game | game world state | guest, via host imports | `src/GameBridge/Bridge/GameHostApi.cs:261`, `:302`, `:323` |
 | B5 guest to guest | per-mod settings and bot ownership | other loaded guests | shared settings table, `sense` snapshot, join name |
@@ -150,7 +150,7 @@ Privilege transitions, each with a named code path:
 1. A console operator types `wasm reload <id>` and a file on disk becomes
    executing code inside the game process, with the bot-servant authority of
    section 4. There is no allowlist of module ids, no signature check, and no
-   record of who ran the command (`src/GameBridge/Bridge/BridgeHost.cs:665`).
+   record of who ran the command (`src/GameBridge/Bridge/BridgeHost.cs:788`).
 2. An installed modlet drops a `Wasm/<id>/module.wasm` tree and, when the
    top-level `Mods/Wasm/wasm.toml` is absent, a `wasm.toml` that sets the
    engine's fuel and memory ceilings. Both take effect at the next server
@@ -192,10 +192,10 @@ named here and mapped in section 7; gaps are in section 8.
 
 - *Elevation of privilege*: `wasm reload <id>` compiles and instantiates a
   file from a module tree and runs its `on_enable` in the game process
-  (`src/GameBridge/Bridge/BridgeHost.cs:665`). Telnet access is the only
+  (`src/GameBridge/Bridge/BridgeHost.cs:788`). Telnet access is the only
   credential required.
 - *Spoofing*: no operator identity is captured. `CmdWasm.Execute` ignores
-  `CommandSenderInfo` (`src/GameBridge/Commands/CmdWasm.cs:33`), so a reload
+  `CommandSenderInfo` (`src/GameBridge/Commands/CmdWasm.cs:55`), so a reload
   leaves no record of the sender beyond the game's own console log.
 - *Tampering*: a module id differing only in case resolves to the same folder
   on Windows and macOS; the code refuses it by confirming the on-disk
@@ -206,14 +206,15 @@ named here and mapped in section 7; gaps are in section 8.
   there. `ModId.IsValid` rejects both, so an id is either a folder on every
   platform or reported as not one
   (`src/HordeForge.WasmHost/Registry/ModId.cs:50`).
-- *Repudiation*: `Reload` and `Unload` report only success or failure to the
-  console (`src/GameBridge/Commands/CmdWasm.cs:59`); nothing durable records
-  the change.
+- *Repudiation*: `Reload` and `Unload` report their outcome, and the reason
+  a load was refused, to the console
+  (`src/GameBridge/Commands/CmdWasm.cs:55`); nothing durable records the
+  change.
 - *Information disclosure*: `wasm status` prints module ids, counters, the
   effective limits, and armed glide net ids to whoever can run it
   (`src/GameBridge/Bridge/BridgeHost.cs:358`).
 - *Denial of service*: `wasm load` recompiles every module in every tree
-  (`src/GameBridge/Bridge/BridgeHost.cs:446`); a large tree repeated on demand
+  (`src/GameBridge/Bridge/BridgeHost.cs:548`); a large tree repeated on demand
   costs compile time inside the console thread, and the `Gate` it holds is the
   same one the tick dispatch takes.
 
@@ -361,7 +362,7 @@ named here and mapped in section 7; gaps are in section 8.
 |---|---|---|
 | CPU burn | fuel budget per call, re-armed before every call | `src/HordeForge.WasmHost/Core/WasmMod.cs:239`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:97` |
 | memory growth | engine static memory maximum, checked against the module's declared maximum at load | `src/HordeForge.WasmHost/Core/WasmModHost.cs:98`, `:292` |
-| giant module | file length checked before the read, then byte length in `LoadModule` | `src/GameBridge/Bridge/BridgeHost.cs:543`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:246` |
+| giant module | file length checked before the read, then byte length in `LoadModule` | `src/GameBridge/Bridge/BridgeHost.cs:681`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:246` |
 | stack exhaustion | engine maximum stack size | `src/HordeForge.WasmHost/Core/WasmModHost.cs:99` |
 | filesystem and env access | WASI linked without preopens, empty environment, no stdin | `src/HordeForge.WasmHost/Core/WasmModHost.cs:102` |
 | raw WASI console flooding | standard streams discarded by default, opt-in only | `src/HordeForge.WasmHost/Config/WasmHostConfig.cs:53`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:337` |
@@ -374,7 +375,7 @@ named here and mapped in section 7; gaps are in section 8.
 | NaN or overflow through SimCommand numbers | invariant parsing, finite-float check | `src/GameBridge/Bridge/BotServant.cs:1054` |
 | path traversal through a mod id | id validation, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:28`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:163` |
 | manifest slurping | 1 MiB read bound, re-checked after the read, strict UTF-8 decode | `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:24` |
-| misspelled or misplaced limit key | `[limits]` is a closed table; unknown keys reject the module, misplaced ones are named in the load log | `src/HordeForge.WasmHost/Registry/ModManifest.cs:53`, `src/GameBridge/Bridge/BridgeHost.cs:579` |
+| misspelled or misplaced limit key | `[limits]` is a closed table; unknown keys reject the module, misplaced ones are named in the load log | `src/HordeForge.WasmHost/Registry/ModManifest.cs:53`, `src/GameBridge/Bridge/BridgeHost.cs:709` |
 | manifest fuel beyond the parser ceiling | 50,000,000 instruction ceiling on the file, enforced on the host config too | `src/HordeForge.WasmHost/Registry/ModManifest.cs:46`, `src/HordeForge.WasmHost/Core/WasmModHost.cs:123` |
 | wrong-signature exports silently dropped | every optional export validated at load | `src/HordeForge.WasmHost/Core/WasmModHost.cs:306` |
 | log, console, and chat text forgery | C0, DEL, C1, bidi, and zero-width characters replaced with '?' | `src/HordeForge.WasmHost/Registry/TextSanitizer.cs:24` |
@@ -397,7 +398,7 @@ Recorded here, not fixed here. Each names the code that would have to change.
    by ownership and not the target, so any guest can damage any living entity
    through its own bots.
 2. **No module-count cap** (T4). `LoadAllModules`
-   (`src/GameBridge/Bridge/BridgeHost.cs:446`) loads every valid folder in
+   (`src/GameBridge/Bridge/BridgeHost.cs:548`) loads every valid folder in
    every tree, and the tick cost is a function of that count. The only bounds
    are fuel per call per module and the manifest fuel ceiling.
 3. **A modlet can supply the module tree and the shared limits** (T5).
@@ -406,7 +407,7 @@ Recorded here, not fixed here. Each names the code that would have to change.
    what loads and under which ceilings, and the only trace is the
    effective-limits line at start.
 4. **No operator identity or durable record for load, reload, and unload**
-   (T1, repudiation). `src/GameBridge/Commands/CmdWasm.cs:33` ignores
+   (T1, repudiation). `src/GameBridge/Commands/CmdWasm.cs:55` ignores
    `CommandSenderInfo`; success is reported to the console only.
 5. **Glide state has no owning module** (T3).
    `src/GameBridge/Bridge/BotServant.cs:129`. Bot bodies are keyed by owning

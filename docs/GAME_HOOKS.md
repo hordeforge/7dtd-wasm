@@ -111,13 +111,28 @@ longer exists on V3.
 
 ## Console commands
 
-`wasm list` (loaded module ids, one per line), `wasm load`,
-`wasm reload <id>`, `wasm unload <id>`, `wasm status` (the default when no
-subcommand is given; the full report: limits, per-module counters, dropped
-line summaries), `wasm help`. An unknown subcommand, and any argument past
-the ones a subcommand takes, print the same usage list rather than falling
-through to the status report, so a typo does not read like a successful
-command.
+`wasm list`, `wasm load`, `wasm reload <id>`, `wasm unload <id>`,
+`wasm status` (the default when no subcommand is given; the full report:
+limits, per-module counters, dropped line summaries), `wasm help`. `help
+wasm` in the game prints the same list. An unknown subcommand, and any
+argument past the ones a subcommand takes, print the same usage list rather
+than falling through to the status report, so a typo does not read like a
+successful command.
+
+Each subcommand says what it did, at the console the operator typed it in:
+
+- `wasm list` prints the loaded module ids, one per line, so the next
+  command can copy one. When nothing is loaded it says how to load the
+  first one.
+- `wasm load` names the modules it loaded and prints a `skipped` line, with
+  the reason, for every module or tree the scan refused. A module sitting
+  in `Mods/Wasm` that never appears is explained there instead of only in
+  the server log.
+- `wasm reload <id>` and `wasm unload <id>` print the reason a load was
+  refused (no `module.wasm`, a malformed `wasm-mod.toml`, a module over the
+  size cap, an id that is not loaded) and then the ids that are loaded, so
+  a mistyped id is corrected from the console. An unload whose shutdown
+  export failed says so on the same command; the module is gone either way.
 
 ## Player join events
 

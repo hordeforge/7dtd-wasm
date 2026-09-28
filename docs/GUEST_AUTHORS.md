@@ -226,7 +226,9 @@ refuses them. The id is matched with the exact on-disk spelling on every
 platform, so a wrong-case id is a "not found" rather than a second registry
 entry reading the same module. An optional `wasm-mod.toml` manifest next to
 the module tunes its limits and settings; see [docs/CONFIG.md](CONFIG.md). A
-malformed manifest rejects the module with a warning in the server log.
+malformed manifest rejects the module with a warning, which `wasm load` and
+`wasm reload` both print with the reason on the console and the server log
+keeps.
 
 ## Settings
 

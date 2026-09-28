@@ -626,6 +626,22 @@ operator, embedder, and guest author.
 
 ### Changed
 
+- The `wasm` console command now reports what it did instead of a bare
+  result. `wasm load` names the modules it loaded and prints a `skipped`
+  line, with the reason, for every module or tree the scan refused;
+  `wasm reload` and `wasm unload` print why a load was refused (missing
+  `module.wasm`, malformed `wasm-mod.toml`, over the size cap, an id that is
+  not loaded) followed by the ids that are loaded, and an unload whose
+  shutdown export failed says so on the command that unloaded it.
+  `wasm list` prints the loaded ids, one per line; the counters stay in
+  `wasm status`. `wasm help` and the game's `help wasm` print the same
+  block, one line per subcommand with a description, instead of a bare list
+  of forms. `BridgeHost.LoadAllModules` returns a `ModuleLoadScan`
+  (loaded ids, skipped reasons) rather than a count, and `Reload` and
+  `Unload` return the reason through an out parameter.
+- `docs/GAME_HOOKS.md`, `docs/GUEST_AUTHORS.md`, and `docs/THREAT_MODEL.md`
+  follow the console change, including the line references into
+  `BridgeHost.cs` and `CmdWasm.cs` the shift moved.
 - `docs/MIGRATION.md`: the upgrade steps the breaking entries below imply
   but never spell out, one subsection per consumer kind (operator, embedder,
   guest author) with the before, the after, and the fix, plus a table of the

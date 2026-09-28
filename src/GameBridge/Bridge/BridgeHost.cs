@@ -382,25 +382,6 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Ids of the loaded modules, one per line, in load order.
-        ///
-        /// "wasm list" prints this, not the telemetry in StatusLines: a
-        /// command named list that answers with limits, rate-limit counters
-        /// and a servant summary is a full status report under the wrong
-        /// name, and an operator asking which modules are loaded has to read
-        /// past everything else to find out.
-        /// </summary>
-        public static List<string> ModuleIds()
-        {
-            lock (Gate)
-            {
-                return _host == null
-                    ? new List<string> { "host not started" }
-                    : new List<string>(_host.ModIds);
-            }
-        }
-
-        /// <summary>
         /// The full host report: configured limits, one line per loaded
         /// module, the dropped totals of every limiter, the armed glide ids,
         /// and the tick telemetry line. Used by "wasm status".
@@ -566,16 +547,20 @@ namespace HordeForge.GameBridge.Bridge
         /// Loads every module found under Mods/Wasm/&lt;id&gt;/module.wasm and
         /// runs its on_enable export (docs/ABI.md: called once when the mod
         /// is loaded and enabled), so "wasm load" leaves new modules in the
-        /// same state as a server start. Returns the number of new modules.
+        /// same state as a server start. Returns which modules were loaded
+        /// and, for every module the scan refused, the reason. The reason
+        /// matters at the console: a module the operator just copied into
+        /// Mods/Wasm is either named as loaded or explained as skipped
+        /// there, not only in the log file.
         /// </summary>
-        public static int LoadAllModules()
+        public static ModuleLoadScan LoadAllModules()
         {
             lock (Gate)
             {
                 WasmModHost? host = _host;
                 if (host == null)
                 {
-                    return 0;
+                    return ModuleLoadScan.None;
                 }
                 // One read of the published snapshot: a scan must resolve
                 // every id against the same set of trees even if a restart
@@ -583,9 +568,10 @@ namespace HordeForge.GameBridge.Bridge
                 IReadOnlyList<string> treeRoots = _moduleTreeRoots;
                 if (treeRoots.Count == 0)
                 {
-                    return 0;
+                    return ModuleLoadScan.None;
                 }
                 var loadedIds = new List<string>();
+                var skipped = new List<string>();
                 foreach (string root in treeRoots)
                 {
                     string[] dirs;
@@ -602,6 +588,8 @@ namespace HordeForge.GameBridge.Bridge
                         // the whole bridge would otherwise come up dead. The
                         // IO message may embed the raw path, so clean both
                         // before logging.
+                        skipped.Add(TextSanitizer.Clean(root) + ": cannot scan module tree: " +
+                                    TextSanitizer.Clean(ex.Message));
                         Log.Warning("[WasmHost] cannot scan module tree " + TextSanitizer.Clean(root) + ": " +
                                     TextSanitizer.Clean(ex.Message) + "; tree skipped");
                         continue;
@@ -619,6 +607,7 @@ namespace HordeForge.GameBridge.Bridge
                             // A folder name with path separators or control
                             // characters (both legal on some filesystems) must
                             // never reach the log source tags or module paths.
+                            skipped.Add(TextSanitizer.Clean(id) + ": not a valid module folder name");
                             Log.Warning("[WasmHost] skipping " + TextSanitizer.Clean(id) +
                                         ": not a valid module folder name");
                             continue;
@@ -627,8 +616,9 @@ namespace HordeForge.GameBridge.Bridge
                         {
                             continue;
                         }
-                        if (!TryLoadFromDisk(host, id))
+                        if (!TryLoadFromDisk(host, id, out string reason))
                         {
+                            skipped.Add(id + ": " + reason);
                             continue;
                         }
                         loadedIds.Add(id);
@@ -638,7 +628,7 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     InitOne(id);
                 }
-                return loadedIds.Count;
+                return new ModuleLoadScan(loadedIds, skipped);
             }
         }
 
@@ -647,16 +637,20 @@ namespace HordeForge.GameBridge.Bridge
         /// registers its manifest settings. Shared by start scanning and
         /// "wasm reload". Returns false (logged) when the manifest is
         /// invalid or the module is unreadable or rejected; on_enable is
-        /// NOT run here, callers init explicitly.
+        /// NOT run here, callers init explicitly. On false,
+        /// <paramref name="reason"/> is the one-clause cause, cleaned like
+        /// the log line, so the console command can report the same refusal
+        /// the log records.
         /// </summary>
-        private static bool TryLoadFromDisk(WasmModHost host, string id)
+        private static bool TryLoadFromDisk(WasmModHost host, string id, out string reason)
         {
             string modulePath = ResolveModuleFile(id, "module.wasm");
             if (modulePath.Length == 0)
             {
+                reason = "no module.wasm under Mods/Wasm/" + id;
                 return false;
             }
-            if (!TryReadManifest(id, out ModManifest? manifest))
+            if (!TryReadManifest(id, out ModManifest? manifest, out reason))
             {
                 // Invalid manifest: refuse to run the module with
                 // weaker-than-intended limits.
@@ -672,6 +666,8 @@ namespace HordeForge.GameBridge.Bridge
                 long length = new FileInfo(modulePath).Length;
                 if (length > host.MaxModuleSizeBytes)
                 {
+                    reason = "module.wasm is " + length +
+                             " bytes, over the cap of " + host.MaxModuleSizeBytes;
                     Log.Warning("[WasmHost] module " + id + " is " + length +
                                 " bytes, over the cap of " + host.MaxModuleSizeBytes + "; module skipped");
                     return false;
@@ -684,6 +680,7 @@ namespace HordeForge.GameBridge.Bridge
                 // bridge start; skip it like any other bad module. The path
                 // and the IO message may both carry text the host does not
                 // control, so both are cleaned before they reach the log.
+                reason = "cannot read module.wasm: " + TextSanitizer.Clean(ex.Message);
                 Log.Warning("[WasmHost] cannot read " + TextSanitizer.Clean(modulePath) + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 return false;
             }
@@ -696,6 +693,7 @@ namespace HordeForge.GameBridge.Bridge
                 // Load rejections quote manifest and module diagnostics that
                 // come from mod files (third-party content); clean them so
                 // control characters cannot forge log lines.
+                reason = TextSanitizer.Clean(ex.Message);
                 Log.Warning("[WasmHost] failed to load module " + id + ": " + TextSanitizer.Clean(ex.Message));
                 return false;
             }
@@ -703,6 +701,7 @@ namespace HordeForge.GameBridge.Bridge
             _gameApi?.RegisterConfig(id, ReadRawConfig(id));
             LogIgnoredKeys("manifest for " + id, manifest);
             LogFuelOverride(id, manifest, host.FuelPerCall);
+            reason = string.Empty;
             return true;
         }
 
@@ -789,18 +788,26 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Unloads and reloads one module from disk, dropping its per-module
-        /// state and running the new instance's on_enable. Returns false
-        /// when the host is not started, the id is invalid, or the load from
-        /// disk failed; a failing shutdown of the outgoing instance is
-        /// logged but does not fail the reload.
+        /// state and running the new instance's on_enable. On false,
+        /// <paramref name="reason"/> says why in one clause: the host is not
+        /// started, the id is not usable, or the load from disk was refused. The
+        /// command prints it, so an operator whose reload did not take effect is
+        /// told why at the console instead of only in the log. A failing shutdown of
+        /// the outgoing instance is logged but does not fail the reload.
         /// </summary>
-        public static bool Reload(string id)
+        public static bool Reload(string id, out string reason)
         {
             lock (Gate)
             {
                 WasmModHost? host = _host;
-                if (host == null || !ModId.IsValid(id))
+                if (host == null)
                 {
+                    reason = "the host is not started";
+                    return false;
+                }
+                if (!ModId.IsValid(id))
+                {
+                    reason = "not a valid module id";
                     return false;
                 }
                 ModRunResult? oldShutdown = host.Unload(id);
@@ -814,7 +821,7 @@ namespace HordeForge.GameBridge.Bridge
                 // module starts from an empty share of the bot budget and the
                 // cap budget, and cannot inherit the old one's bodies.
                 ReleaseModuleState(id);
-                if (!TryLoadFromDisk(host, id))
+                if (!TryLoadFromDisk(host, id, out reason))
                 {
                     return false;
                 }
@@ -827,25 +834,27 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Unloads one module, running its shutdown export and dropping its
-        /// per-module state. Returns false only when the host is not started
-        /// or the id is not loaded. A trapped or failing shutdown still
-        /// reports success, because the module is gone either way; the
-        /// failure is logged instead. That is the opposite convention from
-        /// <see cref="Reload"/>, where a false return means the load did not
-        /// happen.
+        /// per-module state. On false, <paramref name="detail"/> says why, and the
+        /// caller can name the ids that are loaded instead. On true it is empty
+        /// unless the shutdown export itself failed: the module is gone either
+        /// way, and that outcome belongs at the console that unloaded it, not only
+        /// in the log. That is the opposite convention from <see cref="Reload"/>,
+        /// where a false return means the load did not happen.
         /// </summary>
-        public static bool Unload(string id)
+        public static bool Unload(string id, out string detail)
         {
             lock (Gate)
             {
                 WasmModHost? host = _host;
                 if (host == null)
                 {
+                    detail = "the host is not started";
                     return false;
                 }
                 ModRunResult? maybeShutdown = host.Unload(id);
                 if (maybeShutdown is not { } shutdown)
                 {
+                    detail = "no module with that id is loaded";
                     return false;
                 }
                 ReleaseModuleState(id);
@@ -854,9 +863,29 @@ namespace HordeForge.GameBridge.Bridge
                     // Fail soft: the mod is gone either way, but a trapped or
                     // failing shutdown must reach the operator instead of a
                     // bare "unloaded" from the console command.
-                    Log.Warning("[WasmHost] unload of " + id + ": " + Describe(shutdown));
+                    detail = Describe(shutdown);
+                    Log.Warning("[WasmHost] unload of " + id + ": " + detail);
+                }
+                else
+                {
+                    detail = string.Empty;
                 }
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// Ids of the loaded modules, in dispatch order. The console command
+        /// names them after a mistyped or unloaded id, so an operator who
+        /// guessed wrong is shown the ids that do exist instead of having to
+        /// remember "wasm list".
+        /// </summary>
+        public static List<string> LoadedModuleIds()
+        {
+            lock (Gate)
+            {
+                WasmModHost? host = _host;
+                return host == null ? new List<string>() : new List<string>(host.ModIds);
             }
         }
 
@@ -926,9 +955,11 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>
         /// Reads wasm-mod.toml for a module id. Returns false when a manifest
         /// is present but invalid (logged); true with a null manifest when
-        /// the module ships none, so host defaults apply.
+        /// the module ships none, so host defaults apply. On false,
+        /// <paramref name="reason"/> says why in one clause, for the console
+        /// side of the same refusal.
         /// </summary>
-        private static bool TryReadManifest(string id, out ModManifest? manifest)
+        private static bool TryReadManifest(string id, out ModManifest? manifest, out string reason)
         {
             string dir = ResolveModuleDir(id);
             if (dir.Length == 0)
@@ -939,6 +970,7 @@ namespace HordeForge.GameBridge.Bridge
                 // directory, which is the install root, and parse whatever
                 // sits there as this module's limits.
                 manifest = null;
+                reason = "no module folder for " + id;
                 return false;
             }
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");
@@ -947,9 +979,11 @@ namespace HordeForge.GameBridge.Bridge
                 if (File.Exists(tomlPath))
                 {
                     manifest = ModManifest.ParseToml(ManifestFiles.ReadRequired(tomlPath), id);
+                    reason = string.Empty;
                     return true;
                 }
                 manifest = null;
+                reason = string.Empty;
                 return true;
             }
             catch (WasmModLoadException ex)
@@ -958,6 +992,7 @@ namespace HordeForge.GameBridge.Bridge
                 // mod content); clean them like guest log output.
                 Log.Warning("[WasmHost] invalid manifest for " + id + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 manifest = null;
+                reason = "invalid wasm-mod.toml: " + TextSanitizer.Clean(ex.Message);
                 return false;
             }
             catch (Exception ex)
@@ -967,6 +1002,7 @@ namespace HordeForge.GameBridge.Bridge
                 // defaults.
                 Log.Warning("[WasmHost] cannot read manifest for " + id + ": " + TextSanitizer.Clean(ex.Message) + "; module skipped");
                 manifest = null;
+                reason = "cannot read wasm-mod.toml: " + TextSanitizer.Clean(ex.Message);
                 return false;
             }
         }
@@ -1001,24 +1037,6 @@ namespace HordeForge.GameBridge.Bridge
                 _settings = null;
                 _moduleTreeRoots = Array.Empty<string>();
                 Started = false;
-            }
-        }
-
-        /// <summary>
-        /// Whether an id is currently loaded. The console command needs it
-        /// because a reload that fails after the outgoing instance was
-        /// unloaded leaves the module not loaded, which is a different event
-        /// from a reload that failed because the id was never loaded: the
-        /// first cost the operator a working module, the second costs
-        /// nothing. The boolean return of Reload alone cannot tell them
-        /// apart, and reporting them the same way makes a failed reload read
-        /// as a no-op.
-        /// </summary>
-        internal static bool IsLoaded(string id)
-        {
-            lock (Gate)
-            {
-                return _host != null && _host.TryGetMod(id, out _);
             }
         }
 
