@@ -150,7 +150,10 @@ Strings must be well-formed Unicode: a lone surrogate, raw or written as a
 `\uXXXX` escape, is rejected, because it has no UTF-8 form and could not
 round-trip the guest string ABI. A raw control character in a quoted string
 is rejected for the same reason; the tab is the only one TOML allows
-unescaped, so write the others as `\n`, `\r`, `\t`, or `\uXXXX`.
+unescaped, so write the others as `\n`, `\r`, `\t`, or `\uXXXX`. A float
+outside binary64 (`1e999`) is rejected the same way: it is not a number any
+guest can hold, and whether it parses at all would otherwise depend on the
+runtime the host is built for.
 
 ## Settings resolution
 

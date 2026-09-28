@@ -114,13 +114,16 @@ namespace HordeForge.WasmHost.Core
         /// <summary>
         /// Records one tick: its dispatch duration and how many mods failed
         /// on it. A negative duration (a mismeasured clock) counts as zero
-        /// so it cannot drag the average below zero.
+        /// so it cannot drag the average below zero, and so does NaN, which
+        /// fails every comparison and would otherwise be summed into the
+        /// window: one NaN sample makes every later average, max and summary
+        /// line read NaN until the window rolls.
         /// </summary>
         public void Record(long tick, double elapsedMs, int failures)
         {
             lock (_gate)
             {
-                if (elapsedMs < 0.0)
+                if (!(elapsedMs >= 0.0))
                 {
                     elapsedMs = 0.0;
                 }

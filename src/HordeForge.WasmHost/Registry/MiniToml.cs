@@ -404,6 +404,17 @@ namespace HordeForge.WasmHost.Registry
             {
                 if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double d))
                 {
+                    // A literal that overflows binary64 (1e999) parses to
+                    // Infinity on .NET Core and fails to parse on .NET
+                    // Framework, so the same manifest would load on the net8
+                    // host and be rejected by the net48 bridge. Either way it
+                    // is a value no guest can hold: as a [settings] scalar it
+                    // reaches get_setting as "Infinity" / "∞" and nothing can
+                    // read it back as the number written.
+                    if (double.IsInfinity(d) || double.IsNaN(d))
+                    {
+                        throw new FormatException("line " + lineNumber + ": float out of range '" + text + "'" + KeyContext(key));
+                    }
                     return new TomlDouble(d);
                 }
                 throw new FormatException("line " + lineNumber + ": invalid float '" + text + "'" + KeyContext(key));

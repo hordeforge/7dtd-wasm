@@ -903,6 +903,21 @@ greeting = ""hello""
             Assert.Equal("true", m.Settings["flag"]);
         }
 
+        [Theory]
+        [InlineData("1e999")]
+        [InlineData("-1e999")]
+        [InlineData("1e309")]
+        public void TomlFloatOutsideBinary64IsRejected(string literal)
+        {
+            // Such a literal parses to Infinity on .NET Core and fails to parse
+            // on .NET Framework, so the same manifest would load on the net8
+            // host and be rejected by the net48 bridge; as a [settings] scalar
+            // it would reach the guest as "∞" instead of the number written.
+            WasmModLoadException ex = Assert.Throws<WasmManifestException>(
+                () => ModManifest.ParseToml("[settings]\nratio = " + literal + "\n", "bad"));
+            Assert.Contains("out of range", ex.Message);
+        }
+
         [Fact]
         public void TomlManifestDefaultsAndUnknownKeys()
         {

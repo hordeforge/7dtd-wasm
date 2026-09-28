@@ -86,6 +86,18 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void NanSourceReportsZeroNotNaN()
+        {
+            // NaN fails every comparison, so a plain "elapsed < 0.0" test lets
+            // it through; the caller then sums it into an average that reads
+            // NaN for the rest of the window.
+            double[] readings = { 10.0, double.NaN };
+            int next = 0;
+            var timer = new MonotonicTimer(() => readings[next++]);
+            Assert.Equal(0.0, timer.ElapsedMs(() => { }), 6);
+        }
+
+        [Fact]
         public void RejectsNullWork()
         {
             var timer = new MonotonicTimer(() => 0.0);

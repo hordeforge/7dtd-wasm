@@ -58,6 +58,24 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void NanDurationCannotPoisonTheWindow()
+        {
+            // One NaN sample would sum into _windowMs and make every later
+            // average, the window max and the summary line read NaN until the
+            // window rolls. It also fails the slow-budget comparison, so the
+            // tick would be counted neither as a sample nor as a slow tick.
+            var telemetry = new TickTelemetry();
+            telemetry.Record(1, 4.0, 0);
+            telemetry.Record(2, double.NaN, 0);
+            telemetry.Record(3, 2.0, 0);
+
+            Assert.Equal(2.0, telemetry.AverageMs, 6);
+            Assert.Equal(4.0, telemetry.WindowMaxMs, 6);
+            Assert.Equal(3, telemetry.Ticks);
+            Assert.DoesNotContain("NaN", telemetry.Describe());
+        }
+
+        [Fact]
         public void HeartbeatFiresOncePerIntervalNotEveryTick()
         {
             var telemetry = new TickTelemetry();
