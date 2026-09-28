@@ -100,7 +100,9 @@ def license_id(root: pathlib.Path) -> str:
         raise GateError(f"{LICENSE} is not valid UTF-8: {error}") from error
     first = next((line.strip() for line in lines if line.strip()), "")
     if not first:
-        raise GateError(f"{LICENSE} is empty, so the license the package declares cannot be confirmed")
+        raise GateError(
+            f"{LICENSE} is empty, so the license the package declares cannot be confirmed"
+        )
     return first.removesuffix(" License")
 
 

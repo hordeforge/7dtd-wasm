@@ -201,7 +201,7 @@ class MainTest(unittest.TestCase):
     def test_non_utf8_license_names_the_file(self):
         root = complete_repo()
         (root / packcheck.LICENSE).write_bytes(b"\xff\xfe not utf-8\n")
-        code, out, err = self.run_main(root)
+        code, _out, err = self.run_main(root)
         self.assertEqual(code, 1)
         self.assertIn("not valid UTF-8", err)
         self.assertNotIn("Traceback", err)
