@@ -22,8 +22,7 @@ class LineErrorsTest(unittest.TestCase):
         self.assertIn("em dash found", doccheck.line_errors("a \u2013 b"))
 
     def test_ai_attribution_hit(self):
-        self.assertIn("possible AI attribution",
-                      doccheck.line_errors("written by Claude"))
+        self.assertIn("possible AI attribution", doccheck.line_errors("written by Claude"))
 
     def test_plain_by_phrase_passes(self):
         self.assertEqual(doccheck.line_errors("stand by me"), [])
@@ -48,8 +47,14 @@ class LinkTargetTest(unittest.TestCase):
         root = pathlib.Path(tempfile.mkdtemp())
         page = root / "page.md"
         page.write_text("x", encoding="utf-8")
-        for target in ("https://example.com/x", "http://e/x", "#frag",
-                       "mailto:a@b.c", "", "other.md#frag"):
+        for target in (
+            "https://example.com/x",
+            "http://e/x",
+            "#frag",
+            "mailto:a@b.c",
+            "",
+            "other.md#frag",
+        ):
             with self.subTest(target=target):
                 if target == "other.md#frag":
                     (root / "other.md").write_text("x", encoding="utf-8")

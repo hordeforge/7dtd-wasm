@@ -6,6 +6,17 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+### Added
+
+- `ruff format` as the Python formatter, run in check mode by
+  `make check-ci` next to `ruff check tools`.
+
+### Changed
+
+- The tools lint gate covers more rule groups (S, A, BLE, DTZ, FBT, FURB,
+  G, ICN, ISC, LOG, N, PERF, PIE, SLF, TID), all of which the tree passes
+  today. `tools/` is reformatted to the pinned ruff's style.
+
 ## [0.3.1] - 2026-09-21
 
 ### Removed

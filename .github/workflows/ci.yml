@@ -50,7 +50,8 @@ jobs:
       - name: Install ruff (pinned)
         run: python3 -m pip install --quiet ruff==0.16.4
       # check-ci is the game-free half of check: doccheck, the tools unit
-      # tests, the tools lint gate, the guest lint gate, the host build,
+      # tests, the tools lint and format gates, the guest lint gate, the
+      # host build,
       # and the host test suite.
       # bridge and bridge-check need a dedicated server install and cannot run
       # on a hosted runner; that half is proven on a developer host.

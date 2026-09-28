@@ -36,7 +36,7 @@ CHANGELOG_SECTION = re.compile(r"^## \[([^\]]+)\]", re.MULTILINE)
 def read_version(modinfo: pathlib.Path) -> str:
     match = MODINFO_VERSION.search(modinfo.read_text(encoding="utf-8"))
     if not match:
-        raise ValueError(f"{modinfo}: no <Version value=\"...\"> found")
+        raise ValueError(f'{modinfo}: no <Version value="..."> found')
     return match.group(1).strip()
 
 
@@ -70,8 +70,10 @@ def main() -> int:
 
     unique = set(versions.values())
     if len(unique) != 1:
-        print("versioncheck: version declarations disagree; tag, artifact, "
-              "and changelog would describe different releases")
+        print(
+            "versioncheck: version declarations disagree; tag, artifact, "
+            "and changelog would describe different releases"
+        )
         return 1
     print("versioncheck: ok")
     return 0

@@ -186,6 +186,7 @@ check-ci:
 	python3 tools/versioncheck.py
 	python3 -m unittest discover -s tools
 	ruff check tools
+	ruff format --check tools
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test

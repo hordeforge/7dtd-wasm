@@ -4,12 +4,21 @@
 #
 # Rule groups are enabled only where the tree already passes them:
 # PL (pylint) still has findings (module-global counters in
-# doccheck.py) and PT assumes pytest conventions while these tests run
-# under unittest, so both stay off until their findings are fixed.
+# doccheck.py), PT assumes pytest conventions while these tests run
+# under unittest, and T20 flags the print() these CLI tools report
+# with, so those three stay off until their findings are fixed. COM is
+# left out because COM812 fights the formatter, which owns trailing
+# commas here.
+#
+# "ruff format" is the formatter (the pinned ruff ships it, so there is
+# no second tool to version) and "make check-ci" runs it in check mode.
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 src = ["tools"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
@@ -29,4 +38,19 @@ select = [
     "ERA",  # commented-out code
     "PTH",  # use pathlib over os functions
     "RUF",  # ruff-specific rules
+    "S",    # bandit: insecure calls and hardcoded credentials
+    "A",    # flake8-builtins: shadowing a builtin is a defect
+    "BLE",  # blind except: an exception must not vanish
+    "DTZ",  # naive datetimes (these tools are all UTC by construction)
+    "FBT",  # boolean positional args hide a call's meaning
+    "FURB", # refur: a better rewrite of the same code
+    "G",    # logging format checks
+    "ICN",  # import aliases: conventional names only
+    "ISC",  # implicit string concatenation traps
+    "LOG",  # logging misuse
+    "N",    # pep8-naming
+    "PERF", # per-call performance traps
+    "PIE",  # misc lints
+    "SLF",  # private member access across boundaries
+    "TID",  # tidy imports: no banned modules
 ]

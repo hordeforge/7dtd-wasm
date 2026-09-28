@@ -18,7 +18,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 # Directories that never contain shipped text.
 SKIP_DIRS = {
-    ".git", ".cargo", ".rustup", "bin", "obj", "dist", "target",
+    ".git",
+    ".cargo",
+    ".rustup",
+    "bin",
+    "obj",
+    "dist",
+    "target",
     "__pycache__",
 }
 
@@ -77,10 +83,25 @@ def walk():
             continue
         # "makefile" sits in the name check, not the suffix set: a file
         # named Makefile has no dot suffix, so it would never match.
-        if path.suffix.lower() in {
-            ".md", ".txt", ".cs", ".csproj", ".rs", ".toml", ".py",
-            ".json", ".xml", ".yml", ".yaml", ".sh", ".sln",
-        } or path.name.lower() == "makefile":
+        if (
+            path.suffix.lower()
+            in {
+                ".md",
+                ".txt",
+                ".cs",
+                ".csproj",
+                ".rs",
+                ".toml",
+                ".py",
+                ".json",
+                ".xml",
+                ".yml",
+                ".yaml",
+                ".sh",
+                ".sln",
+            }
+            or path.name.lower() == "makefile"
+        ):
             text_files.append(path)
         if path.suffix.lower() == ".md":
             check_markdown(path)

@@ -31,7 +31,9 @@ def project_version(root: pathlib.Path) -> str:
     modinfo = next(root.glob("src/*/ModInfo.xml"), None)
     if modinfo is None:
         raise SystemExit("sbom: ModInfo.xml not found under src/")
-    tag = ET.parse(modinfo).find("Version")
+    # ModInfo.xml is a file in this repository, not a guest-supplied
+    # document, so it carries no external entity to expand.
+    tag = ET.parse(modinfo).find("Version")  # noqa: S314
     if tag is None or not tag.get("value"):
         raise SystemExit(f"sbom: no <Version value=...> in {modinfo}")
     return tag.get("value")
@@ -80,12 +82,14 @@ def cargo_components(cargo_lock: pathlib.Path) -> list[dict]:
     for pkg in data.get("package", []):
         if pkg["name"] in members:
             continue
-        comps.append({
-            "type": "library",
-            "name": pkg["name"],
-            "version": pkg["version"],
-            "purl": f"pkg:cargo/{pkg['name']}@{pkg['version']}",
-        })
+        comps.append(
+            {
+                "type": "library",
+                "name": pkg["name"],
+                "version": pkg["version"],
+                "purl": f"pkg:cargo/{pkg['name']}@{pkg['version']}",
+            }
+        )
     return comps
 
 
@@ -118,10 +122,12 @@ def build_bom(root: pathlib.Path) -> dict:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=pathlib.Path,
-                        default=pathlib.Path(__file__).resolve().parent.parent)
-    parser.add_argument("-o", "--output", type=pathlib.Path,
-                        help="write JSON here instead of stdout")
+    parser.add_argument(
+        "--root", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent.parent
+    )
+    parser.add_argument(
+        "-o", "--output", type=pathlib.Path, help="write JSON here instead of stdout"
+    )
     args = parser.parse_args(argv)
 
     bom = build_bom(args.root)
