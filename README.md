@@ -155,6 +155,8 @@ machine, and `make help` names what each one is missing before it fails:
 | `make dist` | everything `make fixtures` needs, plus a .NET 8 SDK, Python 3, and a 7 Days to Die Dedicated Server install at `GAME_DIR` |
 | `make bridge` / `make bridge-check` | a .NET 8 SDK and a dedicated server install at `GAME_DIR` |
 | `make pack` | a .NET 8 SDK and Python 3 |
+| `make test-tools` | Python 3 |
+| `make tools-check` | Python 3 and the pinned ruff |
 
 `make toolchain` populates `.cargo/` and `.rustup/` inside the checkout using
 rustup from your PATH, so no Rust is installed system-wide; CI runs the same
@@ -162,7 +164,11 @@ target, and both install the channel declared in
 `samples/rust-toolchain.toml`. `make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'` runs one
 test or class while you work, and `make test-list` prints every name such a
 filter can match (a filter that matches nothing fails, because a green run that
-tested nothing is the worst possible answer).
+tested nothing is the worst possible answer). The same shape exists for the
+Python tooling: `make test-tools TOOLS_PATTERN='test_doccheck.py'` runs one
+tools test file, and `make tools-check` runs the whole tools half of
+`make check-ci` (the four Python gates, their unit tests, and ruff) in under a
+second, with no .NET SDK, no Rust toolchain and no game install.
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
 with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the

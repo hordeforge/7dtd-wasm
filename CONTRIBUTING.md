@@ -32,6 +32,9 @@ make toolchain     # once per clone: fills .cargo/ and .rustup/ (no system-wide 
 make test          # host suite must stay green
 make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'   # one test or class
 make test-list     # every test name a TEST_FILTER can match
+make test-tools    # tools/*.py unit tests only, in under a second
+make test-tools TOOLS_PATTERN='test_doccheck.py'              # one tools test file
+make tools-check   # the tools half of check-ci: four Python gates + ruff
 make samples-check # guest lint gate: rustc + clippy warnings are build errors
 make fixtures      # if you touched samples/ or guests; also needs zig and ZDTD_SERVER
 make bridge        # net48 bridge against GAME_DIR
@@ -56,6 +59,12 @@ files stale and locked restore fails on the next `make check`.
 bridge, and it is what CI runs, so it is the shortest honest answer to "is my
 change shippable?". `make check` adds the two targets that need a dedicated
 server install. `make help` lists every target and what it needs.
+
+The gate is split by what a change touches, so you do not pay for the half you
+did not edit. A change under `tools/` runs `make tools-check` (the four Python
+gates, their unit tests, and ruff): no .NET SDK, no Rust toolchain, no game
+install, under a second. `make check-ci` calls the same target, so the two
+cannot drift apart.
 
 Every change lands with its tests and its docs updated in the same commit.
 Compiler, analyzer, and rustc lint warnings fail the build (warnings are

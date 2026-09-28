@@ -192,7 +192,7 @@ RUST_TOOLCHAIN = $(shell $(PYTHON) tools/pinned.py rust)
 # module the host then rejects at load.
 ZIG_VERSION := 0.16.0
 
-.PHONY: help build test test-list toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks check check-ci clean
+.PHONY: help build test test-list test-tools tools-check toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -203,6 +203,11 @@ help:
 	@echo "                      TEST_FILTER='FullyQualifiedName~WasmModHostTests'"
 	@echo "                      (a filter that matches nothing fails, it does not pass)"
 	@echo "  make test-list      print every test name a TEST_FILTER can match"
+	@echo "  make test-tools     run the Python tools unit tests (fast: no .NET, no Rust)"
+	@echo "  make test-tools TOOLS_PATTERN='test_doccheck.py'"
+	@echo "                      run only the tools test file(s) matching a glob"
+	@echo "  make tools-check    the tools half of check-ci: the four Python gates,"
+	@echo "                      the tools unit tests, and the ruff lint and format gates"
 	@echo "  make toolchain      populate the in-project rustup toolchain (.cargo/, .rustup/)"
 	@echo "  make samples        compile guest mods and fixtures (wasm32-wasip1)"
 	@echo "  make samples-check  guest lint gate (rustc + clippy denied)"
@@ -260,6 +265,33 @@ test:
 # The names a TEST_FILTER can match, so the filter above is not guesswork.
 test-list:
 	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) --list-tests
+
+# The tools unit tests, and the fast loop for a change under tools/. The C#
+# suite is the slow one here; this runs in under a second and needs no .NET
+# SDK, no Rust toolchain and no game install, so it is the gate to run while
+# editing a tools/*.py file. TOOLS_PATTERN is the same glob unittest's
+# discover takes, so one file is one invocation:
+#   make test-tools
+#   make test-tools TOOLS_PATTERN='test_doccheck.py'
+# A pattern that matches no file runs zero tests, which unittest reports as
+# "NO TESTS RAN" and exits 5, so a mistyped glob fails instead of passing.
+TOOLS_PATTERN ?= 'test_*.py'
+
+test-tools:
+	$(PYTHON) -m unittest discover -s tools -p $(TOOLS_PATTERN)
+
+# Everything check-ci runs against tools/ and nothing else: the four Python
+# gates, their unit tests, and the ruff lint and format checks. check-ci calls
+# this target, so the two cannot drift apart.
+tools-check:
+	$(PYTHON) tools/doccheck.py
+	$(PYTHON) tools/versioncheck.py
+	$(PYTHON) tools/packcheck.py
+	$(PYTHON) tools/apicheck.py
+	$(MAKE) test-tools
+	$(call require_ruff)
+	ruff check tools
+	ruff format --check tools
 
 # Populate the in-project rustup toolchain. RUSTUP_HOME and CARGO_HOME are
 # exported at the top of this file, so this installs nothing system-wide and
@@ -486,14 +518,10 @@ check: check-ci
 # because a skipped gate reads like a passed one.
 check-ci: export RESTORE_LOCKED := true
 check-ci:
-	$(PYTHON) tools/doccheck.py
-	$(PYTHON) tools/versioncheck.py
-	$(PYTHON) tools/packcheck.py
-	$(PYTHON) tools/apicheck.py
-	$(PYTHON) -m unittest discover -s tools
+	$(MAKE) tools-check
 	$(call require_ruff)
-	ruff check tools evidence
-	ruff format --check tools evidence
+	ruff check evidence
+	ruff format --check evidence
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test

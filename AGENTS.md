@@ -53,6 +53,8 @@ capability requirements as PRDs (`docs/prds/`); see the templates there.
 ```bash
 make build          # host library + tests (net8)
 make test           # host test suite (needs prebuilt fixtures in tests/fixtures)
+make test-tools     # tools/*.py unit tests only (no .NET, no Rust, no game install)
+make tools-check    # the tools half of check-ci: Python gates + ruff
 make toolchain      # once per clone: fills .cargo/ and .rustup/ (no system-wide Rust)
 make fixtures       # rebuild guest fixtures from samples/ and stage them
 make bridge         # net48 mod against GAME_DIR (defaults to this machine's install)
