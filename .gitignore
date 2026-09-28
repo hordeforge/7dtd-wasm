@@ -17,7 +17,10 @@ samples/target/
 samples/guest-boss/*.wasm
 samples/guest-boss-zig/*.wasm
 .rustup/
-.cargo/
+# The in-project Rust toolchain at the workspace root only; the tracked
+# samples/.cargo/config.toml holds the guest link flags (it is not the
+# toolchain, and a repo-wide ".cargo/" would also exclude it).
+/.cargo/
 tools/targetcheck/bin/
 tools/targetcheck/obj/
 

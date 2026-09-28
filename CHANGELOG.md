@@ -39,6 +39,14 @@ Codename: Quarantine (7dtd-wasm).
   UTF-8 (legal on Linux) produced an id that no longer re-encodes to its own
   directory and the module silently never loaded. Replacement characters are
   rejected like the other invisible characters.
+- The guest link flags (`--max-memory=33554432`, 1 MiB stack) move into the
+  tracked `samples/.cargo/config.toml`. They lived only in the gitignored
+  in-project toolchain config, so a fresh checkout and CI built guests that
+  declare no memory maximum, which the host treats as the 4 GiB wasm32
+  ceiling and refuses under the default cap.
+- `wasm load` skips a module tree it cannot enumerate (permissions, a
+  modlet being replaced) with a warning instead of aborting the whole
+  scan and leaving the host unstarted.
 
 ## [0.3.1] - 2026-09-21
 

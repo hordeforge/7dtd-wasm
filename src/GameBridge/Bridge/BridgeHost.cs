@@ -279,7 +279,23 @@ namespace HordeForge.GameBridge.Bridge
                 var loadedIds = new List<string>();
                 foreach (string root in ModuleTreeRoots)
                 {
-                    foreach (string dir in Directory.GetDirectories(root))
+                    string[] dirs;
+                    try
+                    {
+                        dirs = Directory.GetDirectories(root);
+                    }
+                    catch (Exception ex)
+                    {
+                        // An unreadable tree (permissions, a modlet being
+                        // replaced while the server runs) must not abort the
+                        // scan: the other trees still load, and the modules
+                        // already loaded stay in place. The IO message may
+                        // embed the raw path, so clean it before logging.
+                        Log.Warning("[WasmHost] cannot scan " + TextSanitizer.Clean(root) + ": " +
+                                    TextSanitizer.Clean(ex.Message) + "; tree skipped");
+                        continue;
+                    }
+                    foreach (string dir in dirs)
                     {
                         string id = Path.GetFileName(dir);
                         if (!IsValidModId(id))

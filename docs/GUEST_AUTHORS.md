@@ -25,9 +25,12 @@ crate-type = ["cdylib"]
 guest-common = { path = "../guest-common" }
 ```
 
-The workspace `.cargo/config.toml` already pins `--max-memory=33554432` and
-a 1 MiB stack, so the module fits the host caps by construction. Do not
-override `--max-memory` upward unless the host cap is raised too.
+The tracked `samples/.cargo/config.toml` already pins
+`--max-memory=33554432` and a 1 MiB stack, so the module fits the host caps
+by construction. A guest without a declared maximum is treated as
+declaring the 4 GiB wasm32 ceiling and only loads when the operator raised
+the shared cap, so do not drop the flag. Do not override `--max-memory`
+upward unless the host cap is raised too.
 
 ## Minimal module
 

@@ -1,0 +1,16 @@
+# Link flags every guest in this workspace must carry. The host checks a
+# module's declared memory maximum against its cap at load, so a guest
+# built without --max-memory declares no maximum and is treated as
+# declaring the 4 GiB wasm32 ceiling: the host then refuses it unless the
+# operator raised wasm.toml [limits] max_memory_bytes. Pinning the flag
+# here keeps guests inside the host default cap by construction, in CI and
+# in a fresh checkout, not only on a host with a local toolchain config.
+#
+# A guest that needs a different maximum overrides it in its own build
+# script (see guest-fixtures/bigmem, whose 128 MiB must be rejected).
+# The 1 MiB stack matches MaximumStackBytes in WasmHostConfig.
+[target.wasm32-wasip1]
+rustflags = [
+    "-C", "link-arg=--max-memory=33554432",
+    "-C", "link-arg=-zstack-size=1048576",
+]
