@@ -71,5 +71,25 @@ namespace HordeForge.WasmHost.Tests
                 () => new WasmModHost(new TestGameHostApi(), config));
             Assert.Contains("LogSourcePrefix", ex.Message);
         }
+
+        [Fact]
+        public void EffectiveLimitsAreReadableFromTheHost()
+        {
+            // "wasm status" reports these, so they must reflect the
+            // configuration the engine was built with, not the code defaults
+            // a later file could have changed underneath the embedder.
+            var config = new WasmHostConfig
+            {
+                FuelPerCall = 250_000UL,
+                StaticMemoryMaximumBytes = 16UL * 1024 * 1024,
+                MaxModuleSizeBytes = 2048,
+                InheritGuestStandardStreams = true,
+            };
+            using var host = new WasmModHost(new TestGameHostApi(), config);
+            Assert.Equal(250_000UL, host.FuelPerCall);
+            Assert.Equal(16UL * 1024 * 1024, host.StaticMemoryMaximumBytes);
+            Assert.Equal(2048, host.MaxModuleSizeBytes);
+            Assert.True(host.InheritGuestStandardStreams);
+        }
     }
 }

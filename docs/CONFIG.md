@@ -14,9 +14,27 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   `[limits]` replace the code defaults at host start, so an operator may
   raise them; a manifest's `fuel_per_call` overrides the effective default
   within the host ceiling, and its `max_memory_bytes` can only tighten it.
+  A mod that asks for more fuel than the shared value gets is named in the
+  log at load, so the override is visible rather than inferred.
+- **Unknown keys** are tolerated outside `[limits]` (a manifest written for a
+  newer host still loads) and rejected inside it, where a typo such as
+  `fuel_percall` would otherwise leave the operator believing a cap is in
+  force that the engine never applies. An unknown key fails the same way a
+  malformed one does: per mod, the module is skipped; for the shared file,
+  see below.
+- **A bad `wasm.toml` is not silently replaced by the defaults.** The shared
+  file is the only place the host limits come from, so a file that exists
+  but cannot be parsed aborts the bridge start: the server keeps running and
+  no guest loads until the file is fixed. Falling back to the code defaults
+  would hand every guest a fuel budget and memory ceiling nobody wrote.
+- `wasm status` prints the limits the engine is actually running under (fuel
+  per call, memory ceiling, module size cap, guest stdio), and the same line
+  is logged at start. That is the check that the layering produced the limits
+  the operator intended.
 - A **new tunable is a new field**, not a new parse arm: the host binds the
   file onto `ModManifest` struct fields, so adding a supported key means
-  adding a field in one place.
+  adding a field in one place, and adding one to `[limits]` also means adding
+  it to the closed key list the manifest parser accepts.
 
 ## Files
 
@@ -56,6 +74,9 @@ version = "0.1.0"
 # Host-enforced caps. fuel_per_call overrides the effective default
 # (rejected above the 50,000,000 ceiling); max_memory_bytes can only
 # tighten the effective cap and is rejected below one wasm page (65536).
+# These two keys are the whole [limits] schema: any other key here (a
+# misspelling included) fails the load with the supported names, because
+# a limit that does not bind leaves the host cap in force instead.
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432

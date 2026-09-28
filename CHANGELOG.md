@@ -13,6 +13,10 @@ Codename: Quarantine (7dtd-wasm).
   `wasm status` and at shutdown (`HordeForge.WasmHost.Core.TickTelemetry`).
   Guest dispatch failures are now warnings that name their tick instead of
   info-level lines without one.
+- The limits in force are visible: `wasm status` prints fuel per call, the
+  memory ceiling, the module size cap, and whether guest stdio is
+  inherited, and the same line is logged at host start. `WasmModHost`
+  reads them back from the configuration the engine was built with.
 - Guest-driven host log lines (bot servant commands and their failures, the
   chat-rejection line) go through a per-source rate cap, with the dropped
   totals in `wasm status`. They were bounded only by the guest's fuel
@@ -63,6 +67,27 @@ Codename: Quarantine (7dtd-wasm).
   of the server, and a net id the game later reused to another entity
   kept clamping that entity's descent. `wasm status` now lists only the
   armed ids, not every id the servant still remembers.
+- A module initialized on its own (the start scan, `wasm reload`) read its
+  settings, its `config.toml`, and its log attribution from whichever mod
+  the host happened to have called last, or from no mod at all on a fresh
+  start. `WasmModHost.InitModule(id)` runs `on_enable` with the calling mod
+  set, and the host clears that state after every dispatch.
+- The sense position history is pruned by entity membership instead of a
+  size comparison. A tick where entities left while others joined kept the
+  departed ids, and a net id the game later reused was reported with a
+  vertical velocity derived from the previous occupant.
+- Guest rate limiter windows for sources that stopped writing are swept
+  once the table grows past its threshold, so unloading and reloading
+  modules no longer leaves one window per id ever seen.
+- A misspelled key in a manifest's `[limits]` table is rejected instead of
+  ignored. It used to leave the host cap in force where the operator wrote
+  a tighter one, and nothing in the log said so. Keys outside `[limits]`
+  stay tolerated, so a manifest written for a newer host still loads.
+- A shared `Mods/Wasm/wasm.toml` that exists but cannot be parsed now aborts
+  the bridge start instead of falling back to the code defaults, which
+  handed every guest a fuel budget and memory ceiling the operator never
+  wrote. The server keeps running and no guest loads until the file is
+  fixed.
 
 ### Changed
 

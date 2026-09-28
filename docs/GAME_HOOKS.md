@@ -39,7 +39,9 @@ into a one-minute window by `HordeForge.WasmHost.Core.TickTelemetry`:
 Silence from the bridge is therefore a fault, not the healthy state: a
 missing heartbeat means the tick hook stopped firing. The same summary is
 printed by `wasm status` on demand, alongside the per-module call, trap,
-and fuel counters. Guests that spam are rate capped; the running drop
+and fuel counters and the limits in force (fuel per call, memory ceiling,
+module size cap, guest stdio), read back from the running host and logged
+at start. Guests that spam are rate capped; the running drop
 totals surface in `wasm status` and every 100th dropped line is logged.
 
 ## Verified game API surface (V3.1.0, via tools/targetcheck)

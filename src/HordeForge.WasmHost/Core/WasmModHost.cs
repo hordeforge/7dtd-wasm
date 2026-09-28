@@ -145,6 +145,22 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public int MaxModuleSizeBytes => _config.MaxModuleSizeBytes;
 
+        /// <summary>
+        /// Fuel budget granted to a guest call that has no manifest of its
+        /// own, read back from the configuration the engine was built with.
+        /// </summary>
+        public ulong FuelPerCall => _config.FuelPerCall;
+
+        /// <summary>
+        /// Effective engine-wide memory ceiling in bytes, after the shared
+        /// limits file has been applied. Read back so an embedder can show
+        /// the limits actually in force rather than the code defaults.
+        /// </summary>
+        public ulong StaticMemoryMaximumBytes => _config.StaticMemoryMaximumBytes;
+
+        /// <summary>Whether guest WASI stdout/stderr reach the host console.</summary>
+        public bool InheritGuestStandardStreams => _config.InheritGuestStandardStreams;
+
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick
         {

@@ -690,6 +690,38 @@ greeting = ""hello""
         }
 
         [Theory]
+        [InlineData("fuel_per_call_ = 5000")]  // misspelled: the host cap would silently apply instead
+        [InlineData("fuel_percall = 5000")]
+        [InlineData("Fuel_per_call = 5000")]
+        [InlineData("max_memory = 1048576")]
+        [InlineData("fuel_per_call = 5000\nmax_memory_bytes = 1048576\nfuel_per_call_max = 1")]
+        public void MisspelledLimitsKeyIsRejected(string limitsBody)
+        {
+            // A limits table the host cannot bind must not load: the operator
+            // believes a cap is in force that the engine never applies.
+            WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits]\n" + limitsBody + "\n", "bad"));
+            Assert.Contains("unknown limits key", ex.Message);
+        }
+
+        [Fact]
+        public void UnknownLimitTableHeaderIsRejected()
+        {
+            Assert.Throws<WasmModLoadException>(
+                () => ModManifest.ParseToml("[limits.extra]\nk = 1\n", "bad"));
+        }
+
+        [Fact]
+        public void UnknownKeysOutsideLimitsStayTolerated()
+        {
+            // Forward compatibility outside [limits]: a manifest written for
+            // a newer host still loads, and its settings still resolve.
+            ModManifest m = ModManifest.ParseToml(
+                "name = \"x\"\n[future]\nflag = true\n[settings]\nmotto = \"go\"\n", "x");
+            Assert.Equal("go", m.Settings["motto"]);
+        }
+
+        [Theory]
         [InlineData("not toml")]
         [InlineData("[limits]\nfuel_per_call = 0\n")]
         [InlineData("[limits]\nfuel_per_call = -5\n")]

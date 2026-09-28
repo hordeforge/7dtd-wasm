@@ -9,8 +9,12 @@ namespace HordeForge.WasmHost.Registry
     /// guest module. The manifest is a trusted operator file: its limits
     /// never exceed the host caps (fuel_per_call overrides the effective
     /// default within the parser ceiling; max_memory_bytes only tightens
-    /// it). Unknown fields are tolerated; malformed values reject the
-    /// module with a specific reason.
+    /// it). Unknown fields outside [limits] are tolerated, so a manifest
+    /// written for a newer host still loads; malformed values and unknown
+    /// [limits] keys reject the module with a specific reason. A misspelled
+    /// limit is not a harmless extra field: it would silently leave the
+    /// host ceiling in force where the operator wrote a tighter one, so
+    /// [limits] is a closed table.
     ///
     /// TOML shape (canonical, docs/CONFIG.md, following the zdtd-server
     /// conventions: snake_case keys, [section] groups, defaults identical
@@ -28,6 +32,13 @@ namespace HordeForge.WasmHost.Registry
     public sealed class ModManifest
     {
         private const long MaxFuelPerCall = 50_000_000L;
+
+        /// <summary>
+        /// The closed set of [limits] keys. Anything else is a typo or a
+        /// limit this host does not enforce, and either way the operator
+        /// believes a cap is in force that the engine never applies.
+        /// </summary>
+        private static readonly string[] KnownLimitKeys = { "fuel_per_call", "max_memory_bytes" };
 
         private ModManifest()
         {
@@ -79,6 +90,14 @@ namespace HordeForge.WasmHost.Registry
 
         private static void BindLimits(ModManifest manifest, TomlTable limits)
         {
+            foreach (string key in limits.Keys)
+            {
+                if (Array.IndexOf(KnownLimitKeys, key) < 0)
+                {
+                    throw new FormatException("unknown limits key '" + key + "'; supported: " +
+                        string.Join(", ", KnownLimitKeys) + " (an unlisted key would leave the host cap in force instead)");
+                }
+            }
             if (limits.TryGet("fuel_per_call", out TomlValue fuel))
             {
                 manifest.FuelPerCall = (ulong)CheckFuel(fuel.AsInteger("limits.fuel_per_call"));

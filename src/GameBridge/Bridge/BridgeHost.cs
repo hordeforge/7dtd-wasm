@@ -127,7 +127,18 @@ namespace HordeForge.GameBridge.Bridge
                 _settings = new WasmSettingsProvider(sharedTomlPath);
 
                 var config = new WasmHostConfig();
-                ApplySharedLimits(config, sharedTomlPath);
+                if (!TryApplySharedLimits(config, sharedTomlPath))
+                {
+                    // The host's own limits file is the one piece of config
+                    // the host cannot run without an answer for: falling back
+                    // to the code defaults would quietly hand every guest a
+                    // fuel budget and memory ceiling the operator never
+                    // asked for. Refuse to start the host instead (the game
+                    // keeps running, no guest loads) and say what to fix.
+                    Log.Warning("[WasmHost] start aborted: fix " + TextSanitizer.Clean(sharedTomlPath) +
+                                " and restart the server; no guest modules are loaded");
+                    return;
+                }
                 _servant = new BotServant(() => _tick);
                 _gameApi = new GameHostApi(_settings, _servant);
                 _host = new WasmModHost(_gameApi, config);
@@ -143,6 +154,10 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 Started = true;
                 Log.Out("[WasmHost] started; loaded " + _host.ModIds.Count + " module(s) from " + WasmRoot);
+                // The limits actually in force, not the code defaults: they
+                // are the difference between the engine the operator meant
+                // and the one the layering produced.
+                Log.Out("[WasmHost] limits: " + EffectiveLimits());
             }
         }
 
@@ -266,6 +281,7 @@ namespace HordeForge.GameBridge.Bridge
                     return lines;
                 }
                 lines.Add("host started, modules dir: " + WasmRoot);
+                lines.Add("limits: " + EffectiveLimits());
                 foreach (string id in _host.ModIds)
                 {
                     if (_host.TryGetMod(id, out var mod) && mod != null)
@@ -459,7 +475,23 @@ namespace HordeForge.GameBridge.Bridge
             }
             _settings?.UpdateMod(id, manifest);
             _gameApi?.RegisterConfig(id, ReadRawConfig(id));
+            LogFuelOverride(id, manifest, host.FuelPerCall);
             return true;
+        }
+
+        /// <summary>
+        /// Logs a manifest that raises its fuel budget above the host default.
+        /// A per-mod fuel_per_call overrides the shared value by design, so
+        /// the operator sees which modules asked for more than wasm.toml
+        /// grants instead of finding out from a slow dispatch.
+        /// </summary>
+        private static void LogFuelOverride(string id, ModManifest? manifest, ulong hostFuel)
+        {
+            if (manifest != null && manifest.FuelPerCall.HasValue && manifest.FuelPerCall.Value > hostFuel)
+            {
+                Log.Out("[WasmHost] " + id + " raises fuel/call to " + manifest.FuelPerCall.Value +
+                        " over the host default " + hostFuel);
+            }
         }
 
         /// <summary>
@@ -569,14 +601,17 @@ namespace HordeForge.GameBridge.Bridge
         /// defaults before the engine is created (start time only; per-mod
         /// manifests can still tighten further at load). Load order follows
         /// the zdtd convention: code defaults -> wasm.toml -> wasm-mod.toml.
+        /// Returns false when the file exists but cannot be used, so the
+        /// caller can refuse to start rather than run the engine under limits
+        /// the operator did not write.
         /// </summary>
-        private static void ApplySharedLimits(WasmHostConfig config, string sharedPath)
+        private static bool TryApplySharedLimits(WasmHostConfig config, string sharedPath)
         {
             try
             {
                 if (!File.Exists(sharedPath))
                 {
-                    return;
+                    return true;
                 }
                 ModManifest shared = ModManifest.ParseToml(ManifestFiles.ReadRequired(sharedPath), "shared");
                 if (shared.FuelPerCall.HasValue)
@@ -587,19 +622,40 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     config.StaticMemoryMaximumBytes = shared.MaxMemoryBytes.Value;
                 }
+                return true;
             }
             catch (WasmModLoadException ex)
             {
-                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + TextSanitizer.Clean(ex.Message) + "; using code defaults");
+                Log.Warning("[WasmHost] invalid shared wasm.toml limits: " + TextSanitizer.Clean(ex.Message));
             }
             catch (Exception ex)
             {
-                // Same degradation as a malformed file: the bridge starts
-                // with code defaults instead of failing to start. The parser
-                // message quotes raw file text, so clean it like guest log
-                // output.
-                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + TextSanitizer.Clean(ex.Message) + "; using code defaults");
+                // Same verdict as a malformed file: the engine would run
+                // under the code defaults, not the configured ones. The
+                // parser message quotes raw file text, so clean it like guest
+                // log output.
+                Log.Warning("[WasmHost] cannot read shared wasm.toml: " + TextSanitizer.Clean(ex.Message));
             }
+            return false;
+        }
+
+        /// <summary>
+        /// The limits the engine is actually running under, for "wasm
+        /// status". Values come from the live host, so a shared file that
+        /// moved them and a per-mod manifest that tightened them are both
+        /// visible from one place.
+        /// </summary>
+        private static string EffectiveLimits()
+        {
+            WasmModHost? host = _host;
+            if (host == null)
+            {
+                return "none (host not started)";
+            }
+            return "fuel/call " + host.FuelPerCall +
+                   ", memory " + host.StaticMemoryMaximumBytes + " bytes" +
+                   ", module cap " + host.MaxModuleSizeBytes + " bytes" +
+                   ", guest stdio inherited " + (host.InheritGuestStandardStreams ? "yes" : "no");
         }
 
         /// <summary>

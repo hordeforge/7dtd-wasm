@@ -38,8 +38,11 @@ namespace HordeForge.WasmHost.Config
         /// false: the raw WASI path bypasses the bridge's per-module log rate
         /// cap entirely, so a hostile guest could flood the server console
         /// and logfile without bound. Guests should report through the
-        /// <c>log</c> import, which is capped; operators who accept the risk
-        /// (for example while debugging a trusted guest) can enable this.
+        /// <c>log</c> import, which is capped; an embedder that accepts the
+        /// risk (for example while debugging a trusted guest) can enable this
+        /// before constructing the host. The game bridge never sets it, and
+        /// no config file carries it, so a staged server always discards
+        /// guest standard streams; "wasm status" reports the value in force.
         /// When false, guest standard streams are discarded.
         /// </summary>
         public bool InheritGuestStandardStreams { get; set; } = false;
