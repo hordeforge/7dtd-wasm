@@ -28,7 +28,8 @@ auditable embed that enforces hard limits and exposes a narrow game API.
 `src/` holds two projects that depend one way on each other, and one folder
 per concern inside each. A folder is a namespace: the path under `src/` is
 the namespace below the assembly root, so a type sits in the folder that
-owns its concern and nowhere else.
+owns its concern and nowhere else. The gates and the guest side follow the
+same one-folder-one-concern shape, so the whole tree is laid out here.
 
 ```text
 src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
@@ -41,21 +42,26 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
   Core/                      the host itself: WasmModHost, WasmMod, the
                               per-call result and status types, tick telemetry.
                               The only area that references Wasmtime
-  Registry/                  mod metadata off disk: the manifest parser
-                              (MiniToml and the ModManifest it produces),
-                              module roots, the settings table, mod id
-                              validation, and two text helpers
-                              (UnicodeEscapes, TextSanitizer)
-  WasmModLoadException.cs    the types Core and Registry both raise, so they
-  WasmManifestException.cs   sit in the root namespace, in neither: a module
-  ManifestReadException.cs   refused at load, a manifest the parser rejected,
-                              and a manifest file that could not be read
+  Registry/                  mod metadata off disk: the bounded manifest read
+                              (ManifestFiles), the manifest parser (MiniToml
+                              and the ModManifest it produces), module roots,
+                              the settings table, mod id validation, and two
+                              text helpers (UnicodeEscapes, TextSanitizer)
+  WasmModLoadException.cs    the load failure Registry and Core both raise
+  WasmManifestException.cs   its subtype, for a manifest the parser rejected
+  ManifestReadException.cs   a manifest file that could not be read at all;
+                              the three stay together in the root namespace,
+                              in no folder, because a consumer catches the
+                              family there and README.md shows those catch
+                              sites
 
 src/GameBridge/              (net48) the in-game mod
   ModApi.cs                  the game's entry point
   Bridge/                    host wiring and the game side of the host API:
                               BridgeHost, GameHostApi, WasmSettingsProvider,
-                              NativeBootstrap, BotServant, GuestRateLimiter
+                              NativeBootstrap, BotServant, plus the three
+                              classes that carry no game reference:
+                              GuestRateLimiter, SenseRecordPicker, WorldTime
   Hooks/                     the Harmony patches
   Commands/                  the "wasm" console command
 
@@ -64,7 +70,30 @@ tools/                       the repository gates; each Python tool's tests
                              is the one C# project among them
 tests/HordeForge.WasmHost.Tests/
                              one net8 project, flat, one file per subject
-                             named <Subject>Tests.cs
+                             named <Subject>Tests.cs. Two files are not a
+                             subject: FuzzDriver.cs is the shared fuzz
+                             driver, TestGameHostApi.cs the IGameHostApi
+                             double the tests assert against
+
+samples/                     the guest side, one directory per module, each
+                             holding its source and the wasm-mod.toml that
+                             configures it (never its build output, which
+                             goes to samples/target/)
+  Cargo.toml                 the Rust workspace: guest-common, guest-hello
+                             and the five guest-fixtures crates
+  rust-toolchain.toml        the pinned channel, read by "make toolchain"
+  .cargo/config.toml         the link flags every guest carries, so a module
+                             stays inside the host's memory cap
+  guest-common/              helpers the Rust guests share
+  guest-hello/               the reference Rust guest (docs/GUEST_AUTHORS.md)
+  guest-fixtures/            one tiny Rust guest per host behavior under
+                             test: trap, fuel, strings, bigmem, noexports.
+                             A folder of crates, not a crate itself
+  guest-boss/                the C guest (guest-boss.c, compiled by zig cc)
+  guest-boss-zig/            the Zig guest (src/main.zig)
+  parachute/                 wasm-mod.toml only: the manifest for the
+  zdtd-fps-bot/              unmodified third-party modules built in the
+                             sibling checkout the Makefile points at
 ```
 
 The placement rules the layout exists to enforce:
@@ -79,11 +108,12 @@ The placement rules the layout exists to enforce:
   published-surface break and waits for the next minor (see CONTRIBUTING).
   Anything else in those three areas that needs a live module belongs in
   Core.
-- A file at the root of a project is an entry point or a type several
-  areas share: `ModApi` is where the game starts the mod,
-  `WasmModLoadException` is what a rejected module raises everywhere, and
-  the two manifest exceptions are thrown from the registry and caught by
-  the host and by embedders alike.
+- A file at the root of a project is an entry point or a type consumers
+  reach for from outside: `ModApi` is where the game starts the mod, and
+  the three load and manifest failure types sit beside each other in the
+  root so `catch (WasmModLoadException)` and its subtypes need no second
+  using. They are the only three: a new type with one caller area moves
+  into that area's folder.
 - `UnicodeEscapes` and `TextSanitizer` are in `Registry/` because that is
   where they have always been, not because the registry owns them:
   `UnicodeEscapes` is private to `MiniToml`, and no `Registry` type calls
@@ -94,11 +124,15 @@ The placement rules the layout exists to enforce:
 - `GameBridge` is net48 because it references game assemblies, so the net8
   test project cannot reference it. A bridge class that carries no game
   reference but needs suite coverage is source-linked into the test
-  project, as `GuestRateLimiter` is. That is the only accepted way to
-  cover bridge code from the host suite.
+  project, as `GuestRateLimiter`, `SenseRecordPicker` and `WorldTime` are.
+  That is the only accepted way to cover bridge code from the host suite,
+  and the list is explicit: a new game-reference-free bridge class is
+  listed in the test csproj beside those three, not discovered.
 - New host code goes in the folder that owns the concern, not in the
   nearest existing file. New guest-facing surface goes under `Abi/` alone,
-  because [docs/ABI.md](ABI.md) is canonical for it.
+  because [docs/ABI.md](ABI.md) is canonical for it. A new sample guest is
+  a new directory under `samples/` with its manifest beside its source, and
+  a Rust one joins the workspace members in `samples/Cargo.toml`.
 
 ## Host library (HordeForge.WasmHost)
 
