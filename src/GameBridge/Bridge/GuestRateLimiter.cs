@@ -242,7 +242,10 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public void ForgetSource(string source)
         {
-            _windows.Remove(source);
+            lock (_gate)
+            {
+                _windows.Remove(source);
+            }
         }
 
         /// <summary>

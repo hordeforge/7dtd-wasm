@@ -900,6 +900,16 @@ namespace HordeForge.GameBridge.Bridge
         private static bool TryReadManifest(string id, out ModManifest? manifest)
         {
             string dir = ResolveModuleDir(id);
+            if (dir.Length == 0)
+            {
+                // No module directory resolved, so there is no manifest to
+                // read. Combining onto the empty path would instead resolve
+                // "wasm-mod.toml" against the server process's working
+                // directory, which is the install root, and parse whatever
+                // sits there as this module's limits.
+                manifest = null;
+                return false;
+            }
             string tomlPath = Path.Combine(dir, "wasm-mod.toml");
             try
             {

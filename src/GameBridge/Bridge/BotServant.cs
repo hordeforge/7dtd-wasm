@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using HordeForge.WasmHost.Abi;
 using HordeForge.WasmHost.Core;
+using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge
 {
@@ -200,6 +201,12 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return false;
             }
+            // Every line this servant writes quotes the command or a token
+            // parsed out of it, and a command is guest-written text: it is
+            // cleaned here, at the entry point, so no parse path can put a
+            // raw control character into the log. Cleaning twice (the bridge
+            // already cleaned what it passes in) is a no-op.
+            command = TextSanitizer.Clean(command);
             bool isBot = command.StartsWith("bot ", StringComparison.Ordinal);
             handled = true;
             lock (_gate)

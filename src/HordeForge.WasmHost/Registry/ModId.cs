@@ -14,7 +14,9 @@ namespace HordeForge.WasmHost.Registry
     /// the Mods/Wasm prefix and point the module path at another drive's
     /// working directory), no dot-only segments, no control characters
     /// (C0, DEL, C1) that could forge log lines or drive terminals through
-    /// the guest log and status output paths, and no invisible format
+    /// the guest log and status output paths, no Unicode line or paragraph
+    /// separators (they break a line the same way a newline does), and no
+    /// invisible format
     /// characters (zero-width space/joiners, word joiners, bidi controls,
     /// U+FEFF) or variation selectors: those render as nothing, so two ids
     /// that look identical could otherwise coexist as distinct registry
@@ -88,6 +90,14 @@ namespace HordeForge.WasmHost.Registry
                 // every plane-14 selector/tag character (they all encode
                 // with the high surrogate 0xDB40).
                 if ((c >= '\uFE00' && c <= '\uFE0F') || c == '\uDB40')
+                {
+                    return false;
+                }
+                // The Unicode line and paragraph separators are not C0
+                // controls and not format characters, but they break a line
+                // everywhere text is laid out, so an id carrying one splits
+                // a log line the same way a newline would.
+                if (c == '\u2028' || c == '\u2029')
                 {
                     return false;
                 }

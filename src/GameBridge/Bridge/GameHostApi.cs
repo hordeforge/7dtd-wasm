@@ -195,8 +195,9 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Drops every per-module cap window belonging to one module id:
-        /// its log, SimCommand, and sense windows, and its dropped totals
-        /// in "wasm status". Called on unload and before reload, so a fresh
+        /// its log, SimCommand, sense, chat-rejection, and config-read-failure
+        /// windows, and its dropped totals in "wasm status". Called on
+        /// unload and before reload, so a fresh
         /// load generation starts with a full budget instead of inheriting
         /// the previous generation's window (a module reloaded inside the
         /// same second the old one saturated its cap would be throttled
@@ -208,6 +209,11 @@ namespace HordeForge.GameBridge.Bridge
             LogLimiter.ForgetSource(_logSourcePrefix + "/" + modId);
             CommandLimiter.ForgetSource(modId);
             SenseLimiter.ForgetSource(modId);
+            // The two caps keyed by the module id itself, so a reloaded
+            // instance does not start inside the window its previous
+            // generation saturated and have its first lines dropped.
+            ChatRejectLimiter.ForgetSource(modId);
+            ConfigErrorLimiter.ForgetSource(GuestRateLimiter.SourceKey("config/", modId));
         }
 
         /// <summary>

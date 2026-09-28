@@ -31,6 +31,7 @@ namespace HordeForge.WasmHost.Tests
         {
             "\0", "\n", "\r", "\t", "\u0001", "\u007f", "\u0085", "\u009b", "\u200b",
             "\u202a", "\u202e", "\u2066", "\u2069", "\ufeff", "\ufe0f", "\ud83d\ude00",
+            "\u2028", "\u2029",
             "\ud800", "\udfff", "/", "\\", ":", ".", "..", " ", "id", "wasm/hello", "C:name",
             "\u0301", "€", "\U0001F600", "0", "-", "#", "=", "0.0",
         };
@@ -148,7 +149,8 @@ namespace HordeForge.WasmHost.Tests
         {
             bool control = c < ' ' || c == '\x7f' || (c >= '\u0080' && c <= '\u009f');
             bool invisible = (c >= '\u202a' && c <= '\u202e') || (c >= '\u2066' && c <= '\u2069') || c == '\ufeff';
-            return control || invisible;
+            bool lineBreak = c == '\u2028' || c == '\u2029';
+            return control || invisible || lineBreak;
         }
     }
 }

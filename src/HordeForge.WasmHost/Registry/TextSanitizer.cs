@@ -3,7 +3,8 @@ using System.Text;
 namespace HordeForge.WasmHost.Registry
 {
     /// <summary>
-    /// Strips C0 control characters, DEL, the C1 control range, and the
+    /// Strips C0 control characters, DEL, the C1 control range, the Unicode
+    /// line and paragraph separators, and the
     /// invisible bidi controls from guest- or client-supplied text before it
     /// reaches the server log, the console, or global chat: raw newlines
     /// would let a mod forge log lines attributed to other subsystems, and
@@ -46,6 +47,20 @@ namespace HordeForge.WasmHost.Registry
             return c < ' ' || c == '\x7f' || (c >= '\u0080' && c <= '\u009f');
         }
 
+        /// <summary>
+        /// U+2028 and U+2029. They are not C0 controls, so the control
+        /// filter above leaves them, but every consumer that renders a log
+        /// line, a console line, or chat in a text layout treats them as line
+        /// breaks (a browser's JavaScript string view, a terminal in
+        /// line-wrapping mode, most log viewers). A guest that puts one in a
+        /// log or chat message forges exactly the split the C0 filter
+        /// exists to prevent.
+        /// </summary>
+        private static bool IsUnicodeLineBreak(char c)
+        {
+            return c == '\u2028' || c == '\u2029';
+        }
+
         /// <summary>Zero-width characters that reorder or hide the text around them.</summary>
         private static bool IsInvisibleFormat(char c)
         {
@@ -56,7 +71,7 @@ namespace HordeForge.WasmHost.Registry
 
         private static bool IsStripped(char c)
         {
-            return IsControl(c) || IsInvisibleFormat(c);
+            return IsControl(c) || IsUnicodeLineBreak(c) || IsInvisibleFormat(c);
         }
 
         private static int FirstControlIndex(string text)

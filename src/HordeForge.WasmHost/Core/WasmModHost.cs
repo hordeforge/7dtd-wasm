@@ -569,7 +569,7 @@ namespace HordeForge.WasmHost.Core
                     // nullable value-type local at a loop back-edge.
                     if (invoke(mod) is ModRunResult result)
                     {
-                        results.Add(result);
+                        results.Add(result.Value);
                     }
                 }
             }

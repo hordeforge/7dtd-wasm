@@ -54,6 +54,10 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("\u009b31mcsi")]
         [InlineData("trailing\u009f")]
         [InlineData("trailing\u007f")]
+        // Unicode line and paragraph separators: not controls, but they
+        // break a log line wherever the id is rendered.
+        [InlineData("bo\u2028ss")]
+        [InlineData("bo\u2029ss")]
         // Invisible format characters (Cf): zero-width space, joiners, word
         // joiner, bidi overrides/isolates, soft hyphen, U+FEFF. All render
         // as nothing, so "bo" + one of these + "ss" must not coexist with a

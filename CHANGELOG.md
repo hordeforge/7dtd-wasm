@@ -167,6 +167,24 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   TRY003, a style preference about message length, off) and `RSE` are
   enabled; both pass the tree today, so control flow inside a `try` and a
   raised-instead-of-returned error now fail `make check-ci`.
+- The Unicode line and paragraph separators (U+2028, U+2029) survived
+  `TextSanitizer`, so a guest could split a server log line, a console line,
+  or a global chat message with a character the C0 filter never saw. They
+  are replaced with '?' like a raw newline, and a mod id carrying one is
+  rejected, since an id lands in the log source tag and in a module path.
+- The bot servant wrote guest command text into the server log from several
+  parse paths, relying on the caller to have cleaned it. `BotServant.TryQueue`
+  cleans the command itself, so no parse path can put a raw control
+  character into a log line.
+- `wasm reload` did not drop a module's chat-rejection or config-read-failure
+  rate window, so a reloaded instance started inside the window its previous
+  generation had saturated and had its first lines dropped. `ForgetModule`
+  resets every per-module window.
+- `GuestRateLimiter.ForgetSource` removed from the window table without the
+  limiter's lock, so an unload racing a guest write could corrupt the table.
+- A module whose directory resolved to nothing would have had its manifest
+  read from the server process's working directory (`Path.Combine("", name)`
+  is a relative path). `TryReadManifest` refuses instead.
 - `make dist` staged the native engine out of a hardcoded
   `$(HOME)/.nuget/packages`, which is not where NuGet restores to when
   `NUGET_PACKAGES` points somewhere else (CI caches, a shared package

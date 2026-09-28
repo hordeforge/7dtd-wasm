@@ -54,6 +54,17 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Theory]
+        // U+2028 and U+2029 are not C0 controls, but every renderer that
+        // breaks a log line or a chat message treats them as one, so a guest
+        // using them forges the same split the newline filter prevents.
+        [InlineData("deployed\u2028ERR server crashed", "deployed?ERR server crashed")]
+        [InlineData("a\u2029b", "a?b")]
+        public void UnicodeLineSeparatorsBecomeQuestionMarks(string text, string expected)
+        {
+            Assert.Equal(expected, TextSanitizer.Clean(text));
+        }
+
+        [Theory]
         // Zero-width space and joiner carry meaning in real typography
         // (emoji sequences, line breaking), so they must survive.
         [InlineData("a\u200bb")]
