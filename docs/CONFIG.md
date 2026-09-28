@@ -55,7 +55,7 @@ version = "0.1.0"
 
 # Host-enforced caps. fuel_per_call overrides the effective default
 # (rejected above the 50,000,000 ceiling); max_memory_bytes can only
-# tighten the effective cap.
+# tighten the effective cap and is rejected below one wasm page (65536).
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432

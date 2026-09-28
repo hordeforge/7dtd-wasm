@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HordeForge.WasmHost.Core;
 
 namespace HordeForge.WasmHost.Registry
 {
@@ -19,7 +20,7 @@ namespace HordeForge.WasmHost.Registry
     ///
     ///   [limits]                       (host-enforced caps)
     ///   fuel_per_call = 1000000        (optional, must be >= 1)
-    ///   max_memory_bytes = 33554432    (optional, must be >= 1)
+    ///   max_memory_bytes = 33554432    (optional, at least one wasm page)
     ///
     ///   [settings]                     (operator policy served to the guest
     ///   boss_name = "maci"              through the get_setting host import)
@@ -122,9 +123,16 @@ namespace HordeForge.WasmHost.Registry
 
         private static long CheckMemory(long value)
         {
-            if (value < 1)
+            // The floor is one wasm page, the same bound the host enforces on
+            // its own ceiling. A per-mod value below it can only ever reject
+            // the module, and the shared wasm.toml value becomes the engine's
+            // memory ceiling, where the host constructor would throw and take
+            // the bridge start down with it. Rejecting the file here keeps
+            // both callers on the documented "invalid file, keep defaults" path.
+            if (value < WasmModHost.WasmPageBytes)
             {
-                throw new FormatException("limits.max_memory_bytes must be >= 1");
+                throw new FormatException("limits.max_memory_bytes must be at least one wasm page (" +
+                    WasmModHost.WasmPageBytes + " bytes); smaller ceilings reject every module");
             }
             return value;
         }

@@ -127,6 +127,17 @@ Codename: Quarantine (7dtd-wasm).
 - `wasm load` skips a module tree it cannot enumerate (permissions, a
   modlet being replaced) with a warning instead of aborting the whole
   scan and leaving the host unstarted.
+- The server-side glide clamp measured the fall against a single tick while
+  `vy` is averaged over every tick since the entity's stored position, so a
+  player sampled several ticks after the last one (sense called below tick
+  rate) was lifted back up even while sinking within the glide rate. The
+  drop budget now covers the same interval `vy` was measured over.
+- `limits.max_memory_bytes` was accepted down to 1 byte. As a per-mod value
+  it could only reject the module, but the shared `wasm.toml` value becomes
+  the engine's memory ceiling, where the host constructor threw and took the
+  bridge start down with it. The manifest parser now rejects anything below
+  one wasm page, the bound the host already enforces, so an invalid file
+  keeps the documented "log it and use the defaults" behavior.
 - The CycloneDX SBOM now carries an SPDX license per NuGet component.
   `tools/sbom.py` holds the table and fails the build when a package
   reaches a committed lock file without a recorded license, and the SBOM

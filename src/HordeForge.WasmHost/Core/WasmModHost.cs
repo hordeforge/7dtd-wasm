@@ -26,7 +26,8 @@ namespace HordeForge.WasmHost.Core
     /// </summary>
     public sealed class WasmModHost : IDisposable
     {
-        private const long WasmPageBytes = 65536;
+        /// <summary>Size of one wasm page, the smallest memory a module can declare (64 KiB).</summary>
+        public const long WasmPageBytes = 65536;
 
         /// <summary>wasm32 memory ceiling: 65536 pages of 64 KiB.</summary>
         private const ulong Wasm32MemoryCeiling = 65536UL * 65536;

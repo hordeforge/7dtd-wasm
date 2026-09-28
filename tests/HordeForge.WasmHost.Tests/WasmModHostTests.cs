@@ -598,6 +598,8 @@ greeting = ""hello""
         [InlineData("[limits]\nfuel_per_call = -5\n")]
         [InlineData("[limits]\nfuel_per_call = 99999999999\n")]
         [InlineData("[limits]\nmax_memory_bytes = \"big\"\n")]
+        [InlineData("[limits]\nmax_memory_bytes = 0\n")]
+        [InlineData("[limits]\nmax_memory_bytes = 65535\n")]
         [InlineData("[settings]\nbad = [1, 2]\n")]
         [InlineData("key without equals\n")]
         [InlineData("future = [abc\n")]

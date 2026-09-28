@@ -165,7 +165,9 @@ boss_name = "maci"
   >= 1 and at most 50,000,000 (the host ceiling, so a runaway module cannot
   be given an unbounded budget by a careless operator).
 - `limits.max_memory_bytes` is an additional ceiling applied on top of the
-  host cap: the module's declared memory maximum must fit under both.
+  host cap: the module's declared memory maximum must fit under both. Must
+  be at least one wasm page (65536 bytes), the same bound the host enforces
+  on its own ceiling; a smaller value rejects the file.
 - `settings` values are served to the guest through the `get_setting`
   import, per mod (the mod's own settings win over shared `wasm.toml`
   settings).

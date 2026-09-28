@@ -396,6 +396,11 @@ namespace HordeForge.GameBridge.Bridge
         // could be refilled underneath it.
         private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
             new Dictionary<int, (long, UnityEngine.Vector3)>();
+        // Largest tick gap a vy sample is taken over. A larger gap (the bot
+        // was unloaded, the server hitched) is a teleport-scale move, not a
+        // fall, so it reports vy 0 and leaves the stored position alone.
+        private const long MaxVelocityDeltaTicks = 10;
+
         private readonly HashSet<int> _seenIds = new HashSet<int>();
         private readonly List<int> _staleIds = new List<int>();
         private readonly List<int> _deadIds = new List<int>();
@@ -453,7 +458,7 @@ namespace HordeForge.GameBridge.Bridge
             if (known)
             {
                 long dtTicks = tick - last.Tick;
-                if (dtTicks > 0 && dtTicks <= 10)
+                if (dtTicks > 0 && dtTicks <= MaxVelocityDeltaTicks)
                 {
                     // 20 TPS bridge tick; blocks per second.
                     elapsedTicks = (int)dtTicks;
@@ -477,7 +482,7 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Caps a gliding player's descent at the sink rate by nudging the
-        /// server entity up when it dropped too far since the previous tick.
+        /// server entity up when it dropped too far since the last sample.
         /// Belt and suspenders beside the client slow-fall patch (which owns
         /// the visible glide on client-owned physics); the sense record keeps
         /// the real vy (the parachute mod arms on it). Best effort: only
@@ -496,7 +501,7 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return;
             }
-            if (vy >= -SinkVyMps)
+            if (vy >= -SinkVyMps || elapsedTicks <= 0)
             {
                 return;
             }
