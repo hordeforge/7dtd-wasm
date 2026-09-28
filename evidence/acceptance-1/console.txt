@@ -7,7 +7,7 @@ Logon successful.
 *** Server version: V 3.1.0 (b14) Compatibility Version: V 3.1.0
 *** Dedicated server only build
 
-Server IP:   118.189.191.239
+Server IP:   <server-ip-redacted>
 Server port: 26900
 Max players: 4
 Game mode:   GameModeSurvival

@@ -612,7 +612,7 @@ Option AISmellMode: 2/Jog (default: 3/Run)
 2026-08-30T02:54:06 8.408 INF Max View Distance: 1000
 2026-08-30T02:54:06 8.408 INF Regen all on new world: False
 2026-08-30T02:54:06 8.408 INF StartGame done
-2026-08-30T02:54:06 8.578 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243787489771, server SteamID=90291816779749406, server public IP=11*.18*.19*.23*, server port=26900
+2026-08-30T02:54:06 8.578 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243787489771, server SteamID=<steam-id-redacted>, server public IP=11*.18*.19*.23*, server port=26900
 2026-08-30T02:54:06 8.581 INF [Steamworks.NET] Lobby entered: 109775243787489771
 2026-08-30T02:54:06 8.587 INF Received mapping data for: blocks
 2026-08-30T02:54:06 8.592 INF Received mapping data for: items
@@ -789,7 +789,7 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T02:54:24 26.498 INF 60sec delta: 0,current: 976610,desired: 976610
 2026-08-30T02:54:24 26.499 INF [Backtrace] Updated Statistics
 2026-08-30T02:54:24 26.702 INF [PlayerInteractions] persistent player login
-2026-08-30T02:54:24 26.702 INF [Discord] Global lobby: 118.189.191.239_F39552C6F65E2542A1AB4DCFB60FE653
+2026-08-30T02:54:24 26.702 INF [Discord] Global lobby: <server-ip-redacted>_F39552C6F65E2542A1AB4DCFB60FE653
 2026-08-30T02:54:24 26.709 INF [7dtd-fastconnect] boot hb ticks=5222 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
 2026-08-30T02:54:24 26.714 INF OpenSpawnWindow
 2026-08-30T02:54:25 27.093 INF Dymesh: Warming dynamic mesh

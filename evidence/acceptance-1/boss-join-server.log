@@ -1355,7 +1355,7 @@ steamclient.so: cannot open shared object file: No such file or directory
 Shutdown handler: initialize.
 08/24 12:26:15 minidumps folder is set to /tmp/dumps
 Setting breakpad minidump AppID = 251570
-SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loaded no]
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  <steam-id-redacted> [API loaded no]
 [S_API FAIL] Tried to access Steam interface SteamNetworkingUtils004 before SteamAPI_Init succeeded.
 2026-08-24T12:26:15 22.653 INF [Steamworks.NET] Registering auth callbacks
 2026-08-24T12:26:15 22.655 INF Localization language from platform: english
@@ -1373,8 +1373,8 @@ SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loa
 2026-08-24T12:26:15 22.692 INF Dymesh: Mesh location: /root/.local/share/7DaysToDie/Saves/Navezgane/WasmAcceptance1/DynamicMeshes/
 2026-08-24T12:26:15 22.694 INF [Web] Webserver not started, WebDashboardEnabled set to false
 2026-08-24T12:26:15 22.695 INF StartGame done
-2026-08-24T12:26:15 23.248 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=90291509469567006, public IP=11*.18*.19*.23*
-2026-08-24T12:26:15 23.259 INF [Discord] Global lobby: 118.189.191.239_C964F48E7C9DF040B9E20DF537D48204
+2026-08-24T12:26:15 23.248 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=<steam-id-redacted>, public IP=11*.18*.19*.23*
+2026-08-24T12:26:15 23.259 INF [Discord] Global lobby: <server-ip-redacted>_C964F48E7C9DF040B9E20DF537D48204
 2026-08-24T12:26:16 23.447 INF [wasm] hello mod alive at tick 36900 (world 7000)
 2026-08-24T12:26:16 23.697 INF Dymesh: Warming dynamic mesh
 2026-08-24T12:26:16 23.697 INF Dymesh: Creating dynamic mesh manager

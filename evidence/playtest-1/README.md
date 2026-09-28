@@ -4,6 +4,14 @@ Goal: run the unmodified zdtd parachute module end to end on a live 7DTD
 dedicated server driven by a real stock client through the `7dtd-playtest`
 orchestrator, and capture evidence.
 
+## Redaction
+
+The logs are the game's own output, with two kinds of value replaced by a
+placeholder: the Steam account identifiers (`<steam-id-redacted>`) and the
+server's public address (`<server-ip-redacted>`). Both identify a person
+without being needed to read what the run proves. Player names, entity ids,
+tick lines, and the guest's own messages are untouched.
+
 ## What was proven (passing run, 2026-09-04, exit=0 pass=3)
 
 The full parachute suite passed on a real server (managed Safehouse pair

@@ -615,7 +615,7 @@ Option AISmellMode: 2/Jog (default: 3/Run)
 2026-08-30T03:21:15 8.374 INF StartGame done
 2026-08-30T03:21:15 8.514 INF Received mapping data for: blocks
 2026-08-30T03:21:15 8.519 INF Received mapping data for: items
-2026-08-30T03:21:15 8.580 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243790252281, server SteamID=90291817226830878, server public IP=11*.18*.19*.23*, server port=26900
+2026-08-30T03:21:15 8.580 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243790252281, server SteamID=<steam-id-redacted>, server public IP=11*.18*.19*.23*, server port=26900
 2026-08-30T03:21:15 8.584 INF [Steamworks.NET] Lobby entered: 109775243790252281
 2026-08-30T03:21:15 8.934 INF Received config file 'events' from server. Len: 161
 2026-08-30T03:21:15 8.934 INF Received config file 'materials' from server. Len: 4144
@@ -787,7 +787,7 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T03:21:34 27.300 INF 60sec delta: 0,current: 976610,desired: 976610
 2026-08-30T03:21:34 27.301 INF [Backtrace] Updated Statistics
 2026-08-30T03:21:34 27.527 INF [PlayerInteractions] persistent player login
-2026-08-30T03:21:34 27.527 INF [Discord] Global lobby: 118.189.191.239_8AF08A84FB46E24696DE91880B882D8D
+2026-08-30T03:21:34 27.527 INF [Discord] Global lobby: <server-ip-redacted>_8AF08A84FB46E24696DE91880B882D8D
 2026-08-30T03:21:34 27.628 WRN [EntityAsync] force spawning pending entity zombieSoldier  id=176 pos=(850.2, 61.2, 642.5)
 2026-08-30T03:21:34 27.653 WRN [EntityAsync] force spawning pending entity zombieSoldier  id=177 pos=(850.8, 61.2, 643.4)
 2026-08-30T03:21:34 27.655 WRN [EntityAsync] force spawning pending entity zombieSoldier  id=178 pos=(850.0, 61.2, 643.3)

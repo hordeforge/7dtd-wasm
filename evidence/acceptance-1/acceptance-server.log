@@ -1387,7 +1387,7 @@ steamclient.so: cannot open shared object file: No such file or directory
 Shutdown handler: initialize.
 08/24 09:11:47 minidumps folder is set to /tmp/dumps
 Setting breakpad minidump AppID = 251570
-SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loaded no]
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  <steam-id-redacted> [API loaded no]
 [S_API FAIL] Tried to access Steam interface SteamNetworkingUtils004 before SteamAPI_Init succeeded.
 2026-08-24T09:11:47 26.627 INF [Steamworks.NET] Registering auth callbacks
 2026-08-24T09:11:47 26.629 INF Localization language from platform: english
@@ -1407,8 +1407,8 @@ SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loa
 2026-08-24T09:11:47 26.652 INF StartGame done
 2026-08-24T09:11:47 26.654 INF [EOS] Server registered, session: aef93102810640ec89d9d1ae06d1f430, 56 attributes
 2026-08-24T09:11:47 26.656 INF [EOS] Session address: 11*.18*.19*.23*
-2026-08-24T09:11:48 27.205 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=90291500394261534, public IP=11*.18*.19*.23*
-2026-08-24T09:11:48 27.211 INF [Discord] Global lobby: 118.189.191.239_F0A608D104EDFE4FBE4BE4AB6309CEDE
+2026-08-24T09:11:48 27.205 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=<steam-id-redacted>, public IP=11*.18*.19*.23*
+2026-08-24T09:11:48 27.211 INF [Discord] Global lobby: <server-ip-redacted>_F0A608D104EDFE4FBE4BE4AB6309CEDE
 2026-08-24T09:11:48 27.654 INF Dymesh: Warming dynamic mesh
 2026-08-24T09:11:48 27.654 INF Dymesh: Creating dynamic mesh manager
 2026-08-24T09:11:48 27.657 INF Dymesh: Awake

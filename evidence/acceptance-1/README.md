@@ -11,6 +11,14 @@ pattern. The modlet and the `Wasm` module folder were bind-mounted into the
 container's `Mods/`; the native Wasmtime library path was provided as a
 process-start `LD_LIBRARY_PATH` (see `run_acceptance.sh`).
 
+## Redaction
+
+The logs are the game's own output, with two kinds of value replaced by a
+placeholder: the Steam account identifiers (`<steam-id-redacted>`) and the
+server's public address (`<server-ip-redacted>`). Both identify a person
+without being needed to read what the run proves. Player names, entity ids,
+tick lines, and the guest's own messages are untouched.
+
 ## Evidence
 
 | File | What it shows |

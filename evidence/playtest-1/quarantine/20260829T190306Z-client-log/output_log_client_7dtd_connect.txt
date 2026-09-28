@@ -615,7 +615,7 @@ Option AISmellMode: 2/Jog (default: 3/Run)
 2026-08-30T03:00:04 8.179 INF StartGame done
 2026-08-30T03:00:04 8.331 INF Received mapping data for: blocks
 2026-08-30T03:00:04 8.347 INF Received mapping data for: items
-2026-08-30T03:00:04 8.383 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243788048438, server SteamID=90291817226830878, server public IP=11*.18*.19*.23*, server port=26900
+2026-08-30T03:00:04 8.383 INF [Steamworks.NET] Lobby creation succeeded, LobbyID=109775243788048438, server SteamID=<steam-id-redacted>, server public IP=11*.18*.19*.23*, server port=26900
 2026-08-30T03:00:04 8.386 INF [Steamworks.NET] Lobby entered: 109775243788048438
 2026-08-30T03:00:05 8.741 INF Received config file 'events' from server. Len: 161
 2026-08-30T03:00:05 8.741 INF Received config file 'materials' from server. Len: 4144
@@ -790,7 +790,7 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T03:00:21 25.385 INF 60sec delta: 0,current: 976610,desired: 976610
 2026-08-30T03:00:21 25.386 INF [Backtrace] Updated Statistics
 2026-08-30T03:00:21 25.626 INF [PlayerInteractions] persistent player login
-2026-08-30T03:00:21 25.626 INF [Discord] Global lobby: 118.189.191.239_8AF08A84FB46E24696DE91880B882D8D
+2026-08-30T03:00:21 25.626 INF [Discord] Global lobby: <server-ip-redacted>_8AF08A84FB46E24696DE91880B882D8D
 2026-08-30T03:00:21 25.639 INF OpenSpawnWindow
 2026-08-30T03:00:22 26.020 INF Dymesh: Warming dynamic mesh
 2026-08-30T03:00:22 26.020 INF Dymesh: Creating dynamic mesh manager

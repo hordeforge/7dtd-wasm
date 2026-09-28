@@ -92,7 +92,9 @@ The bridge patches `GameManager.RequestToSpawnPlayer` (verified:
 `void(ClientInfo, int, PlayerProfile, int)`) with a Harmony postfix
 (`Hooks/PlayerSpawnHook`). When a player requests to spawn into the world,
 the handler reads `ClientInfo.playerName` and dispatches it to every guest
-that exports the optional `on_player_join` handler.
+that exports the optional `on_player_join` handler. The join log line records
+the entity id and that the dispatch happened, not the name: a name in the
+server log outlives the session and identifies a player.
 
 Hook history (found live in the acceptance run): `GameManager.OnClientSpawned`
 does not fire on the dedicated server, and neither does the

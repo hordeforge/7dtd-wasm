@@ -35,6 +35,15 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 | `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 Unicode code points are rejected (an emoji counts as one) |
 | `get_join_player_name` | `(out_ptr: i32, out_cap: i32) -> i32` | During an `on_player_join` call: the joining player's name written into the guest buffer. Returns byte count, -1 no event, -2 buffer too small |
 
+The join name is the only personal data a guest can read: it is the in-game
+name of a player who just spawned, it is reachable only from inside that
+guest's own `on_player_join` call, and the host clears it when the call
+returns (`WasmModHost.DispatchPlayerJoin`), so no later import reports it.
+Every loaded guest that exports `on_player_join` sees every join, and a guest
+that has no use for names should not export the handler. The host does not
+write the name to the server log (see "Player join events" in
+docs/GAME_HOOKS.md); what a guest logs with it is the guest's own doing.
+
 Strings are passed as `(pointer, length)` pairs into the **guest's own
 linear memory**; the host reads exactly `len` bytes starting at `ptr` and
 never touches guest memory beyond that range. For `get_setting`, the guest

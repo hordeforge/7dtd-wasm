@@ -809,7 +809,7 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-09-04T11:00:24 27.163 INF 60sec delta: 0,current: 976610,desired: 976610
 2026-09-04T11:00:24 27.164 INF [Backtrace] Updated Statistics
 2026-09-04T11:00:24 27.399 INF [PlayerInteractions] persistent player login
-2026-09-04T11:00:24 27.400 INF [Discord] Global lobby: 118.189.191.239_1D12B0756DAD7247B602E5964995AD61
+2026-09-04T11:00:24 27.400 INF [Discord] Global lobby: <server-ip-redacted>_1D12B0756DAD7247B602E5964995AD61
 2026-09-04T11:00:24 27.417 INF OpenSpawnWindow
 2026-09-04T11:00:25 27.747 INF Dymesh: Warming dynamic mesh
 2026-09-04T11:00:25 27.748 INF Dymesh: Creating dynamic mesh manager

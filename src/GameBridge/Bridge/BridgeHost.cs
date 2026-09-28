@@ -295,7 +295,13 @@ namespace HordeForge.GameBridge.Bridge
                 // the acceptance run: the Harmony postfix must not declare
                 // parameters by names the target does not have).
                 int entityId = clientInfo.entityId;
-                Log.Out("[WasmHost] player spawned: " + TextSanitizer.Clean(name) + " (entity " + entityId + ")");
+                // The name identifies a player, and the server log outlives
+                // the session (it is quoted into bug reports and kept with
+                // the server-data folder), so it is not written here. The
+                // entity id is what the dispatch is keyed on and cannot name
+                // a player on its own; the guests still receive the name
+                // through the join handler, which is the documented ABI.
+                Log.Out("[WasmHost] player spawned (entity " + entityId + "); name dispatched to guests");
                 foreach (var result in host.DispatchPlayerJoin(entityId, name))
                 {
                     if (!result.Ok)

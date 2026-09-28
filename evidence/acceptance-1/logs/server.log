@@ -1827,7 +1827,7 @@ steamclient.so: cannot open shared object file: No such file or directory
 Shutdown handler: initialize.
 08/24 14:17:27 minidumps folder is set to /tmp/dumps
 Setting breakpad minidump AppID = 251570
-SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loaded no]
+SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  <steam-id-redacted> [API loaded no]
 [S_API FAIL] Tried to access Steam interface SteamNetworkingUtils004 before SteamAPI_Init succeeded.
 2026-08-24T14:17:27 30.711 INF [Steamworks.NET] Registering auth callbacks
 2026-08-24T14:17:27 30.713 INF Localization language from platform: english
@@ -1860,8 +1860,8 @@ SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  76561197960265728 [API loa
 2026-08-24T14:17:28 31.095 INF [WasmHost] bot 174 shot 171 dmg=12
 2026-08-24T14:17:28 31.345 INF [WasmHost] bot 172 shot 171 dmg=12
 2026-08-24T14:17:28 31.345 INF [WasmHost] bot 172 shot 171 dmg=12
-2026-08-24T14:17:28 31.347 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=90291513709531166, public IP=11*.18*.19*.23*
-2026-08-24T14:17:28 31.362 INF [Discord] Global lobby: 118.189.191.239_9F06C1218830C64EB8AA3CF1E3451FF6
+2026-08-24T14:17:28 31.347 INF [Steamworks.NET] GameServer.LogOn successful, SteamID=<steam-id-redacted>, public IP=11*.18*.19*.23*
+2026-08-24T14:17:28 31.362 INF [Discord] Global lobby: <server-ip-redacted>_9F06C1218830C64EB8AA3CF1E3451FF6
 2026-08-24T14:17:28 31.395 INF [WasmHost] bot 171 shot 172 dmg=12
 2026-08-24T14:17:28 31.395 INF [WasmHost] bot 174 shot 171 dmg=12
 2026-08-24T14:17:28 31.395 INF [WasmHost] bot 174 shot 171 dmg=24 head

@@ -183,6 +183,18 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Changed
 
+- The join log line no longer writes the player name. It reads
+  `[WasmHost] player spawned (entity 171); name dispatched to guests`: the
+  entity id is what the dispatch is keyed on, and the server log outlives the
+  session and travels with bug reports, so a name in it identifies a player
+  for no diagnostic gain. Guests still receive the name through
+  `on_player_join`, which is the documented ABI.
+- The committed run evidence under `evidence/` no longer carries the Steam
+  account identifiers and the server's public address. Both appear verbatim
+  in the game's own log output and identify the person who ran the server;
+  they are replaced by `<steam-id-redacted>` and `<server-ip-redacted>`, and
+  each evidence README says so. Nothing else in the logs changed, so the
+  runs still read the same.
 - `SECURITY.md` and the README safety section no longer imply the host gives
   the operator per-guest permissions. Both now state what a loaded guest can
   reach through the imports: global chat, and the bot servant, which gates
