@@ -28,7 +28,8 @@ namespace HordeForge.WasmHost.Registry
     /// Two more rules come from the Windows filesystem: a name ending in a
     /// space or a period is stored without it, and CON, PRN, AUX, NUL and the
     /// COM/LPT series name a device rather than a directory (before any
-    /// extension). An id carrying one of those is a legal Linux folder name
+    /// extension), and Win32 refuses a name carrying &lt; &gt; " | ? * at
+    /// all. An id carrying one of those is a legal Linux folder name
     /// that names a different, or no, directory on Windows, so it would load
     /// on one platform and silently never load on the other.
     /// </summary>
@@ -48,6 +49,14 @@ namespace HordeForge.WasmHost.Registry
             "LPT\u00b9", "LPT\u00b2", "LPT\u00b3",
         };
 
+        /// <summary>
+        /// Characters Win32 refuses in any file name, beyond the path
+        /// separators, the colon, and the C0 controls rejected above. They
+        /// are ordinary Linux folder names, so an id carrying one loads on
+        /// Linux and names no directory at all on Windows.
+        /// </summary>
+        private const string WindowsForbiddenChars = "<>\"?*|";
+
         /// <summary>True when <paramref name="id"/> is a safe mod id.</summary>
         public static bool IsValid(string? id)
         {
@@ -56,6 +65,10 @@ namespace HordeForge.WasmHost.Registry
                 return false;
             }
             if (id.IndexOf('/') >= 0 || id.IndexOf('\\') >= 0 || id.IndexOf(':') >= 0)
+            {
+                return false;
+            }
+            if (id.IndexOfAny(WindowsForbiddenChars.ToCharArray()) >= 0)
             {
                 return false;
             }

@@ -226,6 +226,18 @@ operator, embedder, and guest author.
   is now `dave`, which identifies nobody, and the built guest fixtures
   match. A sample that ships a person's handle in its default is personal
   data in a committed config, not a demo value.
+- A mod id could carry any of `< > " | ? *`. Those are ordinary Linux folder
+  names and Win32 refuses them in a file name at all, so such a module
+  loaded on a Linux server and named no directory on a Windows one, the
+  platform the net48 bridge actually runs on. The validator already rejected
+  the Windows device names and the trailing space and period for the same
+  reason; the reserved characters join them.
+- `HordeForge.WasmHost.Core.MonotonicTimer.ElapsedMs(double)` reported a
+  source that returned NaN as NaN, because `NaN < 0.0` is false. One NaN
+  sample then poisons every sum and average it reaches for the life of the
+  window, so a single mismeasured clock read turns the per-tick dispatch
+  cost in the minute heartbeat, `wasm status`, and the shutdown summary
+  into NaN. It reports zero, as the bridge's copy of the timer already did.
 - A quoted string in `wasm.toml` or `wasm-mod.toml` accepted raw control
   characters, so a stray CR, NUL, ESC, NEL, or DEL rode the guest string ABI
   inside a setting value and, from there, into a log line or a chat message

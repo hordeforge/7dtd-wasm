@@ -87,12 +87,15 @@ namespace HordeForge.WasmHost.Core
         /// A source that moved backwards (a virtual clock rewound, a
         /// mismeasured platform clock) reports zero rather than a negative
         /// cost, which would otherwise drag an average below zero and read as
-        /// a fast dispatch.
+        /// a fast dispatch. A source that reports NaN takes the same path:
+        /// NaN fails every comparison, so an <c>elapsed &lt; 0.0</c> test
+        /// would pass it through, and one NaN sample poisons every sum and
+        /// average it reaches for the life of the window.
         /// </summary>
         public double ElapsedMs(double startedAtMs)
         {
             double elapsed = _readMs() - startedAtMs;
-            return elapsed < 0.0 ? 0.0 : elapsed;
+            return !(elapsed >= 0.0) ? 0.0 : elapsed;
         }
     }
 }

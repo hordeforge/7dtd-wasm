@@ -95,6 +95,14 @@ namespace HordeForge.WasmHost.Tests
         [InlineData("boss.")]
         [InlineData("boss ")]
         [InlineData("a.b.")]
+        // Win32 refuses these in a file name outright, so a folder carrying
+        // one exists on Linux and cannot be created on Windows at all.
+        [InlineData("bo?ss")]
+        [InlineData("bo*ss")]
+        [InlineData("bo|ss")]
+        [InlineData("bo<ss")]
+        [InlineData("bo>ss")]
+        [InlineData("bo\"ss")]
         public void UnsafeIdsAreRejected(string? id)
         {
             Assert.False(ModId.IsValid(id));

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using HordeForge.WasmHost.Config;
 using HordeForge.WasmHost.Core;
@@ -22,6 +23,14 @@ namespace HordeForge.WasmHost.Tests
     public sealed class WasmModHostConcurrencyTests
     {
         private const int Iterations = 150;
+
+        /// <summary>
+        /// Upper bound on the enables a worker spends waiting to catch the
+        /// churn mod loaded. Generous against a workload that is a
+        /// scheduling accident, and bounded so a genuine regression (the
+        /// churn worker never publishing the mod) still fails the test.
+        /// </summary>
+        private const int ChurnRaceAttempts = 100_000;
 
         private static byte[] Fixture(string name)
         {
@@ -254,6 +263,23 @@ namespace HordeForge.WasmHost.Tests
                     }
                     Assert.NotNull(result);
                     Assert.True(result!.Value.Ok, id + ": " + result.Value.Message);
+                }
+            }
+            // The caller asserts the race actually happened, and that is a
+            // scheduling accident: three cheap InitModule calls per pass can
+            // finish the whole loop before the churn worker has loaded the
+            // mod even once, and the test then fails for having proved
+            // nothing. Keep enabling the churn mod alone until it has entered
+            // a store, yielding between attempts so this spin does not
+            // starve the churn worker of the host gate it needs to make the
+            // race happen. The churn worker's 150 unload/load cycles outlast
+            // this loop, so the mod is available for the whole of it.
+            for (int i = 0; i < ChurnRaceAttempts && churnEnabled == 0; i++)
+            {
+                Thread.Yield();
+                if (host.InitModule("churn") != null)
+                {
+                    churnEnabled++;
                 }
             }
         }

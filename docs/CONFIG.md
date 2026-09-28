@@ -92,9 +92,10 @@ version = "0.1.0"
 # The mod id (the folder name under Mods/Wasm) must be a plain folder name:
 # no path separators, no colons, no dot-only segments, no control
 # characters, and nothing a filesystem renames or reserves: a name ending in
-# a space or a period, and the Windows device names (CON, PRN, AUX, NUL,
-# COM1-9, LPT1-9, before any extension). Invalid folders are skipped with a
-# warning at load. Ids are matched to folders by exact spelling on every
+# a space or a period, any of < > " | ? *, and the Windows device names
+# (CON, PRN, AUX, NUL, COM1-9, LPT1-9, before any extension). Invalid folders
+# are skipped with a warning at load. Ids are matched to folders by exact
+# spelling on every
 # platform, so a console command for "Hello" does not load the "hello" module
 # on a case-insensitive filesystem.
 
