@@ -25,4 +25,10 @@
     <PackageReference Include="Wasmtime" Version="44.0.0" />
   </ItemGroup>
 
+  <!-- Wasmtime is Apache-2.0 WITH LLVM-exception, so the package carries the
+       attribution for it and the rest of the shipped closure. -->
+  <ItemGroup>
+    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
 </Project>

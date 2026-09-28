@@ -9,10 +9,10 @@ name: release
 # the same agreement on every "make check" so drift cannot accumulate
 # between tags.
 #
-# The mod archive is deliberately NOT built here. `make package` compiles
+# The mod archive is deliberately NOT built here. `make dist` compiles
 # against the dedicated server's own assemblies, which a hosted runner does
-# not have; a maintainer with a game install runs `make package` and attaches
-# the zip. Gating the tag is the half that can be proven automatically, and
+# not have; a maintainer with a game install runs `make dist` and attaches
+# dist/Mods. Gating the tag is the half that can be proven automatically, and
 # asserting the other half here would be a claim, not evidence.
 #
 # The tag is not taken on trust: this workflow first runs ci.yml (the same

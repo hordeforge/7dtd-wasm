@@ -55,6 +55,45 @@ class NugetComponentsTest(unittest.TestCase):
         indexrange = next(c for c in comps if c["name"] == "IndexRange")
         self.assertNotIn("hashes", indexrange)
 
+    def test_every_component_carries_its_spdx_license(self):
+        lock = write(
+            pathlib.Path(tempfile.mkdtemp()) / "packages.lock.json",
+            json.dumps({"dependencies": {"net8.0": {
+                "Wasmtime": {"type": "Direct", "resolved": "44.0.0"},
+                "xunit": {"type": "Direct", "resolved": "2.9.3"},
+            }}}),
+        )
+        licenses = {c["name"]: c["licenses"]
+                    for c in sbom.nuget_components(lock)}
+        self.assertEqual(
+            licenses["Wasmtime"], [{"license": {"id": "Apache-2.0 WITH LLVM-exception"}}],
+        )
+        self.assertEqual(licenses["xunit"], [{"license": {"id": "Apache-2.0"}}])
+
+    def test_unrecorded_license_fails_loudly(self):
+        lock = write(
+            pathlib.Path(tempfile.mkdtemp()) / "packages.lock.json",
+            json.dumps({"dependencies": {"net8.0": {
+                "Newtonsoft.Json": {"type": "Transitive", "resolved": "13.0.3"},
+            }}}),
+        )
+        with self.assertRaises(SystemExit) as caught:
+            sbom.nuget_components(lock)
+        self.assertIn("Newtonsoft.Json", str(caught.exception))
+
+
+class NoticesTest(unittest.TestCase):
+    """THIRD-PARTY-NOTICES.md must cover every package the SBOM can emit."""
+
+    NOTICES = pathlib.Path(__file__).resolve().parent.parent / "THIRD-PARTY-NOTICES.md"
+
+    def test_every_recorded_license_is_named_in_the_notices(self):
+        text = self.NOTICES.read_text(encoding="utf-8").lower()
+        for name, license_id in sbom.NUGET_LICENSES.items():
+            with self.subTest(package=name):
+                self.assertIn(name, text)
+                self.assertIn(license_id.split(" WITH ")[0].lower(), text)
+
 
 class CargoComponentsTest(unittest.TestCase):
     def test_excludes_workspace_members(self):
@@ -95,7 +134,11 @@ class BuildBomTest(unittest.TestCase):
         write(
             root / "src" / "GameBridge" / "bin" / "packages.lock.json",
             json.dumps(
-                {"dependencies": {"net48": {"Leak": {"type": "Transitive", "resolved": "1.0.0"}}}}
+                {
+                    "dependencies": {
+                        "net48": {"IndexRange": {"type": "Transitive", "resolved": "1.0.0"}}
+                    }
+                }
             ),
         )
         write(
@@ -110,6 +153,19 @@ class BuildBomTest(unittest.TestCase):
         self.assertEqual(bom["metadata"]["component"]["version"], "9.9.9")
         self.assertEqual([c["purl"] for c in bom["components"]], ["pkg:nuget/xunit@2.9.3"])
 
+    def test_evidence_locks_are_not_inventory(self):
+        """evidence/ is a frozen playtest record, not a shipped artifact."""
+        root = pathlib.Path(tempfile.mkdtemp())
+        write(root / "src" / "M" / "ModInfo.xml", '<xml><Version value="0.1.0" /></xml>')
+        write(root / "src" / "M" / "packages.lock.json",
+              json.dumps({"dependencies": {"net8.0": {
+                  "Wasmtime": {"type": "Direct", "resolved": "44.0.0"}}}}))
+        write(root / "evidence" / "playtest-1" / "client" / "packages.lock.json",
+              json.dumps({"dependencies": {"net8.0": {
+                  "xunit": {"type": "Direct", "resolved": "2.9.3"}}}}))
+        self.assertEqual([c["purl"] for c in sbom.build_bom(root)["components"]],
+                         ["pkg:nuget/wasmtime@44.0.0"])
+
     def test_is_deterministic_and_valid_json(self):
         root = pathlib.Path(tempfile.mkdtemp())
         write(root / "src" / "M" / "ModInfo.xml", '<xml><Version value="0.1.0" /></xml>')
@@ -119,8 +175,8 @@ class BuildBomTest(unittest.TestCase):
                 {
                     "dependencies": {
                         "net8.0": {
-                            "zlib": {"type": "Transitive", "resolved": "1.3"},
-                            "alpha": {"type": "Direct", "resolved": "0.2"},
+                            "System.Buffers": {"type": "Transitive", "resolved": "4.5.1"},
+                            "Wasmtime": {"type": "Direct", "resolved": "44.0.0"},
                         }
                     }
                 }

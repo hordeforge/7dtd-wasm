@@ -21,3 +21,4 @@ to fix in the same change.
 | [rfcs/](rfcs/README.md) | Design questions still being argued | Open questions and their drivers |
 | [prds/](prds/README.md) | Capability requirements | What a capability must do and its acceptance boxes |
 | [../SECURITY.md](../SECURITY.md) | Threat model, sandbox guarantees, operational notes | What the sandbox does and does not protect |
+| [../THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) | Licenses and attribution for redistributed dependencies | What ships in the modlet and under what terms |

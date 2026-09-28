@@ -150,6 +150,9 @@ dist: build fixtures bridge
 	cp src/GameBridge/ModInfo.xml dist/Mods/1_HordeForge_WasmHost/
 	# Native engine for this platform ($(WASMTIME_RID), see header).
 	cp "$(HOME)/.nuget/packages/wasmtime/$(WASMTIME_VERSION)/runtimes/$(WASMTIME_RID)/native/$(WASMTIME_NATIVE)" dist/Mods/1_HordeForge_WasmHost/Native/
+	# Apache-2.0 redistribution requires the license and attribution to travel
+	# with the binaries they cover (Wasmtime and the .NET Foundation closure).
+	cp THIRD-PARTY-NOTICES.md dist/Mods/1_HordeForge_WasmHost/
 	# Sample guest mods + shared settings (zdtd-style TOML, docs/CONFIG.md).
 	mkdir -p dist/Mods/Wasm/hello dist/Mods/Wasm/boss dist/Mods/Wasm/boss-zig dist/Mods/Wasm/fps-bot
 	cp samples/target/wasm32-wasip1/release/guest_hello.wasm dist/Mods/Wasm/hello/module.wasm

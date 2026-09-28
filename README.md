@@ -204,4 +204,7 @@ ABI, and are always interrupted at their budget. Details and limits in
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). The modlet redistributes Wasmtime and the
+.NET Foundation closure; their licenses and attribution are in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), which `make dist` stages
+next to the binaries it covers.

@@ -10,6 +10,11 @@ Codename: Quarantine (7dtd-wasm).
 
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
+- `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the
+  modlet redistributes (Wasmtime, Apache-2.0 WITH LLVM-exception, plus the
+  MIT-licensed .NET Foundation closure). `make dist` stages it next to the
+  binaries it covers and the `HordeForge.WasmHost` NuGet package embeds it,
+  so Apache-2.0 redistribution requirements travel with the artifacts.
 
 ### Changed
 
@@ -47,6 +52,11 @@ Codename: Quarantine (7dtd-wasm).
 - `wasm load` skips a module tree it cannot enumerate (permissions, a
   modlet being replaced) with a warning instead of aborting the whole
   scan and leaving the host unstarted.
+- The CycloneDX SBOM now carries an SPDX license per NuGet component.
+  `tools/sbom.py` holds the table and fails the build when a package
+  reaches a committed lock file without a recorded license, and the SBOM
+  skips lock files under `evidence/` (a frozen playtest record, not a
+  shipped artifact).
 
 ## [0.3.1] - 2026-09-21
 

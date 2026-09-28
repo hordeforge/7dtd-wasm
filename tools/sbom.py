@@ -7,7 +7,8 @@ Sources of truth, in order:
 
 The output is a deterministic CycloneDX 1.6 JSON document covering every
 third-party component that ships with a dist, so consumers and vuln
-scanners get an exact inventory without re-resolving anything.
+scanners get an exact inventory without re-resolving anything. Each NuGet
+component carries its SPDX license expression; see NUGET_LICENSES.
 
 The document goes to stdout unless --output names a file; status lines go
 to stderr, so `sbom.py | jq .` works.
@@ -25,6 +26,51 @@ PROJECT_NAME = "7dtd-wasm"
 
 # Lock-file entries that are not third-party packages.
 NUGET_SKIP_TYPES = {"Project"}
+
+# Directories whose lock files do not describe a shipped artifact: build
+# output is transient, and evidence/ is a frozen record of a past playtest
+# rather than something `make dist` stages.
+NUGET_SKIP_DIRS = ("bin", "obj", "dist", "evidence")
+
+# SPDX license expression per NuGet package id, lowercased. A package that
+# reaches a committed lock file without an entry here fails the SBOM build:
+# an unrecorded license is the exact gap the inventory exists to close, and
+# THIRD-PARTY-NOTICES.md carries the same facts in prose.
+NUGET_LICENSES = {
+    "indexrange": "MIT",
+    "microsoft.codecoverage": "MIT",
+    "microsoft.net.test.sdk": "MIT",
+    "microsoft.netcore.platforms": "MIT",
+    "microsoft.netframework.referenceassemblies": "MIT",
+    "microsoft.netframework.referenceassemblies.net48": "MIT",
+    "microsoft.testplatform.objectmodel": "MIT",
+    "microsoft.testplatform.testhost": "MIT",
+    "netstandard.library": "MIT",
+    "system.buffers": "MIT",
+    "system.memory": "MIT",
+    "system.numerics.vectors": "MIT",
+    "system.runtime.compilerservices.unsafe": "MIT",
+    "wasmtime": "Apache-2.0 WITH LLVM-exception",
+    "xunit": "Apache-2.0",
+    "xunit.abstractions": "Apache-2.0",
+    "xunit.analyzers": "Apache-2.0",
+    "xunit.assert": "Apache-2.0",
+    "xunit.core": "Apache-2.0",
+    "xunit.extensibility.core": "Apache-2.0",
+    "xunit.extensibility.execution": "Apache-2.0",
+    "xunit.runner.visualstudio": "Apache-2.0",
+}
+
+
+def license_for(name: str) -> str:
+    """SPDX expression for a NuGet package id, or fail naming the package."""
+    try:
+        return NUGET_LICENSES[name.lower()]
+    except KeyError:
+        raise SystemExit(
+            f"sbom: no recorded license for NuGet package {name!r}; add it to "
+            f"NUGET_LICENSES in tools/sbom.py and to THIRD-PARTY-NOTICES.md"
+        ) from None
 
 
 def project_version(root: pathlib.Path) -> str:
@@ -56,6 +102,7 @@ def nuget_components(lock_path: pathlib.Path) -> list[dict]:
                 "name": name,
                 "version": version,
                 "purl": f"pkg:nuget/{name.lower()}@{version}",
+                "licenses": [{"license": {"id": license_for(name)}}],
             }
             if info.get("contentHash"):
                 comp["hashes"] = [{"alg": "SHA-512", "content": info["contentHash"]}]
@@ -98,7 +145,7 @@ def build_bom(root: pathlib.Path) -> dict:
     """Build the full CycloneDX document for the repository at root."""
     components: dict[str, dict] = {}
     for lock in sorted(root.rglob("packages.lock.json")):
-        if any(part in ("bin", "obj", "dist") for part in lock.parts):
+        if any(part in NUGET_SKIP_DIRS for part in lock.parts):
             continue
         for comp in nuget_components(lock):
             components[comp["purl"]] = comp
