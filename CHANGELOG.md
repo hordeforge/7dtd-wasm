@@ -307,6 +307,20 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Changed
 
+- The release workflow's tag gate is now `tools/versioncheck.py --tag`,
+  the same tool `make check` runs, instead of a bash copy of its three
+  version parses. One set of rules and one set of error messages cover both
+  gates, so the workflow can no longer disagree with the tool it duplicated.
+  `--tag` is covered by `tools/test_versioncheck.py`.
+- The CI ruff install reads its version from `pyproject.toml` through
+  `make ruff-version` instead of repeating the number, so bumping the
+  `required-version` pin cannot leave the pipeline installing a ruff the
+  tools gate then rejects. The release workflow also gained the concurrency
+  group ci.yml has, so a re-pushed tag supersedes its own in-flight run.
+- `evidence/acceptance-1/run_acceptance.sh` and
+  `evidence/playtest-1/run_server.sh` fail when `dist/Mods` is not staged.
+  Docker creates a missing bind-mount source as an empty directory, so a
+  forgotten `make dist` used to start a server with no modlet and exit 0.
 - The join log line no longer writes the player name. It reads
   `[WasmHost] player spawned (entity 171); name dispatched to guests`: the
   entity id is what the dispatch is keyed on, and the server log outlives the

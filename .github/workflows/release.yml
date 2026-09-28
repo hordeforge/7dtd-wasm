@@ -26,6 +26,12 @@ on:
 permissions:
   contents: read
 
+# One run per tag: a re-pushed or force-moved tag supersedes the in-flight
+# run instead of queueing a second one against the same ref.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # A tag is a release, and a release must not be cut from a tree that does
   # not pass the same gate a pull request does. This calls ci.yml rather than
@@ -41,51 +47,9 @@ jobs:
       # Actions pinned by full commit SHA (tag in comment) so a moved tag or a
       # compromised major-version release cannot inject code into the pipeline.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The same gate "make check" runs, with --tag added: the three
+      # declarations must agree with each other and with the tag. It is the
+      # tool, not a second copy of its parsing here, so the two gates cannot
+      # drift apart.
       - name: Check the tag matches every shipped version declaration
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          case "$TAG" in v*) ;; *) echo "ERROR: tag '$TAG' does not start with 'v'" >&2; exit 1;; esac
-          WANT="${TAG#v}"
-          MODINFO="src/GameBridge/ModInfo.xml"
-          CSPROJ="src/HordeForge.WasmHost/HordeForge.WasmHost.csproj"
-          CHANGELOG="CHANGELOG.md"
-
-          SHIPPED="$(sed -n 's/.*<Version[^>]*value="\([^"]*\)".*/\1/p' "$MODINFO" | head -1)"
-          if [ -z "$SHIPPED" ]; then
-            echo "ERROR: no <Version value=\"...\"> found in $MODINFO" >&2
-            exit 1
-          fi
-          if [ "$SHIPPED" != "$WANT" ]; then
-            echo "ERROR: tag $TAG but $MODINFO ships $SHIPPED; make them match before tagging" >&2
-            exit 1
-          fi
-
-          # The literal <Version> element only; <PackageReference Version=...>
-          # and <LangVersion> cannot match this pattern.
-          PACKAGE="$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' "$CSPROJ" | head -1)"
-          if [ -z "$PACKAGE" ]; then
-            echo "ERROR: no <Version>...</Version> found in $CSPROJ" >&2
-            exit 1
-          fi
-          if [ "$PACKAGE" != "$WANT" ]; then
-            echo "ERROR: tag $TAG but $CSPROJ ships $PACKAGE; make them match before tagging" >&2
-            exit 1
-          fi
-
-          # Newest released section ("## Unreleased" has no bracket, so it is
-          # skipped); a tag without its changelog section is not a release.
-          # [^]] is the POSIX way to write "any character but ]": inside a
-          # bracket expression a backslash is never special, so [^\]] would
-          # parse as "not backslash" plus a literal ']'.
-          NOTES="$(grep -m1 -E '^## \[' "$CHANGELOG" | sed -E 's/^## \[([^]]+)\].*/\1/')"
-          if [ -z "$NOTES" ]; then
-            echo "ERROR: no '## [X.Y.Z]' release section found in $CHANGELOG" >&2
-            exit 1
-          fi
-          if [ "$NOTES" != "$WANT" ]; then
-            echo "ERROR: tag $TAG but the newest released section in $CHANGELOG is [$NOTES]; cut the changelog section before tagging" >&2
-            exit 1
-          fi
-          echo "ok: tag $TAG matches $MODINFO, $CSPROJ, and the newest released $CHANGELOG section ($WANT)"
+        run: python3 tools/versioncheck.py --tag "${GITHUB_REF_NAME}"

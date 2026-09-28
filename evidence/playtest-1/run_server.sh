@@ -12,6 +12,14 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 DIST="$ROOT/dist"
 
+# Docker creates a missing bind-mount source as an empty directory, so a
+# forgotten `make dist` would start a server with no bridge modlet and a
+# passing exit code: a playtest of nothing.
+if [ ! -d "$DIST/Mods/1_HordeForge_WasmHost" ]; then
+  echo "ERROR: $DIST/Mods is not staged. Run 'make dist' in the repo root first." >&2
+  exit 1
+fi
+
 mkdir -p "$HERE/logs"
 
 docker rm -f 7dtd-wasm-playtest >/dev/null 2>&1 || true

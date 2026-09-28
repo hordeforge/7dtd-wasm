@@ -9,10 +9,13 @@ always agree:
   * CHANGELOG.md                     (newest released "## [X.Y.Z]" section)
 
 A disagreement means a tag, the artifact, and the notes can each describe a
-different release, so any drift fails here instead of at tag time (the
-release workflow enforces the same rule against vX.Y.Z tags).
+different release, so any drift fails here instead of at tag time. The
+release workflow passes --tag, which additionally requires every declaration
+to ship the version the vX.Y.Z tag names, so one set of rules and one set of
+error messages cover both gates.
 
-Exit code is non-zero when the declarations are missing or disagree.
+Exit code is non-zero when the declarations are missing, disagree, or do
+not match --tag.
 """
 
 import argparse
@@ -52,6 +55,25 @@ def released_version(changelog: pathlib.Path) -> str:
     return match.group(1).strip()
 
 
+TAG_PREFIX = "v"
+
+
+def tag_mismatches(tag: str, versions: dict[str, str]) -> list[str]:
+    """Report every declaration that does not ship the version the tag names.
+
+    A tag without the "v" prefix has no version to compare against and is
+    itself the error, so it comes back as a single mismatch line.
+    """
+    if not tag.startswith(TAG_PREFIX):
+        return [f"tag {tag!r} does not start with {TAG_PREFIX!r}"]
+    wanted = tag[len(TAG_PREFIX) :]
+    return [
+        f"tag {tag} but {source} ships {version}"
+        for source, version in sorted(versions.items())
+        if version != wanted
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="versioncheck.py",
@@ -63,6 +85,10 @@ def main(argv: list[str] | None = None) -> int:
         type=pathlib.Path,
         default=ROOT,
         help="repository to check (default: the tool's own repo)",
+    )
+    parser.add_argument(
+        "--tag",
+        help="also require every declaration to ship the version this vX.Y.Z tag names",
     )
     args = parser.parse_args(argv)
 
@@ -90,6 +116,15 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
+    if args.tag is not None:
+        mismatches = tag_mismatches(args.tag, versions)
+        if mismatches:
+            for mismatch in mismatches:
+                print(f"versioncheck: {mismatch}", file=sys.stderr)
+            print("versioncheck: make them match before tagging", file=sys.stderr)
+            return 1
+        print(f"versioncheck: ok ({args.tag})", file=sys.stderr)
+        return 0
     print("versioncheck: ok", file=sys.stderr)
     return 0
 

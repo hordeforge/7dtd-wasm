@@ -52,13 +52,13 @@ endef
 define require_ruff
 	@command -v ruff >/dev/null 2>&1 || { \
 	  echo "make: ruff not found on PATH."; \
-	  echo "  The tools gate needs ruff $(RUFF_VERSION) (the version ci.yml installs)."; \
+	  echo "  The tools gate needs ruff $(RUFF_VERSION) (the version the CI step installs)."; \
 	  echo "  Install it into a project-local environment, e.g. uv: uv tool install ruff==$(RUFF_VERSION)"; \
 	  echo "  'make build' and 'make test' do not need it."; \
 	  exit 1; }
 	@ruff --version | grep -q '$(RUFF_VERSION)' || { \
 	  echo "make: ruff $(ruff --version | cut -d' ' -f2) is installed, but this gate is pinned to $(RUFF_VERSION)"; \
-	  echo "  (pyproject.toml required-version, the version ci.yml installs)."; \
+	  echo "  (pyproject.toml required-version, the version the CI step installs)."; \
 	  echo "  Install the pinned one: uv tool install ruff==$(RUFF_VERSION)"; \
 	  exit 1; }
 endef
@@ -123,7 +123,8 @@ RUSTUP ?= rustup
 
 # The ruff the tools gate is pinned to, read from pyproject.toml so the
 # declaration lives in one place: the same file ruff reads, the same version
-# the preflight below checks for, and the same one ci.yml installs.
+# the preflight below checks for, and the same one the CI install step gets
+# from "make ruff-version".
 # Recursively expanded (=) like WASMTIME_VERSION, so the read happens only in
 # the targets that gate on it.
 RUFF_VERSION = $(shell $(PYTHON) -c "import re; print(re.search(r'required-version = \"==(.+?)\"', open('pyproject.toml').read()).group(1))")
@@ -153,7 +154,7 @@ RUST_TOOLCHAIN = $(shell $(PYTHON) -c "import re; print(re.search(r'channel = \"
 # module the host then rejects at load.
 ZIG_VERSION := 0.16.0
 
-.PHONY: help build test toolchain samples samples-check boss boss-zig fixtures bridge bridge-check dist pack check check-ci clean
+.PHONY: help build test toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -211,6 +212,13 @@ toolchain:
 	$(RUSTUP) toolchain install $(RUST_TOOLCHAIN) --profile minimal --target wasm32-wasip1 --component clippy
 	$(RUSTUP) default $(RUST_TOOLCHAIN)
 	@echo "Guest toolchain ready in $(CARGO_HOME) (nothing installed system-wide)."
+
+# The pinned ruff version on stdout, for whoever has to install it. The CI
+# step pipes this into its pip install, so the pin in pyproject.toml is the
+# only place the version is written and a bump cannot miss an installer.
+.PHONY: ruff-version
+ruff-version:
+	@echo $(RUFF_VERSION)
 
 # Compile guests from inside samples/ on purpose: cargo discovers
 # config by walking up from the current directory, and the workspace

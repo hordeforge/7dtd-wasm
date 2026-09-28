@@ -4,11 +4,20 @@
 #
 # Usage: ./run_acceptance.sh
 # Prereqs: docker build -t 7dtd-wasm-acceptance . (see Dockerfile)
+#          `make dist` in the repo root (stages dist/Mods)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 DIST="$ROOT/dist"
+
+# Docker creates a missing bind-mount source as an empty directory, so a
+# forgotten `make dist` would start a server with no modlet and a passing
+# exit code: an acceptance run that tested nothing.
+if [ ! -d "$DIST/Mods/1_HordeForge_WasmHost" ] || [ ! -d "$DIST/Mods/Wasm" ]; then
+  echo "ERROR: $DIST/Mods is not staged. Run 'make dist' in the repo root first." >&2
+  exit 1
+fi
 
 mkdir -p "$HERE/logs"
 
