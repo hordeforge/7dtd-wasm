@@ -45,6 +45,27 @@ CIBUILD ?= -p:ContinuousIntegrationBuild=true
 # The host suite runs on the committed fixtures without either tool, so the
 # error says so rather than sending a new contributor looking for a tool
 # they do not need yet.
+define require_dotnet
+	@command -v "$(DOTNET)" >/dev/null 2>&1 || test -x "$(DOTNET)" 2>/dev/null || { \
+	  echo "make: no .NET SDK found ($(DOTNET) is not executable)."; \
+	  echo "  The host library, the tests and the bridge build with the .NET 8 SDK"; \
+	  echo "  pinned by global.json. Install it from"; \
+	  echo "  https://dotnet.microsoft.com/download/dotnet/8.0, or point the Makefile"; \
+	  echo "  at the one you have: make DOTNET=/path/to/dotnet <target>"; \
+	  echo "  The tools gate does not need it: 'make test-tools' and 'make tools-check'"; \
+	  echo "  run on Python alone."; \
+	  exit 1; }
+endef
+define require_python
+	@command -v "$(PYTHON)" >/dev/null 2>&1 || { \
+	  echo "make: no Python 3 interpreter found ($(PYTHON) is not on PATH)."; \
+	  echo "  The tools under tools/ and the version pins the Makefile reads out of"; \
+	  echo "  them are Python 3. Install it from https://www.python.org/downloads/"; \
+	  echo "  or point the Makefile at one: make PYTHON=/path/to/python3 <target>"; \
+	  echo "  The dotnet targets do not need it: 'make build' and 'make test' build and"; \
+	  echo "  test with the .NET SDK alone."; \
+	  exit 1; }
+endef
 define require_cargo
 	@test -x "$(CARGO)" || { \
 	  echo "make: the guest toolchain is missing ($(CARGO) not found)."; \
@@ -192,7 +213,7 @@ RUST_TOOLCHAIN = $(shell $(PYTHON) tools/pinned.py rust)
 # module the host then rejects at load.
 ZIG_VERSION := 0.16.0
 
-.PHONY: help build test test-list test-tools tools-check toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks check check-ci clean
+.PHONY: help build test test-list test-tools tools-check toolchain ruff-version samples samples-check boss boss-zig fixtures bridge bridge-check dist pack locks sbom api-baseline check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -220,6 +241,8 @@ help:
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
 	@echo "  make pack           pack the host library as a NuGet package under artifacts/packages/"
 	@echo "  make locks          regenerate every packages.lock.json after a dependency bump"
+	@echo "  make sbom           print the CycloneDX SBOM tools/sbom.py builds from the lock files"
+	@echo "  make api-baseline   rewrite tools/api-surface.txt after an accepted public API change"
 	@echo "  make check          everything check-ci runs, plus bridge and bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  make clean          remove build output, samples/target, dist/ and artifacts/"
@@ -233,6 +256,7 @@ help:
 	@echo "committed fixtures and needs none of the three."
 
 build:
+	$(call require_dotnet)
 	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 # Where the test run's output is staged so the no-match check below can read
@@ -251,6 +275,7 @@ TEST_LOG ?= $(CURDIR)/.scratch/test.log
 # would report green for a run that tested nothing. The check below turns that
 # into a named failure.
 test:
+	$(call require_dotnet)
 	@mkdir -p $(dir $(TEST_LOG))
 	@$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) > $(TEST_LOG) 2>&1; \
 	  rc=$$?; cat $(TEST_LOG); \
@@ -264,6 +289,7 @@ test:
 
 # The names a TEST_FILTER can match, so the filter above is not guesswork.
 test-list:
+	$(call require_dotnet)
 	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) --list-tests
 
 # The tools unit tests, and the fast loop for a change under tools/. The C#
@@ -278,12 +304,14 @@ test-list:
 TOOLS_PATTERN ?= 'test_*.py'
 
 test-tools:
+	$(call require_python)
 	$(PYTHON) -m unittest discover -s tools -p $(TOOLS_PATTERN)
 
 # Everything check-ci runs against tools/ and nothing else: the four Python
 # gates, their unit tests, and the ruff lint and format checks. check-ci calls
 # this target, so the two cannot drift apart.
 tools-check:
+	$(call require_python)
 	$(PYTHON) tools/doccheck.py
 	$(PYTHON) tools/versioncheck.py
 	$(PYTHON) tools/packcheck.py
@@ -310,6 +338,20 @@ toolchain:
 	$(RUSTUP) toolchain install $(RUST_TOOLCHAIN) --profile minimal --target wasm32-wasip1 --component clippy
 	$(RUSTUP) default $(RUST_TOOLCHAIN)
 	@echo "Guest toolchain ready in $(CARGO_HOME) (nothing installed system-wide)."
+
+# The two tools/ commands a contributor has to run by hand: the SBOM preview
+# and the api-surface baseline regeneration. Both are spelled as a make target
+# because CONTRIBUTING used to name the interpreter ("python3 tools/..."), and
+# the interpreter is not called python3 on Windows, which the PYTHON resolution
+# at the top of this file exists to handle. Going through $(PYTHON) here is what
+# makes the documented path run on every platform the rest of the tree does.
+sbom:
+	$(call require_python)
+	$(PYTHON) tools/sbom.py
+
+api-baseline:
+	$(call require_python)
+	$(PYTHON) tools/apicheck.py --update
 
 # The pinned ruff version on stdout, for whoever has to install it. The CI
 # step pipes this into its pip install, so the pin in pyproject.toml is the
@@ -407,12 +449,15 @@ fixtures: samples boss boss-zig
 	cp $(ZDTD_SERVER)/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
 
 bridge:
+	$(call require_dotnet)
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 bridge-check:
+	$(call require_dotnet)
 	$(DOTNET) run -c Release --project tools/targetcheck -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) -- "$(GAME_DIR)"
 
 dist: build fixtures bridge
+	$(call require_python)
 	@test -n "$(WASMTIME_VERSION)" || { \
 	  echo "make: the pinned Wasmtime version is empty, so the native engine to stage is unknown."; \
 	  echo "  Run: $(PYTHON) tools/pinned.py wasmtime   (it names the file it could not read)"; \
@@ -484,6 +529,8 @@ dist: build fixtures bridge
 PACKAGE_OUT := artifacts/packages
 
 pack:
+	$(call require_dotnet)
+	$(call require_python)
 	@$(PYTHON) tools/packcheck.py
 	$(DOTNET) pack src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) -o $(PACKAGE_OUT)
 	@echo "NuGet package staged under $(PACKAGE_OUT)/"

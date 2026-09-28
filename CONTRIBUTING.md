@@ -47,7 +47,8 @@ make check-ci      # docs, version, pack and API gates + sbom tests + tools lint
 # committed packages.lock.json; "make check" restores locked and fails when a
 # manifest drifts from its lock.
 make locks                             # refresh all four packages.lock.json
-python3 tools/sbom.py                  # preview the CycloneDX SBOM make dist ships
+make sbom                              # preview the CycloneDX SBOM make dist ships
+make api-baseline                      # after an accepted public API change
 ```
 
 `make locks` restores each project on its own rather than through the solution:
@@ -145,7 +146,7 @@ requested:
   baseline `tools/api-surface.txt` and fails on any difference, a removal
   included. Accepting a change is deliberate: bump as the rule above says,
   write the changelog entry, then regenerate the baseline with
-  `python3 tools/apicheck.py --update`, whose diff lands in the same commit.
+  `make api-baseline`, whose diff lands in the same commit.
   A member's body and doc comment are not surface, so editing them does not
   need the baseline rewritten.
 - Historical note for consumers auditing old tags: 0.1.3 shipped a guest
@@ -172,7 +173,8 @@ checks and the last two are what the tag cannot check for you.
    three declarations cannot be split.
 2. Every `(breaking)` entry in that section has its upgrade steps in
    [docs/MIGRATION.md](docs/MIGRATION.md) under the same version heading.
-3. `python3 tools/versioncheck.py` (it runs on `make check`) and
+3. `make tools-check`, which runs `tools/versioncheck.py` and the other three
+   Python gates (`make check` and `make check-ci` run it too), then
    `make check-ci`.
 4. `make pack`, then attach `artifacts/packages/*.nupkg` to the release.
    The package is not published by the tag: pushing `vX.Y.Z` runs the CI
