@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using HordeForge.WasmHost.Registry;
 using HordeForge.GameBridge.Bridge;
 using HordeForge.GameBridge.Hooks;
 using HarmonyLib;
@@ -40,7 +41,7 @@ namespace HordeForge.GameBridge
             }
             catch (Exception ex)
             {
-                Log.Error("[WasmHost] init failed: " + ex);
+                Log.Error("[WasmHost] init failed: " + TextSanitizer.Describe(ex));
             }
         }
 
@@ -69,13 +70,18 @@ namespace HordeForge.GameBridge
             }
             catch (Exception ex)
             {
-                Log.Error("[WasmHost] failed to apply Harmony patches: " + ex);
+                Log.Error("[WasmHost] Harmony could not be created; no game hook is active: " + TextSanitizer.Describe(ex));
             }
         }
 
         /// <summary>
         /// Posts one hook onto a GameManager method, reporting a target the
-        /// game no longer ships instead of failing the whole patch pass.
+        /// game no longer ships instead of failing the whole patch pass. A
+        /// patch that throws is named the same way and leaves the other hook
+        /// to be attempted: the failure is per target, and a line saying only
+        /// "failed to apply Harmony patches" leaves the reader unable to tell
+        /// which event stopped reaching the guests or whether the other one
+        /// landed.
         /// </summary>
         private static void Patch(Harmony harmony, string method, string label, MethodInfo postfix)
         {
@@ -85,7 +91,16 @@ namespace HordeForge.GameBridge
                 Log.Warning("[WasmHost] GameManager." + method + " not found; " + label + " hook disabled");
                 return;
             }
-            harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+            try
+            {
+                harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[WasmHost] failed to patch GameManager." + method + " (" + label +
+                          " hook disabled): " + TextSanitizer.Describe(ex));
+                return;
+            }
             Log.Out("[WasmHost] patched GameManager." + method);
         }
     }

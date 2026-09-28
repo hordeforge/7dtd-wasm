@@ -44,6 +44,7 @@ inside the host) and rolled into a one-minute window by
 | heartbeat | `Out` | every 1200 ticks (60 s at 20 TPS): tick number, module count, last/avg/max dispatch cost, failure and slow-tick totals, and the guests that failed since the previous heartbeat |
 | slow dispatch | `Warning` | a dispatch over 25 ms, half a 20 TPS frame, naming the guest whose last call cost the most; capped at one per second, `tick` failure logs are capped separately |
 | tick failure | `Warning` | a guest that trapped, exhausted fuel, or errored on `on_tick`, naming the tick, the mod, and the fuel the call consumed |
+| tick hook failure | `Error` | a fault that escaped the dispatch itself, naming the tick; capped at one per second, with the running suppressed count reported |
 | join failure | `Warning` | a guest whose `on_player_join` trapped, exhausted fuel, or errored |
 | shutdown summary | `Out` | totals for the whole run, printed only when an embedder calls `BridgeHost.Shutdown()`; nothing in the mod calls it, so a live server never prints it |
 
@@ -54,7 +55,11 @@ second, never on the tick rate.
 
 A failure caught on the host side (world time, chat, the sense snapshot,
 bot spawn and despawn, the glide buff) is logged as the exception, so the
-log carries its type and stack and not only its message. Each of those
+log carries its type and stack and not only its message. The stack is
+flattened onto the line that reports it
+(`HordeForge.WasmHost.Registry.TextSanitizer.Describe`), so one fault is one
+log entry rather than a dozen lines a line-oriented reader would see as
+unrelated entries. Each of those
 lines is rate capped, so the extra lines cost one write per second at
 most. Diagnostics that quote guest- or file-supplied text (manifest and
 parser errors, trap details) keep the control-character filter and log the

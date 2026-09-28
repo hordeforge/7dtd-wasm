@@ -128,6 +128,16 @@ namespace HordeForge.GameBridge.Bridge
         /// <summary>True once Start completed (mods may still be empty).</summary>
         public static bool Started { get; private set; }
 
+        /// <summary>
+        /// Ticks dispatched since Start, the counter every failure line,
+        /// slow-dispatch warning and heartbeat prints. Exposed so a failure
+        /// raised outside the bridge (the tick hook's own catch, which fires
+        /// before any per-mod result exists) can name the tick it happened
+        /// on and be lined up against the rest of the run's lines. Read on
+        /// the game loop, where the counter is only ever written.
+        /// </summary>
+        public static long TickNumber => _tick;
+
         // Caps the per-tick dispatch-failure log lines per module so a
         // permanently trapping or fuel-burning guest cannot flood the server
         // log at tick rate; totals surface in "wasm status".

@@ -1,3 +1,4 @@
+using System;
 using HordeForge.WasmHost.Registry;
 using Xunit;
 
@@ -74,6 +75,50 @@ namespace HordeForge.WasmHost.Tests
         public void TypographyZeroWidthCharactersPassThrough(string text)
         {
             Assert.Same(text, TextSanitizer.Clean(text));
+        }
+
+        [Fact]
+        public void DescribedExceptionIsOneLineAndKeepsTheStack()
+        {
+            Exception thrown;
+            try
+            {
+                throw new InvalidOperationException("engine refused the store");
+            }
+            catch (Exception ex)
+            {
+                thrown = ex;
+            }
+            string described = TextSanitizer.Describe(thrown);
+            Assert.DoesNotContain('\n', described);
+            Assert.DoesNotContain('\r', described);
+            Assert.Contains("InvalidOperationException", described);
+            Assert.Contains("engine refused the store", described);
+            Assert.Contains(nameof(TextSanitizerTests), described);
+        }
+
+        [Fact]
+        public void DescribedInnerExceptionIsIncluded()
+        {
+            var thrown = new WasmModLoadException("demo", "load failed", new InvalidOperationException("inner cause"));
+            string described = TextSanitizer.Describe(thrown);
+            Assert.DoesNotContain('\n', described);
+            Assert.Contains("inner cause", described);
+        }
+
+        [Fact]
+        public void DescribedNullExceptionIsEmpty()
+        {
+            Assert.Equal(string.Empty, TextSanitizer.Describe(null));
+        }
+
+        [Fact]
+        public void DescribedExceptionCollapsesRunsOfStrippedCharacters()
+        {
+            // A stack trace is newlines, spaces, and tabs in runs; the result
+            // must not carry the padding, and must not start with a space.
+            var thrown = new InvalidOperationException("a\n\n  b\t\tc");
+            Assert.Equal("System.InvalidOperationException: a b c", TextSanitizer.Describe(thrown));
         }
     }
 }

@@ -263,7 +263,7 @@ namespace HordeForge.GameBridge.Bridge
                     // The command is guest-written text, cleaned at the entry
                     // point, and the key it lands in is held by the limiter for
                     // as long as the process lives, so it goes in bounded.
-                    WarnCapped("glide", "glide failed (" + command + "): " + ex.Message);
+                    WarnCapped("glide", "glide failed (" + command + "): " + TextSanitizer.Describe(ex));
                     return false;
                 }
             }
@@ -395,7 +395,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("glidebuff/" + netId, "glide buff " + netId + " failed: " + ex);
+                WarnCapped("glidebuff/" + netId, "glide buff " + netId + " failed: " + TextSanitizer.Describe(ex));
             }
         }
 
@@ -448,7 +448,7 @@ namespace HordeForge.GameBridge.Bridge
                 // The verb is guest-written text, and the key it lands in is
                 // held by the limiter for as long as the process lives, so
                 // it goes in bounded; the log line keeps the verb in full.
-                WarnCapped(GuestRateLimiter.SourceKey("bot/", verb), "bot " + verb + " failed: " + ex);
+                WarnCapped(GuestRateLimiter.SourceKey("bot/", verb), "bot " + verb + " failed: " + TextSanitizer.Describe(ex));
                 return false;
             }
         }
@@ -577,7 +577,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("sense", "sense failed: " + ex);
+                WarnCapped("sense", "sense failed: " + TextSanitizer.Describe(ex));
                 return 0;
             }
             return SenseSnapshotWriter.Write(snapshot, buffer);
@@ -809,7 +809,7 @@ namespace HordeForge.GameBridge.Bridge
                 // fires when the whole snapshot fails, so a read that fails
                 // on every entity would otherwise report 0 for wearing_glider
                 // on every snapshot with nothing in the log to explain it.
-                WarnCapped("sense/worn", "worn-item read failed: " + ex);
+                WarnCapped("sense/worn", "worn-item read failed: " + TextSanitizer.Describe(ex));
             }
             return 0;
         }
@@ -931,7 +931,7 @@ namespace HordeForge.GameBridge.Bridge
             }
             catch (Exception ex)
             {
-                WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + ex);
+                WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + TextSanitizer.Describe(ex));
                 return false;
             }
         }
@@ -1048,7 +1048,7 @@ namespace HordeForge.GameBridge.Bridge
                         // every bot the module owned, so a world that refuses
                         // to despawn any of them would otherwise emit one
                         // line per bot.
-                        WarnCapped("bot/release", "despawn of released bot " + id + " failed: " + ex.Message +
+                        WarnCapped("bot/release", "despawn of released bot " + id + " failed: " + TextSanitizer.Describe(ex) +
                                                  "; bot stays in the world");
                         kept++;
                     }
@@ -1157,7 +1157,7 @@ namespace HordeForge.GameBridge.Bridge
                         // Capped like the sibling release path: a brain
                         // repeating the verb against a world that refuses to
                         // despawn would otherwise write one line per command.
-                        WarnCapped("bot/despawn", "bot despawn of " + entityId + " failed: " + ex.Message +
+                        WarnCapped("bot/despawn", "bot despawn of " + entityId + " failed: " + TextSanitizer.Describe(ex) +
                                     "; bot stays in the world");
                         return;
                     }

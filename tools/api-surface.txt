@@ -240,6 +240,7 @@ src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void Upd
 src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void UpdateShared(IReadOnlyDictionary<string, string> settings)
 src/HordeForge.WasmHost/Registry/SettingsTable.cs: type SettingsTable
 src/HordeForge.WasmHost/Registry/TextSanitizer.cs: TextSanitizer.public static string Clean(string text)
+src/HordeForge.WasmHost/Registry/TextSanitizer.cs: TextSanitizer.public static string Describe(Exception? exception)
 src/HordeForge.WasmHost/Registry/TextSanitizer.cs: type TextSanitizer
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
