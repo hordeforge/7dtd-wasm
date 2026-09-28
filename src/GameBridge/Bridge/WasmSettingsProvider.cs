@@ -157,10 +157,11 @@ namespace HordeForge.GameBridge.Bridge
                 // later fixed save still re-reads.
                 if (!attempted || !_failedValid || attemptedMtime != _failedMtime || attemptedLength != _failedLength)
                 {
-                    // Parser diagnostics quote raw file text; clean them like
-                    // guest log output so control characters cannot forge log
-                    // lines.
-                    Log.Warning("[WasmHost] cannot reload " + _sharedPath + ": " + TextSanitizer.Clean(ex.Message) +
+                    // Parser diagnostics quote raw file text, and the path
+                    // itself is operator-authored (the install and modlet
+                    // folder names); clean both so control characters cannot
+                    // forge log lines.
+                    Log.Warning("[WasmHost] cannot reload " + TextSanitizer.Clean(_sharedPath) + ": " + TextSanitizer.Clean(ex.Message) +
                                 "; serving previous shared settings");
                 }
                 if (attempted)

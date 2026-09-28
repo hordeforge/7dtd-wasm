@@ -41,9 +41,10 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   no guest loads until the file is fixed. Falling back to the code defaults
   would hand every guest a fuel budget and memory ceiling nobody wrote.
 - `wasm status` prints the limits the engine is actually running under (fuel
-  per call, memory ceiling, module size cap, guest stdio), each module's
-  effective fuel per call, and the same host line is logged at start. That is
-  the check that the layering produced the limits the operator intended.
+  per call, memory ceiling, module size cap, stack cap, guest stdio), each
+  module's effective fuel per call, and the same host line is logged at start.
+  That is the check that the layering produced the limits the operator
+  intended.
 - **The shared file in force is named, not assumed.** `wasm status` and the
   start log both print the `wasm.toml` the limits and settings come from, or
   `none, code defaults in force` when no tree carries one. A staged modlet

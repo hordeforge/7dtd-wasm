@@ -274,6 +274,14 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Whether guest WASI stdout/stderr reach the host console.</summary>
         public bool InheritGuestStandardStreams => _config.InheritGuestStandardStreams;
 
+        /// <summary>
+        /// Ceiling on the wasm caller stack, in bytes, read back from the
+        /// configuration the engine was built with, so a report of the
+        /// limits in force names every cap rather than leaving the stack
+        /// ceiling the one only the constructor knows.
+        /// </summary>
+        public int MaximumStackBytes => _config.MaximumStackBytes;
+
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
         public long Tick
         {

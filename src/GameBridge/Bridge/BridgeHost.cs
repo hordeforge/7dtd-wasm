@@ -1002,7 +1002,8 @@ namespace HordeForge.GameBridge.Bridge
             if (reason.Length != 0)
             {
                 Log.Warning("[WasmHost] cannot apply shared wasm.toml limits: " +
-                            TextSanitizer.Clean(reason) + "; the host keeps its code defaults");
+                            TextSanitizer.Clean(reason) +
+                            "; the host does not start rather than run the code defaults");
                 return false;
             }
             LogIgnoredKeys("shared wasm.toml", shared);
@@ -1041,6 +1042,7 @@ namespace HordeForge.GameBridge.Bridge
             return "fuel/call " + host.FuelPerCall +
                    ", memory " + host.StaticMemoryMaximumBytes + " bytes" +
                    ", module cap " + host.MaxModuleSizeBytes + " bytes" +
+                   ", stack cap " + host.MaximumStackBytes + " bytes" +
                    ", guest stdio inherited " + (host.InheritGuestStandardStreams ? "yes" : "no");
         }
 

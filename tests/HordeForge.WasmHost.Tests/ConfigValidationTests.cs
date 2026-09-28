@@ -163,12 +163,14 @@ namespace HordeForge.WasmHost.Tests
                 StaticMemoryMaximumBytes = 16UL * 1024 * 1024,
                 MaxModuleSizeBytes = 2048,
                 InheritGuestStandardStreams = true,
+                MaximumStackBytes = 256 * 1024,
             };
             using var host = new WasmModHost(new TestGameHostApi(), config);
             Assert.Equal(250_000UL, host.FuelPerCall);
             Assert.Equal(16UL * 1024 * 1024, host.StaticMemoryMaximumBytes);
             Assert.Equal(2048, host.MaxModuleSizeBytes);
             Assert.True(host.InheritGuestStandardStreams);
+            Assert.Equal(256 * 1024, host.MaximumStackBytes);
         }
     }
 }

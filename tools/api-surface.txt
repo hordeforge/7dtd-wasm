@@ -181,6 +181,7 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool InheritGues
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public const long WasmPageBytes = 65536
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public int MaxModuleSizeBytes
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public int MaximumStackBytes
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public static string LogSourceFor(string prefix, string modId)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ulong FuelPerCall
