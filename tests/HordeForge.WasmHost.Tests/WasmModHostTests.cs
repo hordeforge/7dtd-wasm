@@ -201,6 +201,42 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void CorruptModuleBytesAreRejectedAndHostStaysUsable()
+        {
+            // A truncated or half-copied module.wasm passes the size cap and
+            // then fails to compile. That must surface as the load error
+            // naming the parse failure, not as a raw engine exception, and
+            // the host must still accept a healthy module afterwards.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                // A half-copied module: a real module's first half, which
+                // carries valid magic and a section table that runs off the
+                // end of the file.
+                byte[] full = Fixture("hello");
+                var corrupt = new byte[full.Length / 2];
+                Array.Copy(full, corrupt, corrupt.Length);
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("corrupt", corrupt));
+                Assert.Equal("corrupt", ex.ModId);
+                Assert.Contains("failed to parse or compile module", ex.Message);
+                Assert.Empty(host.ModIds);
+
+                Assert.True(host.LoadModule("strings", Fixture("strings")).Tick().Ok);
+            }
+        }
+
+        [Fact]
+        public void LoadModuleRejectsMissingBytes()
+        {
+            var (host, _) = NewHost();
+            using (host)
+            {
+                Assert.Throws<ArgumentNullException>(() => host.LoadModule("nothing", null!));
+                Assert.Empty(host.ModIds);
+            }
+        }
+
+        [Fact]
         public void MissingRequiredExportsAreRejected()
         {
             var (host, _) = NewHost();
@@ -257,6 +293,67 @@ namespace HordeForge.WasmHost.Tests
                     "(func (export \"on_tick\") (result i32) i32.const 0)" +
                     "(func (export \"on_shutdown\"))");
                 host.LoadModule("voidshutdown", wasm);
+            }
+        }
+
+        [Fact]
+        public void NonZeroExportStatusIsReportedAsErrorNotOk()
+        {
+            // Export status codes are 0 ok, 1 not implemented, 2 internal
+            // error (docs/ABI.md). A guest reporting one must be reported as
+            // an Error against that mod, never read as Ok, and it must not
+            // be miscounted as a trap or as a fuel exhaustion.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    // Reports a status on the first tick and 0 afterwards, so
+                    // the test can also show the guest stays callable.
+                    "(global $n (mut i32) (i32.const 0))" +
+                    "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                    "(func (export \"on_tick\") (result i32) (global.set $n (i32.add (global.get $n) (i32.const 1)))" +
+                    " (if (result i32) (i32.eq (global.get $n) (i32.const 1)) (then (i32.const 2)) (else (i32.const 0))))");
+                WasmMod mod = host.LoadModule("status", wasm);
+
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.Equal(ModRunStatus.Error, tick.Status);
+                Assert.Equal("status", tick.ModId);
+                Assert.Contains("on_tick", tick.Message);
+                Assert.Contains("returned status 2", tick.Message);
+                Assert.Equal(1, mod.ErrorCalls);
+                Assert.Equal(0, mod.TrapCalls);
+                Assert.Equal(0, mod.FuelExhaustedCalls);
+
+                // A reported status is the guest's answer, not a broken
+                // instance: the mod stays loaded and callable.
+                Assert.Single(host.ModIds);
+                Assert.Equal(1, mod.TotalCalls);
+                Assert.True(host.DispatchTick(2).Single().Ok);
+                Assert.Equal(2, mod.TotalCalls);
+            }
+        }
+
+        [Fact]
+        public void NonZeroEnableStatusFailsInitAndLeavesTheModLoaded()
+        {
+            // Same contract on the enable hook: the bridge start scan and
+            // "wasm reload" both read this result, so a guest that cannot
+            // enable must be visible as failed without losing its registry
+            // entry.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 1)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)");
+                host.LoadModule("notready", wasm);
+
+                ModRunResult init = host.InitModule("notready")!.Value;
+                Assert.Equal(ModRunStatus.Error, init.Status);
+                Assert.Equal("notready", init.ModId);
+                Assert.Contains("on_enable", init.Message);
+                Assert.Contains("returned status 1", init.Message);
+                Assert.Single(host.ModIds);
             }
         }
 

@@ -18,7 +18,9 @@ namespace HordeForge.WasmHost.Tests
             Assert.True(limiter.TryWrite("mod", out long dropped));
             Assert.Equal(0, dropped);
             Assert.True(limiter.TryWrite("mod", out dropped));
+            Assert.Equal(0, dropped);
             Assert.True(limiter.TryWrite("mod", out dropped));
+            Assert.Equal(0, dropped);
             Assert.False(limiter.TryWrite("mod", out dropped));
             Assert.Equal(1, dropped);
             Assert.False(limiter.TryWrite("mod", out dropped));
