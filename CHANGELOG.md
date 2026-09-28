@@ -6,6 +6,8 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+## [0.4.0] - 2026-09-28
+
 This cycle carries breaking changes, so it ships as 0.4.0: in this project's
 0.x scheme the minor digit carries breaking changes and the patch digit never
 does (CONTRIBUTING, "Versioning and releases"). Cutting it as 0.3.2 would put
