@@ -16,8 +16,8 @@ noted under on_player_join.
 A guest is a `wasm32-wasip1` module (cdylib) that:
 
 - imports the host API functions under module name `hordeforge`
-- exports `on_enable`, `on_tick`, and optionally `on_shutdown` and
-  `on_player_join`
+- exports `on_enable`, `on_tick`, and optionally `on_shutdown`,
+  `on_player_join`, and `on_admin_command`
 - declares an explicit memory maximum. A module without one is treated as
   declaring the wasm32 ceiling (4 GiB) and loads only when the operator
   raised the effective cap accordingly (see "Modules without a declared
@@ -49,10 +49,12 @@ it. No host pointer is ever handed to a guest.
 | `on_tick` | `() -> i32` | yes | Called once per game tick; the tick number is read via the `tick` import |
 | `on_shutdown` | `() -> i32` | no | Called on unload and host dispose |
 | `on_player_join` | `(entity_id: i32) -> i32` | no | Called when a player spawns into the world; fetch the name via the `get_join_player_name` import |
+| `on_admin_command` | `(cmd_ptr: i32, cmd_len: i32, out_ptr: i32, out_cap: i32) -> i32` | no | Console command handler (zdtd plugin surface). Resolved and signature-checked at load, but not yet dispatched: the console wiring is stage 3, so today a guest that exports it is simply never called |
 
 An optional export that is present must have exactly this signature
-(`on_shutdown` may return void for zdtd-style plugins); any other shape is
-rejected at load time rather than silently dropping the handler.
+(`on_enable`, `on_tick` and `on_shutdown` may return void for zdtd-style
+plugins); any other shape is rejected at load time rather than silently
+dropping the handler.
 
 Export status codes: 0 ok, 1 not implemented, 2 internal error. When
 verdict-style hooks are added (deny/adjust events), they will follow the
@@ -80,7 +82,7 @@ surface so those plugins run unmodified:
 |---|---|---|
 | `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Same as the hordeforge log |
 | `tick` | `() -> i64` | Same as the hordeforge tick |
-| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected |
+| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (zdtd ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected |
 | `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS4', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
 | `query` | `(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Text request/response (`cover bx bz tx tz`, `path bx bz tx tz`). Returns response bytes, -1 no answer, -2 buffer too small |
 | `config` | `(out_ptr: i32, out_cap: i32) -> i32` | Copy the calling mod's config.toml verbatim as UTF-8, at most min(out_cap, len) bytes and never splitting a multi-byte character; 0 = no config (module has none, or the buffer is too small). The host never parses it; each guest owns its format (zdtd contract, so the parachute mod's on_enable reads it unchanged) |
@@ -97,7 +99,7 @@ glide flags and applies the glide effect (a fall-damage immunity buff synced
 to the client, plus a server-side clamp of the descent to the sink rate),
 and `sense` reports players, zombies, and our bots in the ZBS4 layout (v4:
 40-byte records with server-derived `vy` from the per-tick position history
-and the `wearing_glider` bit, ADR 0037). Only a net id that names a live
+and the `wearing_glider` bit, zdtd ADR 0037). Only a net id that names a live
 player in the world can be armed, so a guest cannot steer an entity it does
 not own. The descent clamp is anchored to the last observed position and
 applies only when that observation is the previous tick, so a gap in sense

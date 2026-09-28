@@ -31,8 +31,8 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
   per call, memory ceiling, module size cap, guest stdio), and the same line
   is logged at start. That is the check that the layering produced the limits
   the operator intended.
-- A **new tunable is a new field**, not a new parse arm: the host binds the
-  file onto `ModManifest` struct fields, so adding a supported key means
+- A **new tunable is a new field**, not a new parse arm: the parser binds
+  the file onto `ModManifest` struct fields, so adding a supported key means
   adding a field in one place, and adding one to `[limits]` also means adding
   it to the closed key list the manifest parser accepts.
 

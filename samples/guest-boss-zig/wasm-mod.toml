@@ -5,8 +5,9 @@ name = "boss-zig"
 description = "Boss watcher written in Zig: prints THE BOSS IS HERE when a named player spawns"
 version = "0.1.0"
 
-# Host-enforced limits. A manifest can only tighten the host defaults;
-# fuel_per_call above the host ceiling is rejected at load.
+# Host-enforced limits. fuel_per_call overrides the host default for this
+# module and is rejected above the 50,000,000 ceiling; max_memory_bytes can
+# only tighten the effective cap.
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432

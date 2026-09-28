@@ -142,6 +142,14 @@ Codename: Quarantine (7dtd-wasm).
   handed every guest a fuel budget and memory ceiling the operator never
   wrote. The server keeps running and no guest loads until the file is
   fixed.
+- `apicheck` recorded a property whose accessor body nested braces as its
+  private backing field, so `WasmModHost.Tick` and `WasmModHost.ModIds` were
+  no longer on the recorded surface. The accessor body is now stripped with
+  a brace count, so the declaration is what the baseline holds.
+- `tools/api-surface.txt` regenerated: it still described the surface before
+  the tick telemetry, the single-module init entry point, the shutdown
+  failure list, and the collapsed TOML accessors landed, so the gate failed
+  on a tree whose published surface had only grown.
 
 ### Changed
 

@@ -8,7 +8,7 @@ namespace HordeForge.WasmHost.Abi
     /// <summary>
     /// Builds the binary world snapshot the zdtd `sense` import fills into a
     /// guest buffer. The format is the sibling zdtd-server contract
-    /// (BOTS_SPEC sense layout v4, ADR 0037, kept byte-identical so plugins
+    /// (BOTS_SPEC sense layout v4, zdtd ADR 0037, kept byte-identical so plugins
     /// written against it, like the unmodified fps_bot and the parachute
     /// mod, parse it unchanged):
     ///
@@ -88,7 +88,7 @@ namespace HordeForge.WasmHost.Abi
             public float Vy;
             /// <summary>Current target net id, or 0.</summary>
             public int TargetId;
-            /// <summary>True when the entity wears the glider item (v4, ADR 0037).</summary>
+            /// <summary>True when the entity wears the glider item (v4, zdtd ADR 0037).</summary>
             public byte Wearing;
         }
 

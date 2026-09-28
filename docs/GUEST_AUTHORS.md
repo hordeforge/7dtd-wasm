@@ -123,6 +123,11 @@ pub extern "C" fn on_player_join(entity_id: i32) -> i32 {
 }
 ```
 
+`on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap)` is the fifth optional
+export. The host resolves and signature-checks it, but no console command
+dispatches to it yet, so a guest that exports it is never called; wait for
+the stage 3 wiring (docs/ABI.md) before relying on it.
+
 ## Writing a guest in C (with zig)
 
 C guests are compiled with the zig compiler (`zig cc`, no libc, no entry

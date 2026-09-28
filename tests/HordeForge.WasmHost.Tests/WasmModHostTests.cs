@@ -947,7 +947,7 @@ greeting = ""hello""
             // Feed the unmodified mod a v4 sense snapshot of a worn player
             // falling fast: after the config's debounce it must arm the
             // glide exemption and announce; when the fall ends it must clear
-            // the glide. This is ADR 0037 end to end through the real module.
+            // the glide. This is zdtd ADR 0037 end to end through the real module.
             var api = new TestGameHostApi();
             api.RawConfigs["parachute"] = File.ReadAllText(
                 Path.Combine(AppContext.BaseDirectory, "fixtures", "parachute-config.toml"));

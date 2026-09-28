@@ -16,7 +16,8 @@ namespace HordeForge.WasmHost.Core
     /// API plus WASI preview1; each loaded module gets its own store. Modules
     /// are loaded per id, validated against the configured limits, and driven
     /// through the documented export surface (on_enable, on_tick,
-    /// on_player_join, on_shutdown). Every entry point serializes on one
+    /// on_player_join, on_shutdown, on_admin_command). Every entry point
+    /// serializes on one
     /// internal gate, so an embedder that drives the host from more than one
     /// thread (a game main loop plus a console thread, say) gets the same
     /// state the single-caller case sees.

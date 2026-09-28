@@ -43,8 +43,36 @@ IMPLICIT_MEMBER = re.compile(r"^(?:[A-Za-z_][\w.<>,\[\]?]*\s+)?[A-Za-z_]\w*\s*[(
 # member's arrow. A bare ">" is a generic argument, not the end.
 TERMINATOR = re.compile(r";|\{|=>")
 # get { ... } -> get; : the accessor keyword is surface, its body is not.
-BLOCK_ACCESSOR = re.compile(r"\b(get|set|init|add|remove)\s*\{[^{}]*\}")
+ACCESSOR = re.compile(r"\b(get|set|init|add|remove)\s*\{")
 ACCESSOR_LIST = re.compile(r"\{\s*((?:(?:get|set|init|add|remove)\s*;\s*)+)\}")
+
+
+def strip_accessor_bodies(text: str) -> str:
+    """Reduce every block accessor to its keyword.
+
+    Braces are counted rather than matched by a regex: an accessor body can
+    nest them (a getter that takes a lock), and a pattern that stops at the
+    first "}" leaves the rest of the body in the text, which then reads as
+    further members.
+    """
+    out: list[str] = []
+    position = 0
+    while (match := ACCESSOR.search(text, position)) is not None:
+        out.append(text[position : match.start()])
+        out.append(match.group(1) + ";")
+        depth = 0
+        index = match.end() - 1
+        while index < len(text):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            index += 1
+        position = index + 1
+    out.append(text[position:])
+    return "".join(out)
 
 
 def strip_noise(text: str) -> str:
@@ -57,7 +85,7 @@ def strip_noise(text: str) -> str:
     text = BLOCK_COMMENT.sub("", text)
     text = LINE_COMMENT.sub("", text)
     text = STRING_LITERAL.sub('""', CHAR_LITERAL.sub("''", text))
-    text = BLOCK_ACCESSOR.sub(r"\1;", text)
+    text = strip_accessor_bodies(text)
     # An accessor list on its own lines is collapsed onto the declaration so
     # every property is read as one line.
     return ACCESSOR_LIST.sub(lambda m: " { " + " ".join(m.group(1).split()) + " }", text)

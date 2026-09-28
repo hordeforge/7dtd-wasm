@@ -17,9 +17,9 @@ Codename **Quarantine**: untrusted mod code is treated like the infected,
 contained by the host with hard limits so it can never reach the game
 process.
 
-- **Fuel**: every guest call (on_enable, on_tick, on_shutdown) gets a fixed
-  instruction budget; a burning loop stops at the budget and reports
-  `FuelExhausted`.
+- **Fuel**: every guest call (on_enable, on_tick, on_player_join,
+  on_shutdown) gets a fixed instruction budget; a burning loop stops at the
+  budget and reports `FuelExhausted`.
 - **Memory**: a guest's declared memory maximum is checked at load time
   against the host cap; oversized modules are rejected.
 - **Module size**: a .wasm file larger than the cap is refused.
@@ -107,12 +107,15 @@ flowchart TB
     I -->|"reaches"| HI
 ```
 
-Config load order (docs/CONFIG.md): each layer can only tighten the
-previous one.
+Config load order (docs/CONFIG.md). Shared `wasm.toml` [limits] replace the
+code defaults at host start, so an operator may raise them; a per-mod
+`wasm-mod.toml` overrides `fuel_per_call` within the host ceiling and can
+only tighten `max_memory_bytes`. The module size cap is not configurable
+from either file; it lives on `WasmHostConfig`.
 
 ```mermaid
 flowchart LR
-    CODE["code defaults"] --> SHARED["wasm.toml"] --> MOD["wasm-mod.toml"] --> EFF["effective limits<br/>fuel, memory, module size"]
+    CODE["code defaults"] --> SHARED["wasm.toml<br/>(replaces the defaults)"] --> MOD["wasm-mod.toml<br/>(overrides fuel, tightens memory)"] --> EFF["effective limits<br/>fuel, memory"]
 ```
 
 ## Why Wasmtime
@@ -204,10 +207,10 @@ foreach (ModRunResult result in host.DispatchInit())
 
 long gameTick = 0;
 while (running)                               // once per game tick; the host
-{                                             // is single-threaded by design:
+{                                             // serializes its entry points,
     foreach (ModRunResult result in host.DispatchTick(gameTick++))
-    {                                         // call it from your main loop only
-        if (!result.Ok)
+{                                         // so a second thread only blocks
+        if (!result.Ok)                       // until this dispatch returns
         {
             Console.WriteLine($"{result.ModId}: {result.Message} {result.Details}");
         }
@@ -219,11 +222,11 @@ ModRunResult? shutdown = host.Unload("hello");
 
 A guest fault never throws: every call outcome is a `ModRunResult`
 (`Ok`, `Trap`, `FuelExhausted`, `Error`). Only load rejection throws,
-as `WasmModLoadException` with the offending mod id. The lists returned
-by the `Dispatch*` methods are owned by the host and are replaced by the
-next dispatch call, so consume or copy them before dispatching again.
-Limits live on `WasmHostConfig` (fuel per call, memory ceiling, module
-size cap) and are validated when the host is constructed. See
+as `WasmModLoadException` with the offending mod id. Each `Dispatch*` call
+builds its own result list and hands it back read-only, so a later dispatch
+(including one on another thread) never rewrites a list you are still
+reading. Limits live on `WasmHostConfig` (fuel per call, memory ceiling,
+module size cap) and are validated when the host is constructed. See
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ABI.md](docs/ABI.md).
 
 Failure outcomes are typed, so nothing needs message matching:

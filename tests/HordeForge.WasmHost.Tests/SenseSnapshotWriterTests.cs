@@ -6,7 +6,7 @@ namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
     /// Byte-level contract of the zdtd sense snapshot ('ZBS4', BOTS_SPEC v4,
-    /// ADR 0037): the layout is kept identical to the sibling zdtd-server
+    /// zdtd ADR 0037): the layout is kept identical to the sibling zdtd-server
     /// wire format so unmodified plugins parse it. These tests pin every
     /// documented field offset from the SenseSnapshotWriter docstring; a
     /// drift here is a silent ABI break guests read as garbage.

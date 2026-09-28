@@ -130,7 +130,7 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<Mo
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchTick(long tick)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> ShutdownFailures
-src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<string> ModIds
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<string> ModIds { get; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? InitModule(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
@@ -138,7 +138,7 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGam
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public const long WasmPageBytes = 65536
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public int MaxModuleSizeBytes
-src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; private set; }
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public void Dispose()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: type WasmModHost
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public const long MaxBytes = 1024 * 1024
@@ -146,40 +146,28 @@ src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static b
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static string ReadRequired(string path)
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: type ManifestFiles
 src/HordeForge.WasmHost/Registry/MiniToml.cs: MiniToml.public static TomlValue Parse(string text)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override long AsInteger(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public bool Value { get; }
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override long AsInteger(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public static readonly TomlBool False = new TomlBool(false)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public static readonly TomlBool True = new TomlBool(true)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public TomlDouble(double value)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public double Value { get; }
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override long AsInteger(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public TomlLong(long value)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public long Value { get; }
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override TomlTable AsTable(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override long AsInteger(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public TomlString(string value)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override long AsInteger(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public string Value { get; }
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public IEnumerable<string> Keys { get; }
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool HasKey(string key)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool TryGet(string key, out TomlValue value)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override long AsInteger(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override string AsString(string context)
 src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public void Add(string key, TomlValue value)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract TomlTable AsTable(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract long AsInteger(string context)
-src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public virtual TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public virtual long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public virtual string AsString(string context)
 src/HordeForge.WasmHost/Registry/ModId.cs: ModId.public static bool IsValid(string? id)
 src/HordeForge.WasmHost/Registry/ModId.cs: type ModId
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public IReadOnlyDictionary<string, string> Settings { get; private set; }

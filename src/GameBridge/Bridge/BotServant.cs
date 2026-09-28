@@ -13,9 +13,9 @@ namespace HordeForge.GameBridge.Bridge
     /// parachute mod), and builds the 'ZBS4' world snapshot the sense import
     /// fills. The brain owns targeting and aim; the servant owns the bodies.
     ///
-    /// Stage 2 status: spawn, move, look, shoot, and sense are implemented;
-    /// cover/path queries still return no answer and on_admin_command is
-    /// not yet wired to the console.
+    /// Stage 2 status: spawn, move, look, shoot, glide, and sense are
+    /// implemented; cover/path queries still return no answer and
+    /// on_admin_command is not yet wired to the console.
     /// </summary>
     public sealed class BotServant
     {
@@ -84,7 +84,7 @@ namespace HordeForge.GameBridge.Bridge
         // time (single main-loop thread by contract).
         private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
         private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords = CreateSenseRecords();
-        // Armed gliders (ADR 0037 `glide <net_id> <0|1>`): net id -> armed.
+        // Armed gliders (zdtd ADR 0037 `glide <net_id> <0|1>`): net id -> armed.
         // The real game has no C2S movement envelope to exempt, so this is
         // tracked as the mod's authority state and surfaced in "wasm status";
         // the parachute deploy/land state machine still runs correctly.
@@ -179,7 +179,7 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Handles `glide &lt;net_id&gt; &lt;0|1|on|true|off|false&gt;` (ADR 0037,
+        /// Handles `glide &lt;net_id&gt; &lt;0|1|on|true|off|false&gt;` (zdtd ADR 0037,
         /// the parachute mod's queue verb): tracks the player's glide flag.
         /// The parse mirrors zdtd exactly (arm values "1"/"on"/"true", clear
         /// values "0"/"off"/"false", anything else is malformed and dropped).
@@ -323,7 +323,7 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         /// <summary>
-        /// Armed glide flags by net id (ADR 0037); exposed for "wasm status".
+        /// Armed glide flags by net id (zdtd ADR 0037); exposed for "wasm status".
         /// A copy, not the live dictionary: the armed flags are written from
         /// the queue import, so a caller enumerating this must not be able
         /// to reach back into the servant's state.
@@ -494,7 +494,7 @@ namespace HordeForge.GameBridge.Bridge
         /// Current vertical velocity in blocks/s (negative = falling), derived
         /// from the server-side position history. The stock dedicated server
         /// does not populate `Entity.motion` for remote players (the client
-        /// owns its own local physics, ADR 0037), so the sense v4 `vy` field
+        /// owns its own local physics, zdtd ADR 0037), so the sense v4 `vy` field
         /// is computed here from the per-tick position delta - the same
         /// approach zdtd uses. The stored position only advances when the
         /// game tick changes, so every module reading sense within one tick
@@ -573,7 +573,7 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// True when the entity wears an item whose ItemClass carries the
-        /// glider tag (sense v4 wearing_glider, ADR 0037). Mirrors zdtd's
+        /// glider tag (sense v4 wearing_glider, zdtd ADR 0037). Mirrors zdtd's
         /// armor-slot tag scan; the tag name matches the parachute mod's
         /// items.xml patch. Defensive: an equipment read failure reports 0
         /// rather than killing the snapshot.
