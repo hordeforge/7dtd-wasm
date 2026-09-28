@@ -293,12 +293,14 @@ namespace HordeForge.GameBridge.Bridge
                     }
                     catch (Exception ex)
                     {
-                        // An unreadable tree (permissions, a modlet being
-                        // replaced while the server runs) must not abort the
-                        // scan: the other trees still load, and the modules
-                        // already loaded stay in place. The IO message may
-                        // embed the raw path, so clean it before logging.
-                        Log.Warning("[WasmHost] cannot scan " + TextSanitizer.Clean(root) + ": " +
+                        // An unreadable tree (permissions, a network share, a
+                        // modlet being replaced while the server runs, a
+                        // folder removed mid-scan) must not abort the scan:
+                        // the remaining trees still load, and at server start
+                        // the whole bridge would otherwise come up dead. The
+                        // IO message may embed the raw path, so clean both
+                        // before logging.
+                        Log.Warning("[WasmHost] cannot scan module tree " + TextSanitizer.Clean(root) + ": " +
                                     TextSanitizer.Clean(ex.Message) + "; tree skipped");
                         continue;
                     }
@@ -580,6 +582,15 @@ namespace HordeForge.GameBridge.Bridge
                 if (_host != null)
                 {
                     _host.Dispose();
+                    // A guest that traps or runs out of fuel on its way out
+                    // must still reach the log; Dispose keeps those results
+                    // for exactly this.
+                    foreach (ModRunResult failure in _host.ShutdownFailures)
+                    {
+                        Log.Warning("[WasmHost] shutdown of " + TextSanitizer.Clean(failure.ModId) + ": " +
+                                    TextSanitizer.Clean(failure.Message) +
+                                    (failure.Details.Length > 0 ? " (" + TextSanitizer.Clean(failure.Details) + ")" : ""));
+                    }
                     _host = null;
                 }
                 // Release what Start() built so a shutdown leaves no static

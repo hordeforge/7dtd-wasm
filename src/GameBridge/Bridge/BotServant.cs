@@ -689,7 +689,21 @@ namespace HordeForge.GameBridge.Bridge
                 Entity e = game.World.GetEntity(entityId);
                 if (e is EntityAlive alive)
                 {
-                    alive.SetDead();
+                    try
+                    {
+                        alive.SetDead();
+                    }
+                    catch (Exception ex)
+                    {
+                        // The body is still alive in the world, so it must go
+                        // back under the servant's tracking: a despawn that
+                        // silently half-happened would leave a live zombie
+                        // nobody can prune, move, or despawn again.
+                        _bots.Add(entityId);
+                        Log.Warning("[WasmHost] bot despawn of " + entityId + " failed: " + ex.Message +
+                                    "; bot stays in the world");
+                        return;
+                    }
                 }
             }
             _botYaw.Remove(entityId);

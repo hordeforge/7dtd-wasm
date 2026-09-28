@@ -72,9 +72,33 @@ namespace TargetCheck
                 return 2;
             }
 
-            using var pe = new PEReader(File.OpenRead(asmCSharp));
-            var md = pe.GetMetadataReader();
+            PEReader? reader = OpenAssembly(asmCSharp);
+            if (reader == null)
+            {
+                return 2;
+            }
+            using (reader)
+            {
+                // Reading the metadata block, and every check below that
+                // walks it, throws on a malformed image or metadata heap
+                // rather than returning partial data. A corrupt game assembly
+                // must fail as a documented usage error (exit 2) instead of a
+                // .NET stack trace.
+                try
+                {
+                    return RunChecks(reader.GetMetadataReader(), managed, asmCSharp);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine("targetcheck: cannot read the game assemblies under " + managed +
+                                            ": " + ex.Message);
+                    return 2;
+                }
+            }
+        }
 
+        private static int RunChecks(MetadataReader md, string managed, string asmCSharp)
+        {
             ReportGameVersion(md, asmCSharp);
 
             CheckType(md, "GameManager", t =>
@@ -193,7 +217,11 @@ namespace TargetCheck
             string logLibrary = Path.Combine(managed, "LogLibrary.dll");
             if (File.Exists(logLibrary))
             {
-                using var peLog = new PEReader(File.OpenRead(logLibrary));
+                using var peLog = OpenAssembly(logLibrary);
+                if (peLog == null)
+                {
+                    return 2;
+                }
                 var mdLog = peLog.GetMetadataReader();
                 CheckType(mdLog, "Log", t =>
                 {
@@ -393,6 +421,40 @@ namespace TargetCheck
         private static string TypeKind(MetadataReader md, TypeDefinition t)
         {
             return (t.Attributes & TypeAttributes.Interface) != 0 ? "interface" : "class";
+        }
+
+        /// <summary>
+        /// Opens a PE image for metadata-only reading, or reports the real
+        /// reason on stderr and returns null. A truncated, corrupt, or
+        /// unreadable assembly is a usage-level problem (exit 2), not a crash:
+        /// an unhandled BadImageFormatException here would print a .NET stack
+        /// trace and exit with a code the Makefile does not document. The
+        /// file handle is closed on every path, including a failed reader
+        /// construction.
+        /// </summary>
+        private static PEReader? OpenAssembly(string path)
+        {
+            FileStream? stream;
+            try
+            {
+                stream = File.OpenRead(path);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("targetcheck: cannot read " + path + ": " + ex.Message);
+                return null;
+            }
+            try
+            {
+                return new PEReader(stream);
+            }
+            catch (Exception ex)
+            {
+                stream.Dispose();
+                Console.Error.WriteLine("targetcheck: " + path + " is not a readable .NET assembly: " +
+                                        ex.Message + "; point GAME_DIR at a real dedicated server install");
+                return null;
+            }
         }
 
         private static void Fail(string what)

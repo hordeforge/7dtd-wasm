@@ -166,9 +166,12 @@ namespace HordeForge.WasmHost.Core
         private ModRunResult Run(string callName, Func<int> invoke)
         {
             TotalCalls++;
-            _store.Fuel = _fuelPerCall;
             try
             {
+                // Inside the try: arming the budget touches the store, and a
+                // failure there must stay this mod's problem instead of
+                // escaping Run and skipping the tick for every other module.
+                _store.Fuel = _fuelPerCall;
                 int status = invoke();
                 ulong consumed = ConsumedFuel();
                 if (status != AbiConstants.StatusOk)

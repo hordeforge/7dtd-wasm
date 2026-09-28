@@ -113,9 +113,27 @@ def walk(root: pathlib.Path):
             check_markdown(path)
 
 
+def read_text(path: pathlib.Path) -> str | None:
+    """File contents, or None after reporting why the file could not be read.
+
+    An unreadable file is a gate failure, not a crash: the walk continues
+    over the rest of the repository instead of aborting on a permission
+    error with a bare traceback.
+    """
+    global errors
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError as problem:
+        errors += 1
+        emit(f"{path}: cannot read file: {problem}")
+        return None
+
+
 def check_markdown(path):
     global errors, warnings
-    text = path.read_text(encoding="utf-8", errors="replace")
+    text = read_text(path)
+    if text is None:
+        return
     for lineno, line in enumerate(text.splitlines(), 1):
         for hit in line_errors(line):
             errors += 1
@@ -135,7 +153,9 @@ def check_markdown(path):
 def check_plain_text():
     global errors
     for path in text_files:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = read_text(path)
+        if text is None:
+            continue
         for lineno, line in enumerate(text.splitlines(), 1):
             if EM_DASH.search(line):
                 errors += 1
@@ -154,6 +174,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     errors, warnings, text_files = 0, 0, []
+    # A mistyped --root would otherwise scan nothing and report "ok": a
+    # silent pass is the one outcome a gate must never produce.
+    if not args.root.is_dir():
+        emit(f"doccheck: {args.root} is not a directory")
+        return 2
     walk(args.root)
     check_plain_text()
     if errors:

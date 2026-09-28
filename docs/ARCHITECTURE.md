@@ -43,6 +43,9 @@ main loop.
   A bad module never stops the loop.
 - `WasmMod` wraps one instance and its exports and keeps per-module counters
   (total calls, traps, fuel exhausted, total fuel consumed).
+- `Dispose` runs every loaded guest's shutdown export and keeps the ones that
+  did not complete in `ShutdownFailures`, which the embedder reads after
+  disposing: a guest that traps on its way out must not disappear silently.
 
 Why fuel over wall-clock: fuel is deterministic and cannot be fooled by host
 scheduling; a guest either finishes within its budget or is stopped at it.
@@ -103,6 +106,8 @@ change silently on Steam patches. `targetcheck` reads `Assembly-CSharp.dll`
 and `LogLibrary.dll` metadata (System.Reflection.Metadata, no code
 execution) and verifies every member the bridge touches, including method
 signatures and enum members. It also reports the detected game version.
+An install that cannot be read at all (missing, unreadable, or a corrupt
+image) exits 2 with the reason on stderr, never a stack trace.
 `make bridge-check` must pass before the bridge is trusted.
 
 ## Evolution path

@@ -80,15 +80,39 @@ def project_version(root: pathlib.Path) -> str:
         raise SystemExit("sbom: ModInfo.xml not found under src/")
     # ModInfo.xml is a file in this repository, not a guest-supplied
     # document, so it carries no external entity to expand.
-    tag = ET.parse(modinfo).find("Version")  # noqa: S314
+    try:
+        tag = ET.parse(modinfo).find("Version")  # noqa: S314
+    except (OSError, ET.ParseError) as error:
+        raise SystemExit(f"sbom: cannot read {modinfo}: {error}") from error
     if tag is None or not tag.get("value"):
         raise SystemExit(f"sbom: no <Version value=...> in {modinfo}")
     return tag.get("value")
 
 
+def load_json(path: pathlib.Path) -> dict:
+    """Parse a lock file, naming the file on a malformed or unreadable one."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise SystemExit(f"sbom: cannot read {path}: {error}") from error
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"sbom: {path} is not valid JSON: {error}") from error
+
+
+def load_toml(path: pathlib.Path) -> dict:
+    """Parse a TOML file, naming the file on a malformed or unreadable one."""
+    try:
+        with path.open("rb") as handle:
+            return tomllib.load(handle)
+    except OSError as error:
+        raise SystemExit(f"sbom: cannot read {path}: {error}") from error
+    except tomllib.TOMLDecodeError as error:
+        raise SystemExit(f"sbom: {path} is not valid TOML: {error}") from error
+
+
 def nuget_components(lock_path: pathlib.Path) -> list[dict]:
     """Flatten one packages.lock.json into deduplicated components."""
-    data = json.loads(lock_path.read_text(encoding="utf-8"))
+    data = load_json(lock_path)
     found: dict[str, dict] = {}
     for tfm_deps in data.get("dependencies", {}).values():
         for name, info in tfm_deps.items():
@@ -114,8 +138,7 @@ def cargo_members(samples_dir: pathlib.Path) -> set[str]:
     """Package names of the workspace's own crates (first-party)."""
     names = set()
     for manifest in samples_dir.rglob("Cargo.toml"):
-        with manifest.open("rb") as fh:
-            name = tomllib.load(fh).get("package", {}).get("name")
+        name = load_toml(manifest).get("package", {}).get("name")
         if name:
             names.add(name)
     return names
@@ -123,8 +146,7 @@ def cargo_members(samples_dir: pathlib.Path) -> set[str]:
 
 def cargo_components(cargo_lock: pathlib.Path) -> list[dict]:
     """Components from Cargo.lock, excluding first-party workspace crates."""
-    with cargo_lock.open("rb") as fh:
-        data = tomllib.load(fh)
+    data = load_toml(cargo_lock)
     members = cargo_members(cargo_lock.parent)
     comps = []
     for pkg in data.get("package", []):
@@ -181,11 +203,18 @@ def main(argv: list[str]) -> int:
                         help="write JSON here instead of stdout")
     args = parser.parse_args(argv)
 
+    if not args.root.is_dir():
+        print(f"sbom: {args.root} is not a directory", file=sys.stderr)
+        return 2
     bom = build_bom(args.root)
     text = json.dumps(bom, indent=2) + "\n"
     if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(text, encoding="utf-8")
+        try:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(text, encoding="utf-8")
+        except OSError as error:
+            print(f"sbom: cannot write {args.output}: {error}", file=sys.stderr)
+            return 2
         print(f"sbom: wrote {len(bom['components'])} components to {args.output}",
               file=sys.stderr)
     else:

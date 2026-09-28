@@ -3,6 +3,7 @@
 
 import contextlib
 import io
+import os
 import pathlib
 import sys
 import tempfile
@@ -105,6 +106,33 @@ class MainTest(unittest.TestCase):
         self.assertEqual(out, "")
         self.assertIn("em dash found", err)
         self.assertIn("doccheck:", err)
+
+    def test_missing_root_fails_instead_of_reporting_ok(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = pathlib.Path(tmp) / "nope"
+            code, out, err = self.run_main(missing)
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertIn("is not a directory", err)
+        self.assertNotIn("doccheck: ok", err)
+
+    def test_unreadable_file_is_a_finding_not_a_crash(self):
+        if os.geteuid() == 0:
+            self.skipTest("root bypasses file permissions")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            locked = root / "locked.md"
+            locked.write_text("clean\n", encoding="utf-8")
+            locked.chmod(0o000)
+            try:
+                (root / "notes.md").write_text("bad \u2014 dash\n", encoding="utf-8")
+                code, _out, err = self.run_main(root)
+            finally:
+                locked.chmod(0o600)
+        self.assertEqual(code, 1)
+        self.assertIn("cannot read file", err)
+        # The rest of the tree is still checked after the unreadable file.
+        self.assertIn("em dash found", err)
 
 
 if __name__ == "__main__":

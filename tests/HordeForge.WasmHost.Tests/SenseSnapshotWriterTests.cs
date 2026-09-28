@@ -148,6 +148,22 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void RecordCountTooLargeForIntArithmeticReportsNoData()
+        {
+            // A count whose int-serialized size wraps negative would pass a
+            // narrower fits check and then write past the buffer.
+            var snapshot = new SenseSnapshotWriter.Snapshot();
+            var record = new SenseSnapshotWriter.EntityRecord { NetId = 1 };
+            for (int i = 0; i < 60_000_000; i++)
+            {
+                snapshot.Records.Add(record);
+            }
+            var buffer = new byte[SenseSnapshotWriter.HeaderSize];
+            Assert.Equal(0, SenseSnapshotWriter.Write(snapshot, buffer));
+            Assert.Equal(0, buffer[SenseSnapshotWriter.HeaderSize - 1]);
+        }
+
+        [Fact]
         public void NullSnapshotIsRejected()
         {
             Assert.Throws<ArgumentNullException>(

@@ -188,5 +188,43 @@ class BuildBomTest(unittest.TestCase):
         self.assertEqual(len(one["components"]), 2)
 
 
+class MalformedInputTest(unittest.TestCase):
+    """A broken lock file must name itself, not raise a bare traceback."""
+
+    def test_malformed_nuget_lock_names_the_file(self):
+        lock = write(pathlib.Path(tempfile.mkdtemp()) / "packages.lock.json", "{ not json")
+        with self.assertRaises(SystemExit) as caught:
+            sbom.nuget_components(lock)
+        self.assertIn(str(lock), str(caught.exception))
+
+    def test_malformed_cargo_lock_names_the_file(self):
+        lock = write(pathlib.Path(tempfile.mkdtemp()) / "Cargo.lock", "= broken =")
+        with self.assertRaises(SystemExit) as caught:
+            sbom.cargo_components(lock)
+        self.assertIn(str(lock), str(caught.exception))
+
+    def test_malformed_modinfo_names_the_file(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        modinfo = write(root / "src" / "M" / "ModInfo.xml", "<Mod><Version>")
+        with self.assertRaises(SystemExit) as caught:
+            sbom.project_version(root)
+        self.assertIn(str(modinfo), str(caught.exception))
+
+
+class MainTest(unittest.TestCase):
+    def test_missing_root_fails_with_a_message_not_a_traceback(self):
+        missing = pathlib.Path(tempfile.mkdtemp()) / "nope"
+        self.assertEqual(sbom.main(["--root", str(missing)]), 2)
+
+    def test_unwritable_output_fails_instead_of_raising(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        write(root / "src" / "M" / "ModInfo.xml", '<xml><Version value="1.0.0" /></xml>')
+        blocker = root / "blocker"
+        blocker.write_text("not a directory", encoding="utf-8")
+        self.assertEqual(
+            sbom.main(["--root", str(root), "-o", str(blocker / "sub" / "out.json")]), 2
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

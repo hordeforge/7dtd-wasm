@@ -150,8 +150,11 @@ namespace HordeForge.WasmHost.Abi
             {
                 throw new ArgumentNullException(nameof(snapshot));
             }
-            int total = HeaderSize + snapshot.Records.Count * RecordSize +
-                        (snapshot.Damage.Count + snapshot.BotInfo.Count) * EventSize;
+            // Width-checked in long: a count large enough to overflow the
+            // int total would wrap negative, pass the fits check, and write
+            // past the end of the caller's buffer.
+            long total = HeaderSize + (long)snapshot.Records.Count * RecordSize +
+                         ((long)snapshot.Damage.Count + snapshot.BotInfo.Count) * EventSize;
             if (total > buffer.Length)
             {
                 return 0;

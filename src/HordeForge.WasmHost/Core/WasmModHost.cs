@@ -60,6 +60,9 @@ namespace HordeForge.WasmHost.Core
         // downcast back to the list, so the read-only contract callers
         // compile against is the contract they get.
         private readonly ReadOnlyCollection<ModRunResult> _resultsView;
+        // Shutdown outcomes that were not Ok, retained after Dispose so the
+        // embedder can report a failed goodbye instead of losing it.
+        private readonly List<ModRunResult> _shutdownFailures = new List<ModRunResult>();
         private string _currentJoinName = string.Empty;
 
         /// <summary>
@@ -714,6 +717,15 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
+        /// Results of the shutdown calls made by <see cref="Dispose"/>, in
+        /// load order, for every mod whose shutdown did not complete. A guest
+        /// that traps on its way out would otherwise leave no trace at all,
+        /// so the embedder can log these after disposing. Empty until
+        /// Dispose has run, and unchanged by later calls.
+        /// </summary>
+        public IReadOnlyList<ModRunResult> ShutdownFailures => _shutdownFailures;
+
+        /// <summary>
         /// Shuts down every loaded mod (best effort), releases each mod's
         /// store and compiled module, and releases the engine and linker.
         /// Safe to call more than once.
@@ -729,7 +741,13 @@ namespace HordeForge.WasmHost.Core
                 if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
                 {
                     _currentModId = mod.Id;
-                    mod.Shutdown();
+                    ModRunResult shutdown = mod.Shutdown();
+                    if (!shutdown.Ok)
+                    {
+                        // Kept rather than dropped: the embedder reads them
+                        // after Dispose to report a failed goodbye.
+                        _shutdownFailures.Add(shutdown);
+                    }
                     mod.Dispose();
                 }
             }

@@ -310,6 +310,27 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void DisposeKeepsFailedShutdownResultsForTheEmbedder()
+        {
+            // A guest that traps on the way out must leave a result behind:
+            // the bridge logs these after Dispose, so dropping them would
+            // make a failed goodbye invisible at server shutdown.
+            var (host, _) = NewHost();
+            host.LoadModule("trapshutdown", WatModule(
+                "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                "(func (export \"on_shutdown\") (result i32) unreachable)"));
+            host.Dispose();
+
+            ModRunResult failure = Assert.Single(host.ShutdownFailures);
+            Assert.Equal("trapshutdown", failure.ModId);
+            Assert.False(failure.Ok);
+            // Disposing again must not re-run or duplicate the goodbyes.
+            host.Dispose();
+            Assert.Single(host.ShutdownFailures);
+        }
+
+        [Fact]
         public void RepeatedUnloadReloadCyclesStayHealthy()
         {
             // `wasm reload <id>` is the operator iteration loop for guest
