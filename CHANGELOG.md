@@ -152,6 +152,14 @@ operator, embedder, and guest author.
   modules reading different configs are covered by tests.
 - Tick dispatch pre-sizes its result list to the loaded module count,
   dropping the grow-and-copy reallocations from every tick.
+- The sense scan no longer fills a `HashSet` with the net id of every alive
+  entity on every request to decide which position-history entries are stale.
+  That set is built from the whole world entity list (thousands of inserts on
+  a populated server, 20 times a second per brain) but is only ever probed
+  for the at most 41 ids a snapshot can carry, and the history it prunes
+  holds only those. Liveness is now asked of the world per tracked id, the
+  same way the armed-glide prune already did, so the cost is proportional to
+  the history rather than to the entity list.
 
 ### Fixed
 
@@ -235,9 +243,12 @@ operator, embedder, and guest author.
   `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
   not-null state of a nullable value-type local at a loop back-edge, so
   `results.Add(result)` had no conversion to use. The pattern match on the
-  return value states the same thing and compiles: the pattern binds the
-  unwrapped `ModRunResult`, so the result is added directly. The library,
-  the net48 bridge, and the test suite were unbuildable at this commit.
+  return value states the same thing and compiles: the matched local is
+  already the unwrapped struct, since `ModRunResult?` is
+  `Nullable<ModRunResult>`, so a `ModRunResult result` pattern binds the
+  value and `result.Value` does not exist on it. The result is added
+  directly. The library, the net48 bridge, and the test suite were
+  unbuildable at this commit.
 - The C# style rules in `.editorconfig` were editor suggestions: nothing
   promoted them, so a rule set that a developer silently ignored was the
   only thing a CI run saw. `EnforceCodeStyleInBuild` is on, and

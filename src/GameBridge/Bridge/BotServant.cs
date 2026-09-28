@@ -488,8 +488,6 @@ namespace HordeForge.GameBridge.Bridge
                 snapshot.WorldTime = WorldTime.ToAbi(game.World.GetWorldTime());
                 snapshot.BloodMoon = false;
                 var records = _senseRecords;
-                var seen = _seenIds;
-                seen.Clear();
                 // Two passes on purpose. The first collects the net ids of
                 // the alive entities and nothing else, so a world with more
                 // entities than a snapshot holds still costs one IsDead
@@ -507,14 +505,6 @@ namespace HordeForge.GameBridge.Bridge
                     if (e is EntityAlive alive && !alive.IsDead())
                     {
                         candidates.Add(e.entityId);
-                        // Membership for the history and glide prunes is
-                        // "alive in the world", so it is collected here,
-                        // before the record window trims the candidate list.
-                        // Collected after the trim it would name only the
-                        // reported entities, and both prunes would then
-                        // discard state for every live entity the snapshot
-                        // does not carry.
-                        seen.Add(e.entityId);
                     }
                 }
                 // Ahead of the record pass, not after it: a glide flag left
@@ -555,7 +545,7 @@ namespace HordeForge.GameBridge.Bridge
                     snapshot.Records.Add(record);
                     ClampGlideDescent(alive, record.Vy, e.position, prevPos, elapsedTicks);
                 }
-                PrunePositionHistory(seen);
+                PrunePositionHistory(game.World);
             }
             catch (Exception ex)
             {
@@ -566,15 +556,14 @@ namespace HordeForge.GameBridge.Bridge
         }
 
         // Per-entity position history backing the sense v4 `vy` field, plus
-        // the id sets and lists the sense and spawn paths collect into. All
-        // pooled: every one of them runs at tick rate, so none may allocate
-        // per call (single main-loop thread by contract). The three id lists
-        // are separate buffers because a collection is walked while another
-        // could be refilled underneath it.
+        // the id lists the sense and spawn paths collect into. All pooled:
+        // every one of them runs at tick rate, so none may allocate per call
+        // (single main-loop thread by contract). The lists are separate
+        // buffers because a collection is walked while another could be
+        // refilled underneath it.
         private readonly Dictionary<int, (long Tick, UnityEngine.Vector3 Pos)> _lastPos =
             new Dictionary<int, (long, UnityEngine.Vector3)>();
 
-        private readonly HashSet<int> _seenIds = new HashSet<int>();
         // Alive net ids collected by the sense scan before the record
         // window is chosen. Pooled for the same reason as the rest: sense
         // runs at tick rate per calling brain and allocates nothing.
@@ -588,7 +577,18 @@ namespace HordeForge.GameBridge.Bridge
         /// Drops position history for entities no longer in the world
         /// (disconnected players, removed bots), so the history stays
         /// proportional to the live entity list instead of every id ever
-        /// seen. Runs inside the sense scan, which already visits them all.
+        /// seen.
+        ///
+        /// Liveness is asked of the world per tracked id, the same way
+        /// <see cref="PruneGlideFlags"/> asks it per armed id. The alternative
+        /// the earlier code used was to fill a HashSet with every alive net
+        /// id during the sense scan and probe membership against it, which
+        /// cost a hash insert per live entity per request to answer a
+        /// question about at most <see cref="MaxSenseRecords"/> ids: on a
+        /// world of a few thousand zombies that was thousands of inserts
+        /// where a few dozen lookups do. A dedicated server at 20 TPS pays
+        /// that on every sense request from every brain.
+        ///
         /// Membership decides, not a size comparison: in a tick where
         /// entities leave and others join the counts can match while ids
         /// differ, and a history entry left behind is served to whatever
@@ -596,13 +596,13 @@ namespace HordeForge.GameBridge.Bridge
         /// from the previous occupant's position. The walk allocates
         /// nothing, so running it unconditionally costs only the iteration.
         /// </summary>
-        private void PrunePositionHistory(HashSet<int> seen)
+        private void PrunePositionHistory(World world)
         {
             var stale = _staleIds;
             stale.Clear();
             foreach (int id in _lastPos.Keys)
             {
-                if (!seen.Contains(id))
+                if (!(world.GetEntity(id) is EntityAlive alive) || alive.IsDead())
                 {
                     stale.Add(id);
                 }
