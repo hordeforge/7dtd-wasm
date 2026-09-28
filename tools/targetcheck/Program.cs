@@ -218,7 +218,7 @@ namespace TargetCheck
 
             CheckType(md, "IModApi", t =>
             {
-                Console.WriteLine("  IModApi found at " + FullName(md, t) + " (" + TypeKind(md, t) + ")");
+                Console.WriteLine("  IModApi found at " + FullName(md, t) + " (" + TypeKind(t) + ")");
             });
 
             CheckEnumMember(md, "EChatType", "Global");
@@ -366,7 +366,7 @@ namespace TargetCheck
                 {
                     continue;
                 }
-                string sig = DecodeSignature(md, m);
+                string sig = DecodeSignature(m);
                 seen.Add(sig);
                 if (sig == expectedSignature)
                 {
@@ -430,7 +430,7 @@ namespace TargetCheck
             return ns.Length == 0 ? md.GetString(t.Name) : ns + "." + md.GetString(t.Name);
         }
 
-        private static string TypeKind(MetadataReader md, TypeDefinition t)
+        private static string TypeKind(TypeDefinition t)
         {
             return (t.Attributes & TypeAttributes.Interface) != 0 ? "interface" : "class";
         }
@@ -480,7 +480,7 @@ namespace TargetCheck
         /// string using type names only. Covers the primitive and class
         /// types the bridge targets; unknown types are rendered as "?".
         /// </summary>
-        private static string DecodeSignature(MetadataReader md, MethodDefinition m)
+        private static string DecodeSignature(MethodDefinition m)
         {
             var sig = m.DecodeSignature(new SignatureDecoder(), new object());
             return sig.ReturnType + "(" + string.Join(", ", sig.ParameterTypes.ToArray()) + ")";

@@ -147,6 +147,26 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Fixed
 
+- `WasmModHost.Dispatch` did not compile. The result was narrowed through a
+  `ModRunResult?` local guarded by `HasValue`, and the compiler drops the
+  not-null state of a nullable value-type local at a loop back-edge, so
+  `results.Add(result)` had no conversion to use. The pattern match on the
+  return value states the same thing and compiles. The library, the net48
+  bridge, and the test suite were unbuildable at this commit.
+- The C# style rules in `.editorconfig` were editor suggestions: nothing
+  promoted them, so a rule set that a developer silently ignored was the
+  only thing a CI run saw. `EnforceCodeStyleInBuild` is on, and
+  `.editorconfig` names the rules it promotes (braces on a multi-line
+  `if`/`else`, unused private members and parameters, unread private
+  members, a simplifiable conditional, a disposable kept past its scope).
+  The tree passes all of them, so a new one fails the build.
+- Two `targetcheck` helpers (`TypeKind`, `DecodeSignature`) took a
+  `MetadataReader` they never read, a leftover from a shared signature
+  shape. Removed, with the call sites.
+- The Python gate had no exception-hygiene rules at all. `TRY` (with
+  TRY003, a style preference about message length, off) and `RSE` are
+  enabled; both pass the tree today, so control flow inside a `try` and a
+  raised-instead-of-returned error now fail `make check-ci`.
 - `make dist` staged the native engine out of a hardcoded
   `$(HOME)/.nuget/packages`, which is not where NuGet restores to when
   `NUGET_PACKAGES` points somewhere else (CI caches, a shared package

@@ -1,6 +1,8 @@
-# Editor conventions matching what the tree already does. These are not
-# build-enforced today; they keep editors from fighting the existing
-# formatting across C#, Rust, Python, and the build files.
+# Editor conventions matching what the tree already does. They keep editors
+# from fighting the existing formatting across C#, Rust, Python, and the
+# build files; the C# half is additionally build-enforced, see the
+# dotnet_diagnostic block at the bottom and EnforceCodeStyleInBuild in
+# Directory.Build.props.
 root = true
 
 [*]
@@ -34,3 +36,24 @@ indent_size = 2
 
 [{Makefile,*.mk}]
 indent_style = tab
+
+# C# style rules, build-enforced. The IDE analyzers ship at their default
+# severities, which are suggestions, so without this block
+# EnforceCodeStyleInBuild has nothing to fail a build on and the C# half of
+# this file would be advisory. The tree passes every rule listed here today
+# (dotnet build -t:Rebuild is clean), so they become build errors via
+# TreatWarningsAsErrors like every other diagnostic. The set is the
+# correctness-adjacent half of IDE: unbraced multi-line if/else (IDE0011) is
+# the goto-fail shape, and the rest are unused and dead-code rules an editor
+# would only ever report in the background. The rest of IDE stays at its
+# default severity: the refactoring rules (IDE0046, IDE0058, IDE0300,
+# IDE0301, IDE0305) would rewrite ~220 lines the tree has not been
+# converted to, and the body-shape rules (IDE0018, IDE0022, IDE0023)
+# contradict a tree that writes expression-bodied members on purpose.
+[*.cs]
+dotnet_diagnostic.IDE0011.severity = warning  # add braces
+dotnet_diagnostic.IDE0051.severity = warning  # unused private member
+dotnet_diagnostic.IDE0052.severity = warning  # unread private member
+dotnet_diagnostic.IDE0060.severity = warning  # unused parameter
+dotnet_diagnostic.IDE0075.severity = warning  # simplify conditional
+dotnet_diagnostic.IDE0350.severity = warning  # prefer using declaration

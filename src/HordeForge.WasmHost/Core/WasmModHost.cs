@@ -564,8 +564,10 @@ namespace HordeForge.WasmHost.Core
                         continue;
                     }
                     SetCurrentMod(mod.Id);
-                    ModRunResult? result = invoke(mod);
-                    if (result.HasValue)
+                    // Pattern-matched, not a ModRunResult? local narrowed by
+                    // HasValue: the compiler drops the not-null state of a
+                    // nullable value-type local at a loop back-edge.
+                    if (invoke(mod) is ModRunResult result)
                     {
                         results.Add(result);
                     }

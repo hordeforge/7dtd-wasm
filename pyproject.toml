@@ -13,7 +13,12 @@
 # under unittest, and T20 flags the print() these CLI tools report
 # with, so those three stay off until their findings are fixed. COM is
 # left out because COM812 fights the formatter, which owns trailing
-# commas here.
+# commas here. TRY is on with TRY003 off: that one rule is a style
+# preference about message length in raise(), and it has 20 findings
+# here, while the rest of the group (TRY200/201/300/301/400/401,
+# the raise-from and control-flow-in-try rules) is clean and catches
+# real defects. ANN is the biggest group still off (no annotations
+# on the tools), and it stays off until the tree is annotated.
 #
 # "ruff format" is the formatter (the pinned ruff ships it, so there is
 # no second tool to version) and "make check-ci" runs it in check mode.
@@ -59,4 +64,10 @@ select = [
     "PIE",  # misc lints
     "SLF",  # private member access across boundaries
     "TID",  # tidy imports: no banned modules
+    "RSE",  # flake8-raise: nothing is raised inside a pointless wrapper
+    "TRY",  # tryceratops: control flow and raise-from inside try
 ]
+# TRY003 hoists an exception message into a named constant. These are CLI
+# tools whose raise() sites carry a short inline message, and a constant
+# would name less than the sentence does. Every other TRY rule runs.
+ignore = ["TRY003"]

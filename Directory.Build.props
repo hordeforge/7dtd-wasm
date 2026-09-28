@@ -9,6 +9,14 @@
   <PropertyGroup>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <!-- Promote the C# style rules in .editorconfig from editor
+         suggestions to build diagnostics. Without this the IDE analyzers
+         run but their severity stays at suggestion, so a rule set there
+         that a developer silently ignores is the only thing a CI run
+         sees. The dotnet_diagnostic block in .editorconfig names the
+         rules this promotes; the tree passes all of them, and
+         TreatWarningsAsErrors turns a new one into a build failure. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- Default ("latest") analysis level: the tree passes it today.
          Stepping up to latest-recommended is a later pass; it currently
          surfaces ~120 findings across CA1051/CA1510/CA1859 and friends,
