@@ -10,6 +10,8 @@ src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int Queue
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int QueueRejected = -1
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int SettingBufferTooSmall = -2
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int SettingNotFound = -1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int StatusInternalError = 2
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int StatusNotImplemented = 1
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int StatusOk = 0
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportAdminCommand = ""
 src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportInit = ""
@@ -85,9 +87,11 @@ src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public string L
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong FuelPerCall { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong StaticMemoryMaximumBytes { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: type WasmHostConfig
-src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed) : this(modId, status, message, details, fuelConsumed, AbiConstants.StatusOk)
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed, int guestStatus)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunStatus Status { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public bool Ok
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public int GuestStatus { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string Details { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string Message { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string ModId { get; }
@@ -115,6 +119,7 @@ src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Init()
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Shutdown()
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Tick()
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult? OnPlayerJoin(int entityId)
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool Enabled
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasAdminCommandHandler { get; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasPlayerJoinHandler { get; }
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long ErrorCalls { get; private set; }
@@ -135,12 +140,19 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? In
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGameHostApi api, WasmHostConfig config)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool InheritGuestStandardStreams
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public const long WasmPageBytes = 65536
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public int MaxModuleSizeBytes
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; }
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ulong FuelPerCall
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ulong StaticMemoryMaximumBytes
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public void Dispose()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: type WasmModHost
+src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public ManifestReadException(string path, string reason) : base(path + "" + reason)
+src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public string Path { get; }
+src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public string Reason { get; }
+src/HordeForge.WasmHost/ManifestReadException.cs: type ManifestReadException
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public const long MaxBytes = 1024 * 1024
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static bool TryRead(string path, out string content, out string failureReason)
 src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static string ReadRequired(string path)
@@ -191,6 +203,8 @@ src/HordeForge.WasmHost/Registry/TextSanitizer.cs: type TextSanitizer
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void EndPendingHighOrThrow(ref bool pendingHigh)
+src/HordeForge.WasmHost/WasmManifestException.cs: WasmManifestException.public WasmManifestException(string modId, string message, Exception innerException) : base(modId, message, innerException)
+src/HordeForge.WasmHost/WasmManifestException.cs: type WasmManifestException
 src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message) : base(message)
 src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message, Exception innerException) : base(message, innerException)
 src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public string ModId { get; }
