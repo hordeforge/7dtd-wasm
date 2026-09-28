@@ -9,15 +9,19 @@
 # DOTNET prefers the workspace-local SDK under $(HOME)/.cache when present
 # and falls back to PATH dotnet (which may be missing or SDK-less); it must
 # never name a specific user.
-DOTNET ?= $(shell test -x $(HOME)/.cache/dotnet-sdk/dotnet && echo $(HOME)/.cache/dotnet-sdk/dotnet || command -v dotnet 2>/dev/null || echo $(HOME)/.cache/dotnet-sdk/dotnet)
-CARGO  ?= $(PWD)/.cargo/bin/cargo
+# CURDIR is the make builtin, computed by make itself from the directory it
+# was started in. PWD is only a shell convention that a shell which does not
+# export it leaves empty, which would silently move the toolchain lookups and
+# the cargo home to /.
+DOTNET ?= $(shell test -x "$(HOME)/.cache/dotnet-sdk/dotnet" && echo "$(HOME)/.cache/dotnet-sdk/dotnet" || command -v dotnet 2>/dev/null || echo "$(HOME)/.cache/dotnet-sdk/dotnet")
+CARGO  ?= $(CURDIR)/.cargo/bin/cargo
 ZIG    ?= $(shell command -v zig 2>/dev/null || echo zig)
 # The tools gate is Python, and the interpreter is spelled differently per
 # platform: Windows installs it as "python" and has no "python3" at all, so a
 # hardcoded python3 breaks every target that runs tools/ (dist, check-ci).
 PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null || echo python3)
-export RUSTUP_HOME := $(PWD)/.rustup
-export CARGO_HOME := $(PWD)/.cargo
+export RUSTUP_HOME := $(CURDIR)/.rustup
+export CARGO_HOME := $(CURDIR)/.cargo
 # An ambient RUSTFLAGS in the environment silently replaces the
 # [target.wasm32-wasip1] rustflags in samples/.cargo/config.toml (cargo
 # prefers the environment over config, and CARGO_ENCODED_RUSTFLAGS over
@@ -120,14 +124,19 @@ else
 endif
 
 # Steam's library root, per platform family: Windows keeps games under
-# Program Files (x86), Linux under the user's home. Both are defaults; every
-# target below takes GAME_DIR=... on the command line.
+# Program Files (x86), Linux under the user's home, macOS under Application
+# Support. All are defaults; every target below takes GAME_DIR=... on the
+# command line.
 ifeq ($(OS),Windows_NT)
   # GNU make cannot reference an environment variable whose name contains
   # parentheses, and Steam keeps games under "Program Files (x86)", so the
   # conventional root is spelled out here. A Steam on another drive is a
   # GAME_DIR=... on the command line.
   STEAM_ROOT ?= C:/Program Files (x86)/Steam/steamapps/common
+else ifeq ($(UNAME_S),Darwin)
+  # macOS has no .local/share; Steam keeps its libraries under Application
+  # Support, so a Linux default here points at a path that never exists.
+  STEAM_ROOT ?= $(HOME)/Library/Application Support/Steam/steamapps/common
 else
   STEAM_ROOT ?= $(HOME)/.local/share/Steam/steamapps/common
 endif
@@ -251,10 +260,10 @@ TEST_LOG ?= $(CURDIR)/.scratch/test.log
 # would report green for a run that tested nothing. The check below turns that
 # into a named failure.
 test:
-	@mkdir -p $(dir $(TEST_LOG))
-	@$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) > $(TEST_LOG) 2>&1; \
-	  rc=$$?; cat $(TEST_LOG); \
-	  if grep -q 'No test matches the given testcase filter' $(TEST_LOG); then \
+	@mkdir -p "$(dir $(TEST_LOG))"
+	@$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) > "$(TEST_LOG)" 2>&1; \
+	  rc=$$?; cat "$(TEST_LOG)"; \
+	  if grep -q 'No test matches the given testcase filter' "$(TEST_LOG)"; then \
 	    echo "make: TEST_FILTER='$(TEST_FILTER)' matched no test."; \
 	    echo "  A VSTest filter that matches nothing still exits 0, so this would"; \
 	    echo "  otherwise read as a passing run. Every test name: make test-list"; \
@@ -382,7 +391,7 @@ boss-zig:
 	  --max-memory=33554432 -femit-bin=../target/guest-boss-zig.wasm
 
 fixtures: samples boss boss-zig
-	@test -f "$(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm" -a -f "$(ZDTD_SERVER)/mods/parachute/parachute.wasm" || { \
+	@test -f "$(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm" && test -f "$(ZDTD_SERVER)/mods/parachute/parachute.wasm" || { \
 	  echo "make: the unmodified zdtd plugins are missing under $(ZDTD_SERVER)/mods."; \
 	  echo "  'make fixtures' and 'make dist' copy them in as real-world fixtures,"; \
 	  echo "  so they need the zdtd-server checkout as a sibling of this repository."; \
@@ -400,11 +409,11 @@ fixtures: samples boss boss-zig
 	cp samples/target/guest-boss-zig.wasm                       tests/fixtures/boss-zig.wasm
 	# The unmodified zdtd fps_bot plugin (workspace sibling), committed as a
 	# fixture so the compatibility surface is tested against the real module.
-	cp $(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm                 tests/fixtures/fps-bot.wasm
+	cp "$(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm"                 tests/fixtures/fps-bot.wasm
 	# The unmodified zdtd parachute mod (sense v4 + glide + config); its
 	# config.toml is staged so the zdtd.config import test serves the real file.
-	cp $(ZDTD_SERVER)/mods/parachute/parachute.wasm             tests/fixtures/parachute.wasm
-	cp $(ZDTD_SERVER)/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
+	cp "$(ZDTD_SERVER)/mods/parachute/parachute.wasm"             tests/fixtures/parachute.wasm
+	cp "$(ZDTD_SERVER)/mods/parachute/config.toml"                tests/fixtures/parachute-config.toml
 
 bridge:
 	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
@@ -452,14 +461,14 @@ dist: build fixtures bridge
 	cp samples/guest-boss-zig/wasm-mod.toml dist/Mods/Wasm/boss-zig/
 	# The unmodified zdtd fps_bot plugin (workspace sibling); the shared
 	# wasm.toml must raise limits.max_memory_bytes for it to load.
-	cp $(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm dist/Mods/Wasm/fps-bot/module.wasm
+	cp "$(ZDTD_SERVER)/mods/fps_bot/fps_bot.wasm" dist/Mods/Wasm/fps-bot/module.wasm
 	cp samples/zdtd-fps-bot/wasm-mod.toml dist/Mods/Wasm/fps-bot/
 	# The unmodified zdtd parachute mod: module + its own config.toml (served
 	# to the guest verbatim via the zdtd.config import). Needs the same raised
 	# memory cap; deploy tuning lives in config.toml, not the manifest.
 	mkdir -p dist/Mods/Wasm/parachute
-	cp $(ZDTD_SERVER)/mods/parachute/parachute.wasm dist/Mods/Wasm/parachute/module.wasm
-	cp $(ZDTD_SERVER)/mods/parachute/config.toml dist/Mods/Wasm/parachute/
+	cp "$(ZDTD_SERVER)/mods/parachute/parachute.wasm" dist/Mods/Wasm/parachute/module.wasm
+	cp "$(ZDTD_SERVER)/mods/parachute/config.toml" dist/Mods/Wasm/parachute/
 	cp samples/parachute/wasm-mod.toml dist/Mods/Wasm/parachute/
 	cp samples/wasm.toml.example dist/Mods/Wasm/wasm.toml
 	# SBOM: CycloneDX inventory built from the committed lock files, so

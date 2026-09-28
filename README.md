@@ -201,7 +201,8 @@ and Python 3 for the tools gate, resolved as `python3` or as
 `python` where that is the interpreter name. `GAME_DIR` defaults to `7 Days to Die
 Dedicated Server` under the Steam library root of the platform
 (`C:\Program Files (x86)\Steam\steamapps\common` on Windows,
-`$HOME/.local/share/Steam/steamapps/common` elsewhere); pass
+`$HOME/.local/share/Steam/steamapps/common` on Linux,
+`$HOME/Library/Application Support/Steam/steamapps/common` on macOS); pass
 `GAME_DIR=/path/to/install` when Steam lives elsewhere. `make dist` reads the
 native engine out of the NuGet global packages folder, so it honors
 `NUGET_PACKAGES` when that is set and falls back to `$HOME/.nuget/packages`.

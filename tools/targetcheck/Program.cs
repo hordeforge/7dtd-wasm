@@ -322,10 +322,12 @@ namespace TargetCheck
 
         /// <summary>
         /// Steam's library root on this platform: Program Files (x86) under
-        /// Windows, the user profile under Linux and macOS. Resolved through
-        /// the framework's own folder API rather than an environment variable,
-        /// so a Windows machine without HOME still finds its install and the
-        /// not-found message names a real path on every platform.
+        /// Windows, the user profile under Linux, and Application Support
+        /// under macOS, which keeps its own per-user data there and has no
+        /// .local/share. Resolved through the framework's own folder API
+        /// rather than an environment variable, so a Windows machine without
+        /// HOME still finds its install and the not-found message names a real
+        /// path on every platform.
         /// </summary>
         private static string DefaultSteamRoot()
         {
@@ -335,6 +337,15 @@ namespace TargetCheck
                 if (!string.IsNullOrEmpty(programFilesX86))
                 {
                     return Path.Combine(programFilesX86, "Steam", "steamapps", "common");
+                }
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                if (!string.IsNullOrEmpty(localAppData))
+                {
+                    return Path.Combine(localAppData, "Steam", "steamapps", "common");
                 }
             }
 
