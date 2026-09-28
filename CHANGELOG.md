@@ -95,6 +95,22 @@ Codename: Quarantine (7dtd-wasm).
   version does not move. `tools/sbom.py` had drifted out of the pinned
   ruff's format since it was last run, and `BridgeHost.IsValidModId`
   pointed its reader at `ModIds.IsValid` rather than `ModId.IsValid`.
+- The guest toolchain was whatever rustup last synced (`stable`), so two
+  guests built a month apart could come off different rustc releases. The
+  channel now lives in `samples/rust-toolchain.toml` and `make toolchain`
+  installs exactly that one, and `require_zig` rejects a zig other than the
+  pinned 0.16.0 by name before compiling the C and Zig guests.
+- The four manifests declared `<LangVersion>latest</LangVersion>`, so the
+  language version floated with the SDK band. It is pinned once in
+  `Directory.Build.props`.
+- A Release build carried the absolute checkout path in its PDB and debug
+  metadata, so the same source built in two directories shipped different
+  bytes. `Directory.Build.props` sets `ContinuousIntegrationBuild` (and with
+  it `DeterministicSourcePaths`) whenever `CI` is set, which normalizes those
+  paths and lets the SDK honor `SOURCE_DATE_EPOCH`.
+- Three manifest tests still asserted `WasmModLoadException` where the parser
+  now raises the narrower `WasmManifestException`, so they failed against the
+  typed manifest errors. They assert the exact type the parser throws.
 - A raw lone surrogate in a manifest string (basic or literal) reached the
   settings table instead of being rejected, while the `\uXXXX` form already
   was. Such a value has no UTF-8 form and cannot round-trip the guest

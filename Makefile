@@ -3,6 +3,9 @@
 # Toolchains. The workspace uses net8.0 for tooling and net48 for in-game
 # mod DLLs; guests are built with an in-project rustup toolchain so nothing
 # is installed system-wide. The C guest is built with the zig compiler.
+# Both non-.NET toolchains are pinned: the Rust channel in
+# samples/rust-toolchain.toml (which RUST_TOOLCHAIN below reads) and the zig
+# release in ZIG_VERSION (which require_zig checks before compiling).
 # DOTNET prefers the workspace-local SDK under $(HOME)/.cache when present
 # and falls back to PATH dotnet (which may be missing or SDK-less); it must
 # never name a specific user.
@@ -36,6 +39,11 @@ define require_zig
 	  echo "  The C and Zig guests are compiled with zig; install it from https://ziglang.org/download/"; \
 	  echo "  or point the Makefile at it with: make ZIG=/path/to/zig <target>"; \
 	  echo "  Every other target, including 'make test', runs without it."; \
+	  exit 1; }
+	@$(ZIG) version | grep -qx '$(ZIG_VERSION)' || { \
+	  echo "make: zig $(ZIG_VERSION) builds the guests, but $(ZIG) reports $$( $(ZIG) version )."; \
+	  echo "  Install the pinned release from https://ziglang.org/download/, or point the"; \
+	  echo "  Makefile at another one with: make ZIG=/path/to/zig $(1)"; \
 	  exit 1; }
 endef
 # ruff is the tools lint and format gate, pinned by required-version in
@@ -131,6 +139,20 @@ SLN = HordeForge.WasmHost.sln
 # those targets outright when the lock file has not been restored yet.
 WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
+# The Rust channel the guests are built and linted with, read from
+# samples/rust-toolchain.toml: the file rustup itself resolves when cargo runs
+# inside samples/, so the pin and the install are the same declaration. It
+# used to be the floating "stable", which lets a guest binary depend on the day
+# the machine last synced its toolchain. Lazily expanded for the same reason
+# as WASMTIME_VERSION above. Bump it by editing that file.
+RUST_TOOLCHAIN = $(shell $(PYTHON) -c "import re; print(re.search(r'channel = \"(.+?)\"', open('samples/rust-toolchain.toml').read()).group(1))")
+
+# The zig release the C and Zig guests compile against, as declared by
+# require_zig below. The Zig guest is source that only builds on the pinned
+# release, so a different zig has to fail by name instead of producing a
+# module the host then rejects at load.
+ZIG_VERSION := 0.16.0
+
 .PHONY: help build test toolchain samples samples-check boss boss-zig fixtures bridge bridge-check dist pack check check-ci clean
 
 help:
@@ -176,15 +198,18 @@ test:
 # exported at the top of this file, so this installs nothing system-wide and
 # leaves no state outside the checkout. The commands are the ones CI runs
 # against its own checkout, so a guest built locally and a guest built in CI
-# come off the same stable toolchain with the same target and clippy.
+# come off the same toolchain with the same target and clippy. The channel is
+# RUST_TOOLCHAIN, read from samples/rust-toolchain.toml, which is the same file
+# rustup resolves when cargo runs inside samples/: installing a different
+# release than the one cargo would pick is not possible.
 toolchain:
 	@command -v rustup >/dev/null 2>&1 || { \
 	  echo "make: rustup not found on PATH."; \
 	  echo "  Install it from https://rustup.rs (the toolchain itself lands in ./.rustup),"; \
 	  echo "  then run 'make toolchain' again. Point at an existing one with RUSTUP=/path/to/rustup."; \
 	  exit 1; }
-	$(RUSTUP) toolchain install stable --profile minimal --target wasm32-wasip1 --component clippy
-	$(RUSTUP) default stable
+	$(RUSTUP) toolchain install $(RUST_TOOLCHAIN) --profile minimal --target wasm32-wasip1 --component clippy
+	$(RUSTUP) default $(RUST_TOOLCHAIN)
 	@echo "Guest toolchain ready in $(CARGO_HOME) (nothing installed system-wide)."
 
 # Compile guests from inside samples/ on purpose: cargo discovers
@@ -207,7 +232,7 @@ samples-check:
 # (preview 1). -nostdlib keeps it free of WASI libc imports; --max-memory
 # declares the 32 MiB maximum the host requires.
 boss:
-	$(call require_zig)
+	$(call require_zig,boss)
 	mkdir -p samples/target
 	$(ZIG) cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
 	  -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
@@ -218,7 +243,7 @@ boss:
 # Like the C guest, the module is emitted straight into samples/target/
 # so no build artifact lands inside a guest source directory.
 boss-zig:
-	$(call require_zig)
+	$(call require_zig,boss-zig)
 	mkdir -p samples/target
 	cd samples/guest-boss-zig && $(ZIG) build-exe src/main.zig \
 	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \

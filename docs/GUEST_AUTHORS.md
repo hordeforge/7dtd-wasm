@@ -7,12 +7,15 @@ implementation is `samples/guest-hello`; the shared helpers live in
 ## Setup
 
 ```bash
-make toolchain  # once per clone: fills .cargo/ and .rustup/ with rustup stable
+make toolchain  # once per clone: fills .cargo/ and .rustup/ with the pinned rust
 make samples    # builds every guest with the in-project rustup toolchain
 ```
 
 `make toolchain` needs rustup on your PATH and installs the toolchain itself
-into the checkout, so nothing lands system-wide. CI runs the same target.
+into the checkout, so nothing lands system-wide. CI runs the same target. The
+channel comes from `samples/rust-toolchain.toml`, the file rustup itself
+resolves, so a guest built locally and one built in CI come off the same
+release.
 
 Each guest crate:
 

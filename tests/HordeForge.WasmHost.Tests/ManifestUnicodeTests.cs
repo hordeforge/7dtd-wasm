@@ -71,7 +71,7 @@ namespace HordeForge.WasmHost.Tests
             };
             foreach (string value in cases)
             {
-                Assert.Throws<WasmModLoadException>(
+                Assert.Throws<WasmManifestException>(
                     () => ModManifest.ParseToml("[settings]\nboss_name = " + value, "test"));
             }
         }

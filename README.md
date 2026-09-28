@@ -151,7 +151,8 @@ is missing before it fails:
 
 `make toolchain` populates `.cargo/` and `.rustup/` inside the checkout using
 rustup from your PATH, so no Rust is installed system-wide; CI runs the same
-target. `make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'` runs one
+target, and both install the channel declared in
+`samples/rust-toolchain.toml`. `make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'` runs one
 test or class while you work.
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
@@ -171,8 +172,10 @@ The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
 The Makefile drives a POSIX shell (GNU make plus `sh`): the in-project
-`cargo` (installed by `make toolchain`) for the Rust guests, `zig` for the C
-and Zig guests, and Python 3 for the tools gate, resolved as `python3` or as
+`cargo` (installed by `make toolchain`, on the channel pinned in
+`samples/rust-toolchain.toml`) for the Rust guests, `zig 0.16.0` for the C
+and Zig guests (a different release is rejected by name before the compile),
+and Python 3 for the tools gate, resolved as `python3` or as
 `python` where that is the interpreter name. `GAME_DIR` defaults to the
 Steam library root of the platform
 (`C:\Program Files (x86)\Steam\steamapps\common` on Windows,

@@ -1,0 +1,10 @@
+# The exact toolchain every guest in this workspace is built and linted with.
+# "make toolchain" installs this channel, and rustup reads this same file
+# whenever cargo runs from inside samples/, so the pin and the install can
+# never disagree. Without it rustup follows "stable" and a guest binary built
+# on a developer machine a month apart from one built in CI can differ.
+[toolchain]
+channel = "1.97.1"
+profile = "minimal"
+targets = ["wasm32-wasip1"]
+components = ["clippy"]
