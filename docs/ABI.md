@@ -42,7 +42,8 @@ returns (`WasmModHost.DispatchPlayerJoin`), so no later import reports it.
 Every loaded guest that exports `on_player_join` sees every join, and a guest
 that has no use for names should not export the handler. The host does not
 write the name to the server log (see "Player join events" in
-docs/GAME_HOOKS.md); what a guest logs with it is the guest's own doing.
+docs/GAME_HOOKS.md), and a guest must not log it either: the server log is
+kept with the server data folder and quoted into bug reports.
 
 Strings are passed as `(pointer, length)` pairs into the **guest's own
 linear memory**; the host reads exactly `len` bytes starting at `ptr` and

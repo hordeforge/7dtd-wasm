@@ -182,6 +182,10 @@ pub fn world_time() -> i64 {
 /// Name of the player that most recently spawned. Only valid inside an
 /// `on_player_join` call; outside one, the host reports "no event" and this
 /// returns None. The name is read into `out`; None also means it did not fit.
+///
+/// The name is the only personal data a guest can read. Match on it inside
+/// the callback and do not pass it to `log_*`: the server log outlives the
+/// session and a name in it identifies a player.
 pub fn join_player_name(out: &mut [u8]) -> Option<String> {
     let written = unsafe { get_join_player_name(out.as_mut_ptr() as i32, out.len() as i32) };
     if written < 0 {

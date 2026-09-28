@@ -116,12 +116,21 @@ callback):
 #[export_name = "on_player_join"]
 pub extern "C" fn on_player_join(entity_id: i32) -> i32 {
     let mut buf = [0u8; 128];
-    if let Some(name) = abi::join_player_name(&mut buf) {
-        abi::log_info(&format!("player {} joined (entity {})", name, entity_id));
+    if abi::join_player_name(&mut buf).is_some() {
+        abi::log_info(&format!("a player joined (entity {})", entity_id));
     }
     abi::STATUS_OK
 }
 ```
+
+The name is the only personal data a guest can read, and the server log
+outlives the session: it is kept with the server data folder and pasted into
+bug reports. The host logs the entity id and never the name (see "Player join
+events" in [GAME_HOOKS.md](GAME_HOOKS.md)), so a guest must not put the name
+into `log_*` either. Match on it inside the callback, as
+`samples/guest-boss` does, and report the entity id if the mod needs to say
+something. A guest that has no use for names should not export the handler
+at all.
 
 `on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap)` is the fifth optional
 export. The host resolves and signature-checks it, but no console command
