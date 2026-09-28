@@ -1121,10 +1121,10 @@ greeting = ""hello""
         [Fact]
         public void DispatchResultsRejectWrites()
         {
-            // The Dispatch* results buffer is host-owned and reused, so it
-            // must not escape as a mutable List behind an IReadOnlyList: a
-            // caller that downcast and rewrote it would corrupt the next
-            // dispatch. The view is the same one ModIds uses.
+            // The Dispatch* result list belongs to the caller, but it must
+            // not escape as a mutable List behind an IReadOnlyList: a caller
+            // that downcast and rewrote it would corrupt its own dispatch
+            // results. The view is the same one ModIds uses.
             var (host, _) = NewHost();
             using (host)
             {

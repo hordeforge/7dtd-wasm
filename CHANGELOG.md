@@ -25,6 +25,10 @@ Codename: Quarantine (7dtd-wasm).
   documented target rather than the whole suite.
 - `global.json` declaring the .NET 8 SDK the tree builds against, matching
   what CI installs.
+- `WasmModHostConcurrencyTests`: dispatch, load, and unload driven from
+  several threads at once, asserting no mod is skipped or duplicated in a
+  tick, that the settings import never answers with another mod's value, and
+  that the registry and the load order agree afterwards.
 - `ruff format` as the Python formatter, run in check mode by
   `make check-ci` next to `ruff check tools`.
 - `THIRD-PARTY-NOTICES.md`: licenses and attribution for everything the
@@ -68,6 +72,10 @@ Codename: Quarantine (7dtd-wasm).
   rejected (ADR 0004's 4 GiB amendment) or that JSON manifests are
   accepted, ADR 0005 links the record that superseded it, `docs/CONFIG.md`
   points MiniToml at ADR 0007, and the ADR index carries a status column.
+- `BotServant.Glide` returns a copy of the armed flags instead of the live
+  dictionary, so the "wasm status" read cannot reach the servant's state.
+  `ModApi` applies its Harmony patches under a lock, so a second `InitMod`
+  racing the first cannot stack duplicate postfixes.
 - The tools lint gate covers more rule groups (S, A, BLE, DTZ, FBT, FURB,
   G, ICN, ISC, LOG, N, PERF, PIE, SLF, TID), all of which the tree passes
   today. `tools/` is reformatted to the pinned ruff's style.
@@ -125,7 +133,15 @@ Codename: Quarantine (7dtd-wasm).
   They are formatted now, and `pyproject.toml` declares
   `required-version = "==0.16.4"` so a developer's ruff has to be the one CI
   installs rather than whatever happens to be on PATH.
-
+- `WasmModHost` guarded its "call it from one thread" contract with a comment
+  only: two threads entering it skipped or duplicated mods in a dispatch,
+  served one guest another guest's settings, and could enter a wasm store
+  that was already running a call (the engine aborts the process). Every
+  entry point now serializes on one internal gate, and the dispatch results
+  and `ModIds` are per-call copies instead of host-owned live views, so a
+  list handed to one caller cannot be refilled by a dispatch running on
+  another thread. `WasmModHostConcurrencyTests` drives dispatch, load, and
+  unload from several threads against real guest fixtures.
 - The `config` host import cut its copy at `min(out_cap, len)` bytes, which
   could land inside a multi-byte UTF-8 character and hand the guest bytes it
   decodes as U+FFFD. The cut now stops on a character boundary

@@ -18,8 +18,11 @@ namespace HordeForge.GameBridge
 
         // Harmony patches must be applied at most once per process: a second
         // InitMod would stack duplicate postfixes and dispatch every game
-        // event to guests twice.
+        // event to guests twice. Held under PatchLock, because a second
+        // InitMod racing the first through the check would apply twice.
         private static bool _patched;
+
+        private static readonly object PatchLock = new object();
 
         public void InitMod(Mod _modInstance)
         {
@@ -50,11 +53,14 @@ namespace HordeForge.GameBridge
         /// </summary>
         private static void ApplyHarmonyPatches()
         {
-            if (_patched)
+            lock (PatchLock)
             {
-                return;
+                if (_patched)
+                {
+                    return;
+                }
+                _patched = true;
             }
-            _patched = true;
             try
             {
                 var harmony = new Harmony("hordeforge.7dtd.wasmhost");

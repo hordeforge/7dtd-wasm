@@ -16,8 +16,10 @@ namespace HordeForge.WasmHost.Core
     /// API plus WASI preview1; each loaded module gets its own store. Modules
     /// are loaded per id, validated against the configured limits, and driven
     /// through the documented export surface (on_enable, on_tick,
-    /// on_player_join, on_shutdown). The host is single-threaded by design:
-    /// call it from the game main loop only.
+    /// on_player_join, on_shutdown). Every entry point serializes on one
+    /// internal gate, so an embedder that drives the host from more than one
+    /// thread (a game main loop plus a console thread, say) gets the same
+    /// state the single-caller case sees.
     ///
     /// Sandbox guarantees: fuel budget per call, hard memory maximum enforced
     /// at load time from the module's declared memory maximum, module size
@@ -36,31 +38,21 @@ namespace HordeForge.WasmHost.Core
         private readonly IGameHostApi _api;
         private readonly Engine _engine;
         private readonly Linker _linker;
+        // Serializes every entry point that touches the registry, the load
+        // order, the per-call mod id, or an engine handle. Without it a
+        // second thread walks _modOrder while a load or unload rewrites it
+        // (a skipped or duplicated mod, a list index past the end), reads
+        // another mod's id out of _currentModId (one guest served the
+        // other's settings), and enters a wasm store that is already
+        // executing a call, which traps the engine itself. Monitor
+        // reentrancy keeps an IGameHostApi callback that calls back into the
+        // host working; it does not make a nested Dispatch safe, because the
+        // nested dispatch would run guests inside the outer one's walk.
+        private readonly object _gate = new object();
         private readonly Dictionary<string, WasmMod> _mods = new Dictionary<string, WasmMod>(StringComparer.Ordinal);
         // Dispatch happens in load order (documented); Dictionary enumeration
         // order is an implementation detail, so the ids are tracked here.
         private readonly List<string> _modOrder = new List<string>();
-        // Live read-only view over _modOrder, built once: ModIds is read by
-        // the bridge on every game tick, and a per-call array copy would
-        // allocate at tick rate for no benefit. Callers get the same
-        // mutation protection as a copy (the wrapper rejects writes) while
-        // always seeing current load order.
-        private readonly ReadOnlyCollection<string> _modIdsView;
-        // One reusable result buffer for the Dispatch* methods: they run at
-        // tick rate on the game main loop, so steady-state dispatch must not
-        // allocate. The buffer is owned by the host and is cleared and
-        // refilled by the next Dispatch* call; callers consume it (or copy
-        // out) before dispatching again. Safe because the host is
-        // single-threaded by contract and no guest import re-enters a
-        // dispatch.
-        private readonly List<ModRunResult> _results = new List<ModRunResult>();
-        // Live read-only view over _results, built once for the same reason
-        // as _modIdsView: the buffer must never escape as a mutable List
-        // behind an IReadOnlyList, or a caller could rewrite the host's
-        // dispatch results in place. The wrapper rejects writes and does not
-        // downcast back to the list, so the read-only contract callers
-        // compile against is the contract they get.
-        private readonly ReadOnlyCollection<ModRunResult> _resultsView;
         // Shutdown outcomes that were not Ok, retained after Dispose so the
         // embedder can report a failed goodbye instead of losing it.
         private readonly List<ModRunResult> _shutdownFailures = new List<ModRunResult>();
@@ -76,8 +68,8 @@ namespace HordeForge.WasmHost.Core
         /// <summary>
         /// Creates a host with its own Wasmtime engine and linker; each
         /// loaded mod gets its own store. The api implementation is called
-        /// on the caller thread for every guest host-API call; see
-        /// <see cref="Abi.IGameHostApi"/>.
+        /// on the calling thread for every guest host-API call, one call at
+        /// a time across the whole host; see <see cref="Abi.IGameHostApi"/>.
         /// </summary>
         public WasmModHost(IGameHostApi api, WasmHostConfig config)
         {
@@ -93,8 +85,6 @@ namespace HordeForge.WasmHost.Core
             _linker = new Linker(_engine);
             _linker.DefineWasi();
             DefineHostApi();
-            _modIdsView = new ReadOnlyCollection<string>(_modOrder);
-            _resultsView = new ReadOnlyCollection<ModRunResult>(_results);
         }
 
         /// <summary>
@@ -131,8 +121,21 @@ namespace HordeForge.WasmHost.Core
             }
         }
 
-        /// <summary>Ids of the currently loaded mods, in load order.</summary>
-        public IReadOnlyList<string> ModIds => _modIdsView;
+        /// <summary>
+        /// Ids of the currently loaded mods, in load order. A fresh read-only
+        /// copy: an enumerator handed out here must stay valid even when
+        /// another thread loads or unloads a module.
+        /// </summary>
+        public IReadOnlyList<string> ModIds
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return new ReadOnlyCollection<string>(new List<string>(_modOrder));
+                }
+            }
+        }
 
         /// <summary>
         /// Largest module <see cref="LoadModule"/> accepts, in bytes. Exposed
@@ -143,7 +146,18 @@ namespace HordeForge.WasmHost.Core
         public int MaxModuleSizeBytes => _config.MaxModuleSizeBytes;
 
         /// <summary>Game tick of the most recent DispatchTick call.</summary>
-        public long Tick { get; private set; }
+        public long Tick
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _tick;
+                }
+            }
+        }
+
+        private long _tick;
 
         /// <summary>
         /// Compiles, validates, and instantiates a guest module under the
@@ -154,46 +168,49 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
         {
-            ThrowIfDisposed();
-            if (wasmBytes == null)
+            lock (_gate)
             {
-                throw new ArgumentNullException(nameof(wasmBytes));
-            }
-            if (!ModId.IsValid(id))
-            {
-                throw new WasmModLoadException(id ?? string.Empty, "mod id must be a plain folder name without path separators or control characters");
-            }
-            if (wasmBytes.Length > _config.MaxModuleSizeBytes)
-            {
-                throw new WasmModLoadException(id, "module size " + wasmBytes.Length + " bytes exceeds cap " + _config.MaxModuleSizeBytes);
-            }
-            if (_mods.ContainsKey(id))
-            {
-                throw new WasmModLoadException(id, "a mod with this id is already loaded");
-            }
+                ThrowIfDisposed();
+                if (wasmBytes == null)
+                {
+                    throw new ArgumentNullException(nameof(wasmBytes));
+                }
+                if (!ModId.IsValid(id))
+                {
+                    throw new WasmModLoadException(id ?? string.Empty, "mod id must be a plain folder name without path separators or control characters");
+                }
+                if (wasmBytes.Length > _config.MaxModuleSizeBytes)
+                {
+                    throw new WasmModLoadException(id, "module size " + wasmBytes.Length + " bytes exceeds cap " + _config.MaxModuleSizeBytes);
+                }
+                if (_mods.ContainsKey(id))
+                {
+                    throw new WasmModLoadException(id, "a mod with this id is already loaded");
+                }
 
-            Module module;
-            try
-            {
-                module = Module.FromBytes(_engine, id, wasmBytes);
-            }
-            catch (Exception ex)
-            {
-                throw new WasmModLoadException(id, "failed to parse or compile module: " + ex.Message, ex);
-            }
+                Module module;
+                try
+                {
+                    module = Module.FromBytes(_engine, id, wasmBytes);
+                }
+                catch (Exception ex)
+                {
+                    throw new WasmModLoadException(id, "failed to parse or compile module: " + ex.Message, ex);
+                }
 
-            // The compiled module holds native machine code behind its own
-            // handle. Every rejection from here on must release it, or each
-            // repeated failed load attempt (operator retrying "wasm reload")
-            // accumulates engine memory until finalization.
-            try
-            {
-                return LoadValidated(id, module, manifest);
-            }
-            catch
-            {
-                module.Dispose();
-                throw;
+                // The compiled module holds native machine code behind its own
+                // handle. Every rejection from here on must release it, or each
+                // repeated failed load attempt (operator retrying "wasm reload")
+                // accumulates engine memory until finalization.
+                try
+                {
+                    return LoadValidated(id, module, manifest);
+                }
+                catch
+                {
+                    module.Dispose();
+                    throw;
+                }
             }
         }
 
@@ -267,7 +284,7 @@ namespace HordeForge.WasmHost.Core
                     throw new WasmModLoadException(id, "instantiation failed: " + ex.Message, ex);
                 }
 
-                var mod = new WasmMod(id, module, store, fuelPerCall, instance, Tick);
+                var mod = new WasmMod(id, module, store, fuelPerCall, instance, _tick);
                 _mods.Add(id, mod);
                 _modOrder.Add(id);
                 return mod;
@@ -314,7 +331,10 @@ namespace HordeForge.WasmHost.Core
         /// <summary>Looks up a loaded mod by id.</summary>
         public bool TryGetMod(string id, out WasmMod? mod)
         {
-            return _mods.TryGetValue(id, out mod);
+            lock (_gate)
+            {
+                return _mods.TryGetValue(id, out mod);
+            }
         }
 
         /// <summary>
@@ -327,48 +347,57 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public ModRunResult? Unload(string id)
         {
-            ThrowIfDisposed();
-            if (_mods.TryGetValue(id, out var mod))
+            lock (_gate)
             {
-                _currentModId = mod.Id;
-                try
+                ThrowIfDisposed();
+                if (_mods.TryGetValue(id, out var mod))
                 {
-                    ModRunResult shutdown = mod.Shutdown();
-                    _mods.Remove(id);
-                    _modOrder.Remove(id);
-                    mod.Dispose();
-                    return shutdown;
+                    _currentModId = mod.Id;
+                    try
+                    {
+                        ModRunResult shutdown = mod.Shutdown();
+                        _mods.Remove(id);
+                        _modOrder.Remove(id);
+                        mod.Dispose();
+                        return shutdown;
+                    }
+                    finally
+                    {
+                        // Same rule as InitModule: no mod is current once the call
+                        // is over, so a later direct guest call cannot resolve
+                        // settings or a log tag against the mod just unloaded.
+                        _currentModId = string.Empty;
+                    }
                 }
-                finally
-                {
-                    // Same rule as InitModule: no mod is current once the call
-                    // is over, so a later direct guest call cannot resolve
-                    // settings or a log tag against the mod just unloaded.
-                    _currentModId = string.Empty;
-                }
+                return null;
             }
-            return null;
         }
 
         /// <summary>
         /// Drives one game tick into every loaded mod and returns the per-mod
         /// results in load order. A misbehaving mod never stops the loop:
-        /// its failure is reported in its result. The returned list is
-        /// host-owned, rejects writes, and is replaced by the next
-        /// Dispatch* call.
+        /// its failure is reported in its result. The returned list belongs
+        /// to the caller and rejects writes, so a dispatch on another thread
+        /// can never rewrite results this call is still reading.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchTick(long tick)
         {
-            ThrowIfDisposed();
-            Tick = tick;
-            return Dispatch(static mod => mod.Tick());
+            lock (_gate)
+            {
+                ThrowIfDisposed();
+                _tick = tick;
+                return Dispatch(static mod => mod.Tick());
+            }
         }
 
         /// <summary>Invokes init on every loaded mod, in load order.</summary>
         public IReadOnlyList<ModRunResult> DispatchInit()
         {
-            ThrowIfDisposed();
-            return Dispatch(static mod => mod.Init());
+            lock (_gate)
+            {
+                ThrowIfDisposed();
+                return Dispatch(static mod => mod.Init());
+            }
         }
 
         /// <summary>
@@ -378,24 +407,26 @@ namespace HordeForge.WasmHost.Core
         /// get_join_player_name host import. Fail soft like tick: one
         /// misbehaving handler never stops the others. The entity id is
         /// i32 on the wire (the on_player_join parameter), so it is taken
-        /// as int and never narrowed silently. The returned list is
-        /// host-owned, rejects writes, and is replaced by the next
-        /// Dispatch* call.
+        /// as int and never narrowed silently. The returned list belongs to
+        /// the caller and rejects writes, like the tick results.
         /// </summary>
         public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
         {
-            ThrowIfDisposed();
-            _currentJoinName = playerName ?? string.Empty;
-            try
+            lock (_gate)
             {
-                return Dispatch(mod => mod.OnPlayerJoin(entityId));
-            }
-            finally
-            {
-                // The join event is over: get_join_player_name must report
-                // "no event" (-1) again, per docs/ABI.md, instead of serving
-                // the stale name from this join to later calls.
-                _currentJoinName = string.Empty;
+                ThrowIfDisposed();
+                _currentJoinName = playerName ?? string.Empty;
+                try
+                {
+                    return Dispatch(mod => mod.OnPlayerJoin(entityId));
+                }
+                finally
+                {
+                    // The join event is over: get_join_player_name must report
+                    // "no event" (-1) again, per docs/ABI.md, instead of serving
+                    // the stale name from this join to later calls.
+                    _currentJoinName = string.Empty;
+                }
             }
         }
 
@@ -404,11 +435,16 @@ namespace HordeForge.WasmHost.Core
         /// <paramref name="invoke"/> on each, and collects the results the
         /// mod reports (a null result means the mod does not handle the
         /// event). The tick and init delegates are static, so tick-rate
-        /// dispatch allocates nothing.
+        /// dispatch allocates no delegate. Runs under <see cref="_gate"/>,
+        /// which is what keeps a concurrent load or unload from rewriting
+        /// the order this walk indexes. The result list is per call: the
+        /// caller owns it, so a dispatch running on another thread cannot
+        /// refill a list this one is still handing out. It is wrapped so it
+        /// never escapes as a mutable list.
         /// </summary>
         private IReadOnlyList<ModRunResult> Dispatch(Func<WasmMod, ModRunResult?> invoke)
         {
-            _results.Clear();
+            var results = new List<ModRunResult>();
             List<string> order = _modOrder;
             Dictionary<string, WasmMod> mods = _mods;
             try
@@ -423,7 +459,7 @@ namespace HordeForge.WasmHost.Core
                     ModRunResult? result = invoke(mod);
                     if (result.HasValue)
                     {
-                        _results.Add(result.GetValueOrDefault());
+                        results.Add(result.GetValueOrDefault());
                     }
                 }
             }
@@ -434,7 +470,7 @@ namespace HordeForge.WasmHost.Core
                 // any later single-module call that forgot to set one.
                 _currentModId = string.Empty;
             }
-            return _resultsView;
+            return new ReadOnlyCollection<ModRunResult>(results);
         }
 
         private ulong? DeclaredMemoryMaximumBytes(Module module)
@@ -743,30 +779,33 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         public void Dispose()
         {
-            if (_disposed)
+            lock (_gate)
             {
-                return;
-            }
-            for (int i = 0; i < _modOrder.Count; i++)
-            {
-                if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
+                if (_disposed)
                 {
-                    _currentModId = mod.Id;
-                    ModRunResult shutdown = mod.Shutdown();
-                    if (!shutdown.Ok)
-                    {
-                        // Kept rather than dropped: the embedder reads them
-                        // after Dispose to report a failed goodbye.
-                        _shutdownFailures.Add(shutdown);
-                    }
-                    mod.Dispose();
+                    return;
                 }
+                for (int i = 0; i < _modOrder.Count; i++)
+                {
+                    if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
+                    {
+                        _currentModId = mod.Id;
+                        ModRunResult shutdown = mod.Shutdown();
+                        if (!shutdown.Ok)
+                        {
+                            // Kept rather than dropped: the embedder reads them
+                            // after Dispose to report a failed goodbye.
+                            _shutdownFailures.Add(shutdown);
+                        }
+                        mod.Dispose();
+                    }
+                }
+                _mods.Clear();
+                _modOrder.Clear();
+                _linker.Dispose();
+                _engine.Dispose();
+                _disposed = true;
             }
-            _mods.Clear();
-            _modOrder.Clear();
-            _linker.Dispose();
-            _engine.Dispose();
-            _disposed = true;
         }
     }
 }

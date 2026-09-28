@@ -312,8 +312,14 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
-        /// <summary>Armed glide flags by net id (ADR 0037); exposed for "wasm status".</summary>
-        public IReadOnlyDictionary<int, bool> Glide => _glide;
+        /// <summary>
+        /// Armed glide flags by net id (ADR 0037); exposed for "wasm status".
+        /// A copy, not the live dictionary: the armed flags are written from
+        /// the queue import, so a caller enumerating this must not be able
+        /// to reach back into the servant's state.
+        /// </summary>
+        public IReadOnlyDictionary<int, bool> Glide =>
+            new Dictionary<int, bool>(_glide);
 
         /// <summary>
         /// Serializes the current world snapshot into the calling guest's

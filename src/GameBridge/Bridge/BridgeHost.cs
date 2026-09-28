@@ -18,13 +18,13 @@ namespace HordeForge.GameBridge.Bridge
     /// Thread model: tick dispatch and player joins arrive on the game main
     /// loop, while "wasm" console commands execute on the telnet/console
     /// thread of the dedicated server. Every entry point therefore takes
-    /// <see cref="Gate"/>; the host library itself stays single-threaded per
-    /// its contract (a store must never be touched from two threads, and
-    /// a mid-dispatch unload would throw out of the load-order walk). The
-    /// gate can stall a console command until the current dispatch ends;
-    /// both sides are bounded (fuel per guest call, module size cap on
-    /// compile), so this trades a bounded pause for the crash risk of
-    /// concurrent store access.
+    /// <see cref="Gate"/>: it keeps the host's guest calls off two threads
+    /// at once and gives the bridge's own mutable state (settings tables,
+    /// raw config cache, rate limiters, bot and glide records) a single
+    /// writer. The gate can stall a console command until the current
+    /// dispatch ends; both sides are bounded (fuel per guest call, module
+    /// size cap on compile), so this trades a bounded pause for the crash
+    /// risk of concurrent store access.
     /// </summary>
     public static class BridgeHost
     {
