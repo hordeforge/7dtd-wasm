@@ -31,7 +31,17 @@ namespace HordeForge.WasmHost.Registry
     /// </summary>
     public sealed class ModManifest
     {
-        private const long MaxFuelPerCall = 50_000_000L;
+        /// <summary>
+        /// Largest per-call fuel budget any source may configure, in
+        /// instructions. It is a runtime invariant, not a format rule: one
+        /// call at the ceiling is roughly 50 ms of CPU, and a 20 TPS game
+        /// loop cannot absorb more than a small multiple of that per
+        /// module. The host enforces it on the configuration it is built
+        /// from too (<see cref="Core.WasmModHost"/>), so an embedder setting
+        /// <see cref="Config.WasmHostConfig.FuelPerCall"/> directly gets the
+        /// same bound the file path reports by name.
+        /// </summary>
+        internal const long MaxFuelPerCall = 50_000_000L;
 
         /// <summary>
         /// The closed set of [limits] keys. Anything else is a typo or a

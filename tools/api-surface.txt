@@ -143,7 +143,7 @@ src/HordeForge.WasmHost/Core/WasmMod.cs: type WasmMod
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchInit()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchTick(long tick)
-src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> ShutdownFailures
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> ShutdownFailures { get; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<string> ModIds { get; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? InitModule(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)

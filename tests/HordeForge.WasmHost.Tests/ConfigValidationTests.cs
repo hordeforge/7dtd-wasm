@@ -7,9 +7,11 @@ namespace HordeForge.WasmHost.Tests
 {
     /// <summary>
     /// Fail-fast configuration validation: a WasmHostConfig the host can
-    /// never honor (zero fuel, sub-page memory ceiling, non-positive caps,
+    /// never honor (zero or runaway fuel, a memory ceiling below one page or
+    /// above wasm32, non-positive caps, a stack the engine aborts on, an
     /// empty log prefix) must be rejected at construction, not surface later
-    /// as every call exhausting fuel or every module being rejected.
+    /// as every call exhausting fuel, every module being rejected, or the
+    /// process dying from a panic inside the native engine.
     /// </summary>
     public sealed class ConfigValidationTests
     {
@@ -39,6 +41,57 @@ namespace HordeForge.WasmHost.Tests
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
                 () => new WasmModHost(new TestGameHostApi(), config));
             Assert.Contains("StaticMemoryMaximumBytes", ex.Message);
+        }
+
+        [Fact]
+        public void AboveWasm32MemoryCeilingIsRejected()
+        {
+            // wasm32 memory is 65536 pages; a larger ceiling rejects no
+            // module, so accepting it reports a bound the engine never had.
+            var config = new WasmHostConfig { StaticMemoryMaximumBytes = 8UL * 1024 * 1024 * 1024 };
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new WasmModHost(new TestGameHostApi(), config));
+            Assert.Contains("StaticMemoryMaximumBytes", ex.Message);
+        }
+
+        [Fact]
+        public void UpperBoundsAreInclusive()
+        {
+            // The bounds are ceilings, not exclusive limits: the largest
+            // value each engine can honor still has to build.
+            var config = new WasmHostConfig
+            {
+                FuelPerCall = 50_000_000UL,
+                MaximumStackBytes = 2 * 1024 * 1024,
+                StaticMemoryMaximumBytes = 65536UL * 65536,
+            };
+            using var host = new WasmModHost(new TestGameHostApi(), config);
+        }
+
+        [Fact]
+        public void FuelAboveTheMainLoopBudgetIsRejected()
+        {
+            // Fuel is the only bound on how long one guest call can hold the
+            // game loop, so an embedder gets the same ceiling the manifest
+            // parser reports by name. The engine itself accepts the value,
+            // so without this check only the file path is bounded.
+            var config = new WasmHostConfig { FuelPerCall = 50_000_001UL };
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new WasmModHost(new TestGameHostApi(), config));
+            Assert.Contains("FuelPerCall", ex.Message);
+        }
+
+        [Fact]
+        public void StackCeilingAboveTheEngineLimitIsRejected()
+        {
+            // 2 MiB + 1 is the first value the engine rejects, and it does
+            // so by aborting the process from a panic inside the native
+            // engine, which no caller can catch. The host rejects it first,
+            // with a message that names the field.
+            var config = new WasmHostConfig { MaximumStackBytes = 2 * 1024 * 1024 + 1 };
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                () => new WasmModHost(new TestGameHostApi(), config));
+            Assert.Contains("MaximumStackBytes", ex.Message);
         }
 
         [Theory]

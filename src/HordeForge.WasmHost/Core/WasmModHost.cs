@@ -40,6 +40,16 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         internal const ulong Wasm32MemoryCeilingBytes = 65536UL * 65536;
 
+        /// <summary>
+        /// Largest wasm caller stack the engine accepts, in bytes. Wasmtime
+        /// requires max_wasm_stack to fit inside its own async stack, and a
+        /// larger value aborts the process from a panic inside the native
+        /// engine rather than raising anything the host could turn into a
+        /// configuration error. The bound is enforced here so an embedder
+        /// gets the constructor's named rejection instead.
+        /// </summary>
+        private const int EngineMaxStackBytes = 2 * 1024 * 1024;
+
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
         private readonly Engine _engine;
@@ -105,6 +115,17 @@ namespace HordeForge.WasmHost.Core
                 throw new ArgumentOutOfRangeException(nameof(config), config.FuelPerCall,
                     "FuelPerCall must be at least 1 instruction; 0 would exhaust every call immediately.");
             }
+            // The fuel budget is the host's only bound on how long a guest
+            // call can hold the game main loop, so the ceiling the manifest
+            // parser enforces on the file path is enforced on the embedder
+            // path too: without it a host built from a hand-written config
+            // can grant a call a budget of hours.
+            if (config.FuelPerCall > (ulong)ModManifest.MaxFuelPerCall)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.FuelPerCall,
+                    "FuelPerCall must be at most " + ModManifest.MaxFuelPerCall +
+                    " instructions; a larger budget lets one guest call stall the loop it runs on.");
+            }
             if (config.StaticMemoryMaximumBytes < (ulong)WasmPageBytes)
             {
                 throw new ArgumentOutOfRangeException(nameof(config), config.StaticMemoryMaximumBytes,
@@ -118,11 +139,13 @@ namespace HordeForge.WasmHost.Core
                 // the wrong unit) reaches the engine, which cannot honor it:
                 // the engine build throws and takes the whole host start
                 // down instead of the documented "invalid file, keep
-                // defaults" path. A module declaring no maximum is already
-                // treated as the full 4 GiB, so nothing above it can load.
+                // defaults" path. A wasm32 linear memory is 65536 pages at
+                // most, so a module declaring no maximum is already treated
+                // as the full 4 GiB and nothing above that can load: the
+                // value bounds nothing.
                 throw new ArgumentOutOfRangeException(nameof(config), config.StaticMemoryMaximumBytes,
-                    "StaticMemoryMaximumBytes must be at most the wasm32 address space (" +
-                    Wasm32MemoryCeilingBytes + " bytes).");
+                    "StaticMemoryMaximumBytes must be at most the wasm32 memory ceiling (" +
+                    Wasm32MemoryCeilingBytes + " bytes); no module can declare more, so a larger cap bounds nothing.");
             }
             if (config.MaxModuleSizeBytes <= 0)
             {
@@ -133,6 +156,12 @@ namespace HordeForge.WasmHost.Core
             {
                 throw new ArgumentOutOfRangeException(nameof(config), config.MaximumStackBytes,
                     "MaximumStackBytes must be positive.");
+            }
+            if (config.MaximumStackBytes > EngineMaxStackBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(config), config.MaximumStackBytes,
+                    "MaximumStackBytes must be at most " + EngineMaxStackBytes +
+                    " bytes; the engine aborts the process on a larger stack rather than failing the call.");
             }
             if (string.IsNullOrEmpty(config.LogSourcePrefix))
             {
@@ -818,9 +847,20 @@ namespace HordeForge.WasmHost.Core
         /// load order, for every mod whose shutdown did not complete. A guest
         /// that traps on its way out would otherwise leave no trace at all,
         /// so the embedder can log these after disposing. Empty until
-        /// Dispose has run, and unchanged by later calls.
+        /// Dispose has run, and unchanged by later calls. A fresh read-only
+        /// copy, like <see cref="ModIds"/> and the dispatch results: the
+        /// list behind it belongs to the host.
         /// </summary>
-        public IReadOnlyList<ModRunResult> ShutdownFailures => _shutdownFailures;
+        public IReadOnlyList<ModRunResult> ShutdownFailures
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return new ReadOnlyCollection<ModRunResult>(new List<ModRunResult>(_shutdownFailures));
+                }
+            }
+        }
 
         /// <summary>
         /// Shuts down every loaded mod (best effort), releases each mod's

@@ -172,7 +172,27 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 _servant = new BotServant(() => _tick, () => ClockMs());
                 _gameApi = new GameHostApi(_settings, _servant, () => ClockMs());
-                _host = new WasmModHost(_gameApi, config);
+                try
+                {
+                    _host = new WasmModHost(_gameApi, config);
+                }
+                catch (Exception ex)
+                {
+                    // The limits file parsed, but the engine refuses the
+                    // configuration it describes (a ceiling outside the range
+                    // the engine or the wasm32 model can express). Letting
+                    // that escape would take the tick and player-join hooks
+                    // down with it, since they are applied after this call;
+                    // the bridge's own contract is that no guest loads and
+                    // the rest of the mod keeps working.
+                    Log.Warning("[WasmHost] start aborted: " + TextSanitizer.Clean(ex.Message) +
+                                "; fix " + TextSanitizer.Clean(sharedTomlPath) + " and restart the server");
+                    _gameApi = null;
+                    _servant = null;
+                    _settings = null;
+                    ModuleTreeRoots.Clear();
+                    return;
+                }
                 _telemetry.Reset();
 
                 // LoadAllModules runs each newly loaded module's on_enable (see

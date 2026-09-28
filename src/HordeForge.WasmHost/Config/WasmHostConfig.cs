@@ -15,14 +15,19 @@ namespace HordeForge.WasmHost.Config
         /// (on_enable, on_tick, on_player_join, or on_shutdown). Fuel is
         /// consumed by executed instructions; when it runs out the call
         /// stops with FuelExhausted and the host stays healthy. Default
-        /// 1,000,000 instructions per call.
+        /// 1,000,000 instructions per call. At most
+        /// <see cref="Registry.ModManifest.MaxFuelPerCall"/>: a call is the
+        /// only thing bounding how long a guest can hold the loop it runs on,
+        /// so a value above that is rejected at construction.
         /// </summary>
         public ulong FuelPerCall { get; set; } = 1_000_000UL;
 
         /// <summary>
         /// Engine-wide ceiling on the static memory (in bytes) any guest
         /// instance may use. Modules that declare a larger memory maximum are
-        /// rejected at load time. Default 32 MiB.
+        /// rejected at load time. Default 32 MiB, at most the wasm32 ceiling
+        /// (4 GiB); a larger value bounds nothing, since no module can
+        /// declare a memory maximum above it.
         /// </summary>
         public ulong StaticMemoryMaximumBytes { get; set; } = 32UL * 1024 * 1024;
 
@@ -49,7 +54,10 @@ namespace HordeForge.WasmHost.Config
 
         /// <summary>
         /// Optional upper bound on the wasm caller stack, in bytes. Kept as a
-        /// ceiling against guest recursion. Default 1 MiB.
+        /// ceiling against guest recursion. Default 1 MiB. Above the engine's
+        /// own 2 MiB limit the engine aborts the process from a panic rather
+        /// than failing a call, so the host rejects a larger value at
+        /// construction instead.
         /// </summary>
         public int MaximumStackBytes { get; set; } = 1024 * 1024;
 

@@ -147,6 +147,10 @@ amendment; see SECURITY.md for the weaker bound).
 
 - Every call runs under a fresh fuel budget (default 1,000,000 instructions).
   Exceeding it stops the call with `FuelExhausted`; the module stays loaded.
+  The budget is capped at 50,000,000 instructions per call, the same ceiling
+  `limits.fuel_per_call` is held to, and a host configured above it is
+  rejected at construction: one guest call is the only thing standing between
+  a runaway module and the tick budget of the loop it runs on.
 - Traps return a structured `ModRunResult`; the game loop and other modules
   are unaffected.
 - WASI preview 1 is linked with stdout and stderr discarded by default (the

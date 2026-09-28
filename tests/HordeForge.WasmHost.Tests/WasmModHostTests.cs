@@ -506,6 +506,25 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void ShutdownFailuresHandOutAReadOnlyCopy()
+        {
+            // The embedder reads the failures after Dispose, and every other
+            // collection this class publishes (ModIds, the dispatch results)
+            // is a copy that rejects writes. A live list here would be one
+            // downcast away from a caller rewriting the host's own state.
+            var (host, _) = NewHost();
+            host.LoadModule("trapshutdown", WatModule(
+                "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                "(func (export \"on_shutdown\") (result i32) unreachable)"));
+            host.Dispose();
+
+            IReadOnlyList<ModRunResult> failures = host.ShutdownFailures;
+            Assert.IsNotType<List<ModRunResult>>(failures);
+            Assert.Throws<NotSupportedException>(() => ((IList<ModRunResult>)failures).Add(default));
+        }
+
+        [Fact]
         public void RepeatedUnloadReloadCyclesStayHealthy()
         {
             // `wasm reload <id>` is the operator iteration loop for guest
