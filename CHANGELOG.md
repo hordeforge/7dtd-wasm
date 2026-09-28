@@ -98,9 +98,25 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   budget, manifest determinism, and sanitizer idempotence rather than only
   "did not crash". `HORDEFORGE_FUZZ_SEED` and `HORDEFORGE_FUZZ_ITERATIONS`
   reseed and lengthen a run; every failure prints its replay command.
+- CI builds the host library and runs its test suite on Windows as well as
+  Linux. The net48 bridge is loaded inside a Windows game process, so every
+  path, case comparison and encoding rule in `HordeForge.WasmHost` decides
+  what a Windows install does; a Linux-only matrix asserted those rules
+  without ever running them. The job calls `dotnet` directly because the
+  Windows runner image has no GNU make; the Makefile targets are unchanged
+  and README still records them as unproven there.
 
 ### Fixed
 
+- `make dist` staged the native engine out of a hardcoded
+  `$(HOME)/.nuget/packages`, which is not where NuGet restores to when
+  `NUGET_PACKAGES` points somewhere else (CI caches, a shared package
+  folder). The variable is read now, with the same path as its default.
+- A mod id naming a Windows device (`con`, `nul`, `com1`, ..., also with a
+  suffix like `aux.wasm`) or ending in a space or a period was accepted and
+  then never loaded, because Windows has no directory by that name and stores
+  one without its trailing space or period. Such ids are rejected with the
+  rest, so a mod is either loadable on every platform or reported.
 - `make dist` staged the modlet with the third-party notices but not the
   project's own MIT LICENSE, so the shipped tree linked to a file that was
   not in it. Both travel in `dist/Mods/1_HordeForge_WasmHost/` now.

@@ -40,7 +40,7 @@ against the code instead of against this document.
 | Console command `wasm list/load/reload/unload/status` | `src/GameBridge/Commands/CmdWasm.cs:32` | telnet console and in-game console, whoever the game lets run console commands |
 | Module directory scan at start and on `wasm load` | `src/GameBridge/Bridge/BridgeHost.cs:338` | filesystem under `Mods/Wasm` and each staged modlet's `Wasm/` |
 | `module.wasm`, `wasm-mod.toml`, `config.toml`, `wasm.toml` files | `src/GameBridge/Bridge/BridgeHost.cs:410`, `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:30` | filesystem |
-| Mod id from console input | `src/GameBridge/Bridge/BridgeHost.cs:511`, validated by `src/HordeForge.WasmHost/Registry/ModId.cs:25` | console |
+| Mod id from console input | `src/GameBridge/Bridge/BridgeHost.cs:511`, validated by `src/HordeForge.WasmHost/Registry/ModId.cs:50` | console |
 | Harmony postfix on `GameManager.Update` (tick) | `src/GameBridge/Hooks/GameTickHook.cs:14` | the game loop, 20 calls per second |
 | Harmony postfix on `GameManager.RequestToSpawnPlayer` (join) | `src/GameBridge/Hooks/PlayerSpawnHook.cs:15` | a remote player joining or respawning |
 | Player name from `ClientInfo` | `src/GameBridge/Bridge/BridgeHost.cs:233` | a remote player, through the join hook |
@@ -146,7 +146,12 @@ named here and mapped in section 7; gaps are in section 8.
 - *Tampering*: a module id differing only in case resolves to the same folder
   on Windows and macOS; the code refuses it by confirming the on-disk
   spelling (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:146`), which
-  removes the double registration.
+  removes the double registration. The same filesystem accepts two spellings
+  that are not the same id at all: a name ending in a space or a period is
+  stored without it, and a device name (`con`, `com1`, ...) is no directory
+  there. `ModId.IsValid` rejects both, so an id is either a folder on every
+  platform or reported as not one
+  (`src/HordeForge.WasmHost/Registry/ModId.cs:50`).
 - *Repudiation*: `Reload` and `Unload` report only success or failure to the
   console (`src/GameBridge/Commands/CmdWasm.cs:58`); nothing durable records
   the change.
@@ -282,7 +287,7 @@ named here and mapped in section 7; gaps are in section 8.
 | game-side work outside the fuel budget | per-module caps on `queue` (200/s) and `sense` (200/s) | `src/GameBridge/Bridge/GameHostApi.cs:195`, `:238` |
 | entity multiplication | 16 live bot ceiling across all modules, top-up throttled to 1/s | `src/GameBridge/Bridge/BotServant.cs:29`, `:628` |
 | one guest driving another guest's bots | every bot id is checked against the module that asked for it, in the ownership registry, before move, look, shoot, despawn, count, and the `is_self` sense bit | `src/HordeForge.WasmHost/Core/BotOwnershipRegistry.cs:19`, `src/GameBridge/Bridge/BotServant.cs` |
-| path traversal through a mod id | id validation, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:25`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:146` |
+| path traversal through a mod id | id validation, then on-disk spelling confirmation | `src/HordeForge.WasmHost/Registry/ModId.cs:50`, `src/HordeForge.WasmHost/Registry/ModuleRoots.cs:146` |
 | manifest slurping | 1 MiB read bound, re-checked after the read | `src/HordeForge.WasmHost/Registry/ManifestFiles.cs:24` |
 | wrong-signature exports silently dropped | every optional export validated at load | `src/HordeForge.WasmHost/Core/WasmModHost.cs:242` |
 | log, console, and chat text forgery | C0, DEL, C1, bidi, and zero-width characters replaced with '?' | `src/HordeForge.WasmHost/Registry/TextSanitizer.cs:24` |

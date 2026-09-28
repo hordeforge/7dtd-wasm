@@ -69,3 +69,31 @@ jobs:
       # bridge and bridge-check need a dedicated server install and cannot run
       # on a hosted runner; that half is proven on a developer host.
       - run: make check-ci
+
+  # The host library is the artifact a Windows server actually loads: the
+  # net48 bridge runs inside the game process, and the .wasm guests it drives
+  # are platform-neutral, so every filesystem, case-comparison, and encoding
+  # decision in HordeForge.WasmHost is a decision about the filesystem of a
+  # Windows install. Linux-only CI never exercised any of them, which is how
+  # a mod id naming a Windows device stayed valid in the validator while
+  # naming no directory on the platform the mod runs on.
+  #
+  # This job runs the host build and its test suite only, and calls dotnet
+  # rather than make: the windows runner image has no GNU make, and the
+  # Makefile targets that need one (make dist, make bridge) are the ones
+  # README records as unproven on Windows. What this covers is the shipped
+  # library and the module-loading path, on the platform it is loaded on.
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+      - name: Build the host library
+        run: dotnet build src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=true
+      - name: Run the host test suite
+        run: dotnet test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=true

@@ -133,6 +133,14 @@ NUGET_GLOBAL_PACKAGES = $(shell $(DOTNET) nuget locals global-packages --list 2>
 # Dedicated server install used for the net48 bridge build and target check.
 GAME_DIR ?= $(STEAM_ROOT)/7 Days to Die Dedicated Server
 
+# Where the NuGet global packages folder is, for the one target that reads a
+# restored package out of it ("make dist" stages the native engine from the
+# Wasmtime package). NUGET_PACKAGES is the supported override and is set by
+# CI systems, shared build caches, and anyone who keeps packages off the
+# home disk, so hardcoding the default would break those restores silently:
+# the copy would look for a file dotnet never wrote there.
+NUGET_PACKAGES ?= $(HOME)/.nuget/packages
+
 # Sibling checkout holding the unmodified zdtd plugins (fps_bot, parachute)
 # that are committed under tests/fixtures and staged by "make dist". It is a
 # separate repository, so a clone of this one alone cannot rebuild them.

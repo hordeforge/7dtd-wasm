@@ -190,8 +190,13 @@ and Python 3 for the tools gate, resolved as `python3` or as
 Steam library root of the platform
 (`C:\Program Files (x86)\Steam\steamapps\common` on Windows,
 `$HOME/.local/share/Steam/steamapps/common` elsewhere); pass
-`GAME_DIR=/path/to/install` when Steam lives elsewhere. CI exercises Linux
-only, so a Windows run of these targets is unproven.
+`GAME_DIR=/path/to/install` when Steam lives elsewhere. `make dist` reads the
+native engine out of the NuGet global packages folder, so it honors
+`NUGET_PACKAGES` when that is set and falls back to `$HOME/.nuget/packages`.
+CI runs the host library build and its test suite on Linux and on Windows,
+which is the platform the net48 bridge is loaded on; the Makefile targets
+above `make build` need GNU make and a game install, so a Windows run of
+those is unproven.
 
 ### Embedding the host library
 

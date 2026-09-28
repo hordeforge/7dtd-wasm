@@ -22,6 +22,11 @@ namespace HordeForge.WasmHost.Tests
         // First non-control code point after DEL and the C1 block.
         [InlineData("\u00a0nbsp")]
         [InlineData("café")]
+        // Only a whole device name is reserved: a longer stem is a folder.
+        [InlineData("console")]
+        [InlineData("com10")]
+        [InlineData("boss.dat2")]
+        [InlineData("a.b")]
         public void PlainFolderNamesAreValid(string id)
         {
             Assert.True(ModId.IsValid(id));
@@ -68,6 +73,24 @@ namespace HordeForge.WasmHost.Tests
         // .NET as U+FFFD; the id no longer re-encodes to its own directory.
         [InlineData("bo\ufffdss")]
         [InlineData("\ufffd")]
+        // Windows names a device, not a directory, so a folder with one of
+        // these names cannot exist there while the id still validates.
+        [InlineData("con")]
+        [InlineData("CON")]
+        [InlineData("nul")]
+        [InlineData("aux.wasm")]
+        [InlineData("PRN")]
+        [InlineData("com1")]
+        [InlineData("LPT9")]
+        // The three superscript forms are reserved as well and render like
+        // the ASCII ones in a console listing.
+        [InlineData("COM\u00b9")]
+        [InlineData("lpt\u00b3")]
+        // Windows stores a name without its trailing period or space, so the
+        // id would name a different directory than the one it spells.
+        [InlineData("boss.")]
+        [InlineData("boss ")]
+        [InlineData("a.b.")]
         public void UnsafeIdsAreRejected(string? id)
         {
             Assert.False(ModId.IsValid(id));

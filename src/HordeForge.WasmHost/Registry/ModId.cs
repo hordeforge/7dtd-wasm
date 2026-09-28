@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace HordeForge.WasmHost.Registry
@@ -21,9 +23,29 @@ namespace HordeForge.WasmHost.Registry
     /// edge: a folder name that is not valid UTF-8 (legal on Linux) reaches
     /// .NET as U+FFFD, and the id built from it no longer names its own
     /// directory once re-encoded, so the module would silently never load.
+    /// Two more rules come from the Windows filesystem: a name ending in a
+    /// space or a period is stored without it, and CON, PRN, AUX, NUL and the
+    /// COM/LPT series name a device rather than a directory (before any
+    /// extension). An id carrying one of those is a legal Linux folder name
+    /// that names a different, or no, directory on Windows, so it would load
+    /// on one platform and silently never load on the other.
     /// </summary>
     public static class ModId
     {
+        /// <summary>
+        /// Device names Windows reserves in every directory, before any
+        /// extension. The superscript forms are reserved too, and read as
+        /// their ASCII counterparts in a console listing.
+        /// </summary>
+        private static readonly HashSet<string> ReservedDeviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+            "COM\u00b9", "COM\u00b2", "COM\u00b3",
+            "LPT\u00b9", "LPT\u00b2", "LPT\u00b3",
+        };
+
         /// <summary>True when <paramref name="id"/> is a safe mod id.</summary>
         public static bool IsValid(string? id)
         {
@@ -36,6 +58,18 @@ namespace HordeForge.WasmHost.Registry
                 return false;
             }
             if (id == "." || id == "..")
+            {
+                return false;
+            }
+            if (id[id.Length - 1] == ' ' || id[id.Length - 1] == '.')
+            {
+                return false;
+            }
+            // The device name is what precedes the first period, so "con.toml"
+            // is reserved exactly as "con" is.
+            int dot = id.IndexOf('.');
+            string stem = dot < 0 ? id : id.Substring(0, dot);
+            if (ReservedDeviceNames.Contains(stem))
             {
                 return false;
             }
