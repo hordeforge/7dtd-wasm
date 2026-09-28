@@ -46,6 +46,84 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void RepeatedEnableRunsOnEnableOnlyOnce()
+        {
+            // docs/ABI.md promises on_enable is "called once when the mod is
+            // loaded and enabled". An embedder that enables twice (a second
+            // DispatchInit, an InitModule after the load scan already
+            // enabled the mod) must not run the guest's enable side effects
+            // twice. The probe module reports an error status on its second
+            // enable, so a re-run would show up as a failed result.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmMod mod = host.LoadModule("counted", CountedEnableModule());
+                Assert.True(host.DispatchInit().Single().Ok);
+                Assert.True(mod.Enabled);
+
+                Assert.True(host.DispatchInit().Single().Ok);
+                Assert.True(host.InitModule("counted")!.Value.Ok);
+                Assert.Equal(1, mod.TotalCalls);
+            }
+        }
+
+        [Fact]
+        public void ReloadedGenerationEnablesAgain()
+        {
+            // The enable latch is per generation, not per id: the "wasm
+            // reload" loop must still run on_enable on the fresh instance.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] bytes = CountedEnableModule();
+                WasmMod first = host.LoadModule("counted", bytes);
+                Assert.True(first.Init().Ok);
+                Assert.NotNull(host.Unload("counted"));
+
+                WasmMod second = host.LoadModule("counted", bytes);
+                Assert.True(host.InitModule("counted")!.Value.Ok);
+                Assert.Equal(1, second.TotalCalls);
+            }
+        }
+
+        [Fact]
+        public void FailedEnableIsRetryable()
+        {
+            // A guest that cannot enable must stay retryable: latching the
+            // attempt would make "wasm reload" the only way back and would
+            // hide a fix applied to its manifest.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                byte[] wasm = WatModule(
+                    "(func (export \"on_enable\") (result i32) i32.const 1)" +
+                    "(func (export \"on_tick\") (result i32) i32.const 0)");
+                WasmMod mod = host.LoadModule("notready", wasm);
+
+                Assert.Equal(ModRunStatus.Error, host.InitModule("notready")!.Value.Status);
+                Assert.False(mod.Enabled);
+                Assert.Equal(ModRunStatus.Error, host.InitModule("notready")!.Value.Status);
+                Assert.Equal(2, mod.TotalCalls);
+            }
+        }
+
+        /// <summary>
+        /// A module whose on_enable returns Ok on its first call and an error
+        /// status on every later one, so a second enable is visible as a
+        /// failed result rather than needing a log assertion.
+        /// </summary>
+        private static byte[] CountedEnableModule()
+        {
+            return WatModule(
+                "(global $n (mut i32) i32.const 0)" +
+                "(func (export \"on_enable\") (result i32)" +
+                "  global.get $n i32.const 1 i32.add global.set $n" +
+                "  global.get $n i32.const 1 i32.eq" +
+                "  if (result i32) i32.const 0 else i32.const 1 end)" +
+                "(func (export \"on_tick\") (result i32) i32.const 0)");
+        }
+
+        [Fact]
         public void InitLogsUtf8Losslessly()
         {
             var (host, api) = NewHost();

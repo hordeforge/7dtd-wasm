@@ -22,6 +22,7 @@ namespace HordeForge.WasmHost.Core
         private readonly Func<int, int>? _onPlayerJoin;
         private readonly Func<int, int, int, int, int>? _onAdminCommand;
         private bool _disposed;
+        private bool _enabled;
 
         internal WasmMod(string id, Module module, Store store, ulong fuelPerCall, Instance instance, long initTick)
         {
@@ -72,11 +73,33 @@ namespace HordeForge.WasmHost.Core
         /// <summary>
         /// Invokes the guest on_enable export. Guests read configuration
         /// through get_setting. See docs/ABI.md.
+        ///
+        /// Runs at most once per load generation, which is what docs/ABI.md
+        /// promises ("called once when the mod is loaded and enabled"). A
+        /// repeated call is a no-op reporting Ok: an embedder that enables a
+        /// mod twice (a second DispatchInit, an InitModule after the load
+        /// scan already enabled it) must not run the guest's enable side
+        /// effects twice. The latch is per generation, so an unload and
+        /// reload enables the fresh instance as its first act.
+        ///
+        /// A failed enable does not latch, so an embedder may retry it.
         /// </summary>
         public ModRunResult Init()
         {
-            return Run("on_enable", _init);
+            if (_enabled)
+            {
+                return new ModRunResult(Id, ModRunStatus.Ok, string.Empty, string.Empty, 0UL);
+            }
+            ModRunResult result = Run("on_enable", () => _init());
+            if (result.Ok)
+            {
+                _enabled = true;
+            }
+            return result;
         }
+
+        /// <summary>True once on_enable has completed for this generation.</summary>
+        public bool Enabled => _enabled;
 
         /// <summary>Invokes the guest on_tick export; the tick number is read via the tick import.</summary>
         public ModRunResult Tick()

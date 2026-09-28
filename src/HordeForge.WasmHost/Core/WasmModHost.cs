@@ -324,24 +324,34 @@ namespace HordeForge.WasmHost.Core
         /// log source tag all resolve against the mod currently being
         /// called, so a direct call would serve the previously dispatched
         /// mod's settings and config to this one.
+        ///
+        /// Under <see cref="_gate"/>, like every other entry point: it writes
+        /// the per-call mod id and enters a store, so an enable racing a
+        /// dispatch or an unload would otherwise hand this mod the setting
+        /// the other guest is reading, or call into a store the unload is
+        /// disposing. The mod's own enable latch makes a second call to an
+        /// already-enabled mod a no-op rather than a second on_enable.
         /// </summary>
         public ModRunResult? InitModule(string id)
         {
-            ThrowIfDisposed();
-            if (!_mods.TryGetValue(id, out WasmMod? mod))
+            lock (_gate)
             {
-                return null;
-            }
-            _currentModId = mod.Id;
-            try
-            {
-                return mod.Init();
-            }
-            finally
-            {
-                // The call is over; no mod is current until the next one
-                // starts, so a later direct guest call cannot inherit this id.
-                _currentModId = string.Empty;
+                ThrowIfDisposed();
+                if (!_mods.TryGetValue(id, out WasmMod? mod))
+                {
+                    return null;
+                }
+                _currentModId = mod.Id;
+                try
+                {
+                    return mod.Init();
+                }
+                finally
+                {
+                    // The call is over; no mod is current until the next one
+                    // starts, so a later direct guest call cannot inherit this id.
+                    _currentModId = string.Empty;
+                }
             }
         }
 

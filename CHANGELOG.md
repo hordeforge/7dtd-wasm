@@ -129,7 +129,19 @@ Codename: Quarantine (7dtd-wasm).
   were printed in hash-table order, so the same run printed a different
   line between runs. Sources are listed in ordinal key order and net ids
   ascending now.
-- A raw lone surrogate in a manifest string (basic or literal) reached the
+- `on_enable` could run more than once for one load generation, although
+  `docs/ABI.md` documents it as "called once when the mod is loaded and
+  enabled". An embedder that enabled a mod twice (a second `DispatchInit`,
+  an `InitModule` after the load scan already enabled it) re-ran the
+  guest's enable side effects. `WasmMod.Init` now latches the enable per
+  generation, so a repeat enable reports Ok without calling the guest; a
+  failed enable is still retryable, and a reloaded generation enables
+  again. `WasmMod.Enabled` reads the latch back.
+- `WasmModHost.InitModule` took no internal lock while every other entry
+  point did, so an enable racing a dispatch or an unload could enter a
+  wasm store the unload was disposing, or hand one guest the setting the
+  other was reading. It now serializes on the same gate.
+>- A raw lone surrogate in a manifest string (basic or literal) reached the
   settings table instead of being rejected, while the `\uXXXX` form already
   was. Such a value has no UTF-8 form and cannot round-trip the guest
   string ABI.

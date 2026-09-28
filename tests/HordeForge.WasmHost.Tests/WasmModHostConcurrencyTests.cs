@@ -150,9 +150,77 @@ namespace HordeForge.WasmHost.Tests
             }
         }
 
-        private static void Churn(WasmModHost host, byte[] bytes)
+        [Fact]
+        public void ConcurrentEnableRacesNeverEnterAnUnusableStore()
+        {
+            // "wasm reload" runs InitModule while the tick hook is
+            // dispatching and, on a double-typed command, while another
+            // enable is in flight. InitModule writes the per-call mod id and
+            // enters a store, so it has to serialize like the other entry
+            // points: without the gate an enable can enter a store the
+            // unload is disposing (reported as a failed enable) or hand this
+            // guest the setting the other one is reading.
+            TestGameHostApi api;
+            using (WasmModHost host = NewHost(out api))
+            {
+                host.LoadModule("alpha", Fixture("strings"));
+                host.LoadModule("beta", Fixture("strings"));
+                api.ModSettings["alpha"] = new Dictionary<string, string>(StringComparer.Ordinal) { ["welcome"] = "alpha-only" };
+                api.ModSettings["beta"] = new Dictionary<string, string>(StringComparer.Ordinal) { ["welcome"] = "beta-only" };
+                byte[] churn = Fixture("strings");
+
+                RunWorkers(
+                    () => EnableInALoop(host, new[] { "alpha", "beta" }),
+                    () => EnableInALoop(host, new[] { "alpha", "beta" }),
+                    () =>
+                    {
+                        for (int i = 0; i < Iterations; i++)
+                        {
+                            host.Unload("churn");
+                            host.LoadModule("churn", churn);
+                        }
+                        host.Unload("churn");
+                    },
+                    () => AssertOwnSettingOnly(host, Iterations));
+
+                // A racing enable must not have served one guest the other's
+                // setting, and the registry must still agree with the order.
+                // Only the two stable mods carry a setting; the churn mod
+                // legitimately resolves none.
+                foreach (var entry in api.Logs)
+                {
+                    if (entry.Message.Contains("setting=") && entry.Source.EndsWith("/alpha"))
+                    {
+                        Assert.Contains("setting='alpha-only'", entry.Message);
+                    }
+                    if (entry.Message.Contains("setting=") && entry.Source.EndsWith("/beta"))
+                    {
+                        Assert.Contains("setting='beta-only'", entry.Message);
+                    }
+                }
+                List<string> ids = host.ModIds.ToList();
+                Assert.Equal(new[] { "alpha", "beta" }, ids);
+                Assert.All(ids, id => Assert.True(host.TryGetMod(id, out WasmMod? mod) && mod != null, id));
+            }
+        }
+
+        private static void EnableInALoop(WasmModHost host, string[] ids)
         {
             for (int i = 0; i < Iterations; i++)
+            {
+                foreach (string id in ids)
+                {
+                    ModRunResult? result = host.InitModule(id);
+                    // null is the mod being unloaded under us; a non-Ok
+                    // result is an enable that entered a store the unload
+                    // was disposing, which is the fault under test.
+                    Assert.True(result is null || result.Value.Ok, id + ": " + result?.Message);
+                }
+            }
+        }
+
+        private static void Churn(WasmModHost host, byte[] bytes)
+        {            for (int i = 0; i < Iterations; i++)
             {
                 if (host.TryGetMod("racer", out _))
                 {
