@@ -54,3 +54,13 @@ parser must stay in sync with the documented subset, and the
 calling-mod-aware get_setting adds a small amount of host plumbing.
 Revisit if the manifest needs a real schema or a TOML library becomes
 justified.
+
+## Amendment (2026-09-28): a fifth hook, on_admin_command
+
+`on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap) -> i32` joined the
+hook set: the export name is the zdtd plugin name, and the host resolves
+and signature-checks it at load exactly like the other four, reporting
+`WasmMod.HasAdminCommandHandler`. The console wiring is not shipped, so
+a guest that exports it is validated and then never called
+(docs/ABI.md, stage 3). The decision is unchanged: hook export names are
+the zdtd plugin hooks, exported bare.

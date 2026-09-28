@@ -42,6 +42,9 @@ IMPLICIT_MEMBER = re.compile(r"^(?:[A-Za-z_][\w.<>,\[\]?]*\s+)?[A-Za-z_]\w*\s*[(
 # A signature ends at the body, the statement, or an expression-bodied
 # member's arrow. A bare ">" is a generic argument, not the end.
 TERMINATOR = re.compile(r";|\{|=>")
+# A constructor's ": this(...)" or ": base(...)" clause, which is a body
+# detail rather than part of the signature.
+CTOR_INITIALIZER = re.compile(r":\s*(?:this|base)\s*\(")
 # get { ... } -> get; : the accessor keyword is surface, its body is not.
 ACCESSOR = re.compile(r"\b(get|set|init|add|remove)\s*\{")
 ACCESSOR_LIST = re.compile(r"\{\s*((?:(?:get|set|init|add|remove)\s*;\s*)+)\}")
@@ -91,6 +94,32 @@ def strip_noise(text: str) -> str:
     return ACCESSOR_LIST.sub(lambda m: " { " + " ".join(m.group(1).split()) + " }", text)
 
 
+def strip_constructor_initializer(signature: str) -> str:
+    """Cut a constructor initializer off a normalized signature.
+
+    An overload that chains with `: this(...)` or `: base(...)` has the same
+    signature as one that does not, so recording the clause would report
+    every chained constructor as removed and re-added. The argument list is
+    balanced rather than matched with a regex: it can nest, and it can hold
+    a collection initializer.
+    """
+    match = CTOR_INITIALIZER.search(signature)
+    if match is None:
+        return signature
+    depth = 0
+    index = match.end() - 1
+    while index < len(signature):
+        char = signature[index]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if depth == 0:
+                break
+        index += 1
+    return signature[: match.start()].rstrip()
+
+
 def normalize(text: str) -> str:
     """Collapse a signature to one line.
 
@@ -99,7 +128,7 @@ def normalize(text: str) -> str:
     ")" is removed with the rest of the whitespace.
     """
     text = re.sub(r"\s+", " ", text).strip()
-    return re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text))
+    return strip_constructor_initializer(re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text)))
 
 
 def source_files(root: pathlib.Path) -> list[pathlib.Path]:

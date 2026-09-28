@@ -70,3 +70,16 @@ references), and a second constructor takes the millisecond clock so
 window resets and TickCount wraparound are covered deterministically
 (GuestRateLimiterTests). The decision is unchanged: the cap policy lives
 in the bridge. The old honest downside above no longer holds.
+
+## Amendment (2026-09-28): guest standard streams are discarded by default
+
+`WasmHostConfig.InheritGuestStandardStreams` defaults to false, so the
+host does not wire guest WASI stdout and stderr to the server console.
+Raw WASI output never reaches `GameHostApi.Log` and so bypasses every
+limiter this ADR puts in the bridge; leaving that path open would make
+the caps decorative. An embedder that accepts the risk sets the flag
+before constructing the host. No config file carries the key, the game
+bridge never sets it, and "wasm status" reports the value in force
+(docs/THREAT_MODEL.md, "raw WASI console flooding"). The decision is
+unchanged: the host stays policy-free, and the one guest path that
+would defeat the cap stays closed.

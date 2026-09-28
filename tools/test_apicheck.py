@@ -95,6 +95,59 @@ class SurfaceTest(unittest.TestCase):
         write_library(root, "namespace N\n{\n    internal sealed class Hidden\n    {\n    }\n}\n")
         self.assertEqual(apicheck.surface(root), [])
 
+    def test_constructor_initializer_is_not_part_of_the_signature(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        source = """\
+namespace N
+{
+    public sealed class Sample
+    {
+        public Sample(int a, int b)
+            : this(a + b)
+        {
+        }
+
+        public Sample(int total)
+        {
+        }
+    }
+}
+"""
+        write_library(root, source)
+        joined = "\n".join(apicheck.surface(root))
+        self.assertIn("Sample.public Sample(int a, int b)", joined)
+        self.assertIn("Sample.public Sample(int total)", joined)
+        self.assertNotIn("this(", joined)
+
+    def test_chaining_a_constructor_is_not_a_surface_change(self):
+        root = pathlib.Path(tempfile.mkdtemp())
+        chained = """\
+namespace N
+{
+    public sealed class Sample
+    {
+        public Sample(int total)
+            : this(total, 0)
+        {
+        }
+
+        public Sample(int total, int extra)
+        {
+        }
+    }
+}
+"""
+        path = write_library(root, chained)
+        self.assertEqual(run(root, "--update")[0], 0)
+        chained_out = (
+            "        public Sample(int total)\n            : this(total, 0)\n        {\n        }"
+        )
+        path.write_text(
+            chained.replace(chained_out, "        public Sample(int total)\n        {\n        }"),
+            encoding="utf-8",
+        )
+        self.assertEqual(run(root)[0], 0)
+
 
 class GateTest(unittest.TestCase):
     def test_matching_baseline_passes(self):

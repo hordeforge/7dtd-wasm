@@ -91,15 +91,22 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Fixed
 
-- The public surface gate was red again: `tools/api-surface.txt` predated
-  `ModRunResult.GuestStatus` and its constructor overload,
-  `AbiConstants.StatusNotImplemented` and `StatusInternalError`,
-  `WasmMod.Enabled`, the limits `WasmModHost` reads back (`FuelPerCall`,
-  `StaticMemoryMaximumBytes`, `InheritGuestStandardStreams`), and the
-  `WasmManifestException` and `ManifestReadException` types, so
-  `apicheck.py` read the additive changes as a surface shrink. The baseline
-  is regenerated; every added member is documented under Added above, so no
-  member was removed and the version does not move.
+- `apicheck.py` recorded a constructor's `: this(...)` / `: base(...)`
+  clause as part of its signature, so a chained constructor read as a
+  removal plus an addition and the gate failed on a clean tree
+  (`ModRunResult`'s five-argument overload chains to the six-argument
+  one). The clause is a body detail, like an accessor body, and is now
+  stripped before the signature is recorded, with tests. The baseline
+  picks up the members added since it was last written: `GuestStatus`
+  and its constructor, the guest status codes, `WasmMod.Enabled`, the
+  limits the host reads back, and the two exception types. No member was
+  removed, so the version does not move.
+- `docs/adrs/0009-align-abi-with-zdtd-server.md`: the decision to adopt
+  the sibling zdtd-server plugin contract, which shipped with the 0.1.3
+  ABI alignment and the 0.1.4 `zdtd` import module, had no decision
+  record. ADR 0007's hook list now carries the fifth hook
+  (`on_admin_command`, resolved and signature-checked at load), and ADR
+  0006 records why guest standard streams are discarded by default.
 - `make check` failed on a clean tree. `tools/api-surface.txt` predated
   `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
   `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three

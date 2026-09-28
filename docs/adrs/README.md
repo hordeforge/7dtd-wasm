@@ -14,3 +14,4 @@ one, mark the file Superseded and link forward instead of rewriting history.
 | [0006](0006-guest-log-rate-capping-in-bridge.md) | Rate cap guest log output in the bridge, not the host | Accepted |
 | [0007](0007-toml-config-schema.md) | Mod config is TOML, following the zdtd-server conventions | Accepted |
 | [0008](0008-zdtd-sense-v4-and-config-import.md) | Adopt the zdtd sense v4 snapshot and the self-contained config import | Accepted |
+| [0009](0009-align-abi-with-zdtd-server.md) | Align the guest ABI with the sibling zdtd-server plugin contract | Accepted |

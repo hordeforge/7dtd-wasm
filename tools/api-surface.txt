@@ -87,7 +87,7 @@ src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public string L
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong FuelPerCall { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong StaticMemoryMaximumBytes { get; set; }
 src/HordeForge.WasmHost/Config/WasmHostConfig.cs: type WasmHostConfig
-src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed) : this(modId, status, message, details, fuelConsumed, AbiConstants.StatusOk)
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed, int guestStatus)
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunStatus Status { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public bool Ok
@@ -149,7 +149,7 @@ src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ulong FuelPerCal
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ulong StaticMemoryMaximumBytes
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public void Dispose()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: type WasmModHost
-src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public ManifestReadException(string path, string reason) : base(path + "" + reason)
+src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public ManifestReadException(string path, string reason)
 src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public string Path { get; }
 src/HordeForge.WasmHost/ManifestReadException.cs: ManifestReadException.public string Reason { get; }
 src/HordeForge.WasmHost/ManifestReadException.cs: type ManifestReadException
@@ -203,9 +203,9 @@ src/HordeForge.WasmHost/Registry/TextSanitizer.cs: type TextSanitizer
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
 src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void EndPendingHighOrThrow(ref bool pendingHigh)
-src/HordeForge.WasmHost/WasmManifestException.cs: WasmManifestException.public WasmManifestException(string modId, string message, Exception innerException) : base(modId, message, innerException)
+src/HordeForge.WasmHost/WasmManifestException.cs: WasmManifestException.public WasmManifestException(string modId, string message, Exception innerException)
 src/HordeForge.WasmHost/WasmManifestException.cs: type WasmManifestException
-src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message) : base(message)
-src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message, Exception innerException) : base(message, innerException)
+src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message)
+src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message, Exception innerException)
 src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public string ModId { get; }
 src/HordeForge.WasmHost/WasmModLoadException.cs: type WasmModLoadException
