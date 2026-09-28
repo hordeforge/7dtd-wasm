@@ -213,6 +213,7 @@ check-ci: export RESTORE_LOCKED := true
 check-ci:
 	$(PYTHON) tools/doccheck.py
 	$(PYTHON) tools/versioncheck.py
+	$(PYTHON) tools/apicheck.py
 	$(PYTHON) -m unittest discover -s tools
 	ruff check tools
 	ruff format --check tools

@@ -24,21 +24,14 @@ Codename: Quarantine (7dtd-wasm).
   MIT-licensed .NET Foundation closure). `make dist` stages it next to the
   binaries it covers and the `HordeForge.WasmHost` NuGet package embeds it,
   so Apache-2.0 redistribution requirements travel with the artifacts.
-
-### Fixed
-
-- A module initialized on its own (the start scan, `wasm reload`) read its
-  settings, its `config.toml`, and its log attribution from whichever mod
-  the host happened to have called last, or from no mod at all on a fresh
-  start. `WasmModHost.InitModule(id)` runs `on_enable` with the calling mod
-  set, and the host clears that state after every dispatch.
-- The sense position history is pruned by entity membership instead of a
-  size comparison. A tick where entities left while others joined kept the
-  departed ids, and a net id the game later reused was reported with a
-  vertical velocity derived from the previous occupant.
-- Guest rate limiter windows for sources that stopped writing are swept
-  once the table grows past its threshold, so unloading and reloading
-  modules no longer leaves one window per id ever seen.
+- Public surface gate for the published library (`tools/apicheck.py`, in
+  `make check`, with its baseline in `tools/api-surface.txt`): every
+  public and protected member of `HordeForge.WasmHost` is recorded, and
+  any difference, a removal included, fails until the minor digit is
+  bumped, the changelog entry is written, and the baseline is regenerated
+  with `--update`. A member's body is not surface, so an implementation
+  change does not touch the baseline. This is the guard that was missing
+  when `WasmModHost.TryInit` came off the surface in the 0.3.1 patch slot.
 
 ### Changed
 
@@ -69,6 +62,26 @@ Codename: Quarantine (7dtd-wasm).
 - `ModApi.ApplyHarmonyPatches` posts each hook through one `Patch` helper
   (same targets, same messages).
 - `CmdWasm` writes console output through one `Output` helper.
+- The `glide` queue verb only arms a net id that names a live player
+  (`EntityPlayer`) in the loaded world. An armed flag applies the glide buff
+  and clamps the entity's descent, so accepting any world net id let a guest
+  steer entities it does not own, other players included. A non-player net id
+  is refused with a `glide (not a player)` line in the log.
+  `docs/ABI.md` states the gate.
+- `TextSanitizer` also strips the invisible bidi controls (U+202A to
+  U+202E, U+2066 to U+2069) and the zero-width no-break space (U+FEFF) from
+  guest- and client-supplied log, chat and set-name text, replacing them
+  with '?' like the control characters it already stripped. They render as
+  nothing while reordering the text around them, so a chat or log line
+  could read as some other name or as text the guest never wrote. Zero-width
+  space, joiner, word joiner and variation selectors are left alone, so
+  emoji sequences and non-Latin scripts still render.
+- The repository tools (`doccheck.py`, `versioncheck.py`, `sbom.py`,
+  `targetcheck`) share one command-line contract: `--help` documents every
+  flag, `--root` selects the repository to work on, machine-readable data
+  goes to stdout and progress to stderr, and exit codes are 0 pass, 1 check
+  failed, 2 usage error. `versioncheck.py` moved its messages to stderr and
+  gained `--root`.
 
 ### Fixed
 
@@ -100,6 +113,18 @@ Codename: Quarantine (7dtd-wasm).
 - `BotServant.PruneDeadBots` collects dead ids into the pooled scratch list
   instead of allocating one per call, matching the pooling the sense path
   already does.
+- A module initialized on its own (the start scan, `wasm reload`) read its
+  settings, its `config.toml`, and its log attribution from whichever mod
+  the host happened to have called last, or from no mod at all on a fresh
+  start. `WasmModHost.InitModule(id)` runs `on_enable` with the calling mod
+  set, and the host clears that state after every dispatch.
+- The sense position history is pruned by entity membership instead of a
+  size comparison. A tick where entities left while others joined kept the
+  departed ids, and a net id the game later reused was reported with a
+  vertical velocity derived from the previous occupant.
+- Guest rate limiter windows for sources that stopped writing are swept
+  once the table grows past its threshold, so unloading and reloading
+  modules no longer leaves one window per id ever seen.
 
 ### Removed
 
@@ -109,13 +134,27 @@ Codename: Quarantine (7dtd-wasm).
   require. One manifest test that duplicated another, and the redundant
   InlineData cases in the duplicate malformed-manifest theory, are gone
   (the surviving theory keeps every case).
+- `ModApi.HostStarted` (the bridge mod's public flag, never read) and the
+  `BotServant` weapon damage table. Stage 2 bots all carry the pistol
+  (weapon id 0) and nothing reads the other five ids, so the table held
+  values with no servant-side use; the pistol constant replaces it.
+- `TomlArray` no longer stores the items it parsed. Items are still parsed,
+  so a malformed one fails the load, but nothing reads array elements: no
+  manifest field is an array, and `AsString` and its siblings reject an
+  array value either way.
 
 ## [0.3.1] - 2026-09-21
 
-### Removed
+### Removed (breaking)
 
 - `WasmModHost.TryInit(id, out result)` and `BotServant.ClearGlide()`. Both
   had zero callers; dispatch walks and `Glide` status cover their uses.
+  `WasmModHost` is part of the published `HordeForge.WasmHost` package, so a
+  consumer that called `TryInit` (the documented way to init a single freshly
+  loaded mod outside a dispatch walk) does not compile against 0.3.1 and must
+  move to the dispatch walk. The version number does not warn of this: it
+  shipped in a patch slot, which under this project's rule carries no
+  breaking change. The entry is marked here so the audit trail is right.
 
 ## [0.3.0] - 2026-09-20
 

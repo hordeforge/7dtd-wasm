@@ -1,0 +1,188 @@
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int ChatOk = 0
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int ChatRejected = -1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int LogDebug = 0
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int LogError = 3
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int LogInfo = 1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int LogWarn = 2
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int QueryBufferTooSmall = -2
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int QueryNoAnswer = -1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int QueueAccepted = 0
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int QueueRejected = -1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int SettingBufferTooSmall = -2
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int SettingNotFound = -1
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const int StatusOk = 0
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportAdminCommand = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportInit = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportPlayerJoin = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportShutdown = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ExportTick = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string HostModule = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportConfig = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportGetJoinPlayerName = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportQuery = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportQueue = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportSense = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ImportTick = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: AbiConstants.public const string ZdtdHostModule = ""
+src/HordeForge.WasmHost/Abi/AbiConstants.cs: type AbiConstants
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool SendChat(string message)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool TryGetRawConfig(string modId, out string content)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool TryGetSetting(string modId, string key, out string value)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public bool TryQueueCommand(string modId, string command)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public int WriteSenseSnapshot(string modId, Span<byte> buffer)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public long GetWorldTime()
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public string? TryQuery(string request)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: IGameHostApi.public void Log(string source, int level, string message)
+src/HordeForge.WasmHost/Abi/IGameHostApi.cs: type IGameHostApi
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: BotInfoEvent.public int NetId
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: BotInfoEvent.public int WeaponId
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: DamageEvent.public float Amount
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: DamageEvent.public int Attacker
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: DamageEvent.public int Victim
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public bool Alive
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public bool IsSelf
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public byte Kind
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public byte Wearing
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float Hp
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float Vy
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float X
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float Y
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float Yaw
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public float Z
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public int NetId
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: EntityRecord.public int TargetId
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: FloatBits.public float Float
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: FloatBits.public uint UInt32
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const byte KindBot = 2
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const byte KindEventBotInfo = 4
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const byte KindEventDamage = 3
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const byte KindPlayer = 0
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const byte KindZombie = 1
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const int EventSize = 16
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const int HeaderSize = 24
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const int RecordSize = 40
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const uint Magic = 0x3453425a
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public static int Write(Snapshot snapshot, Span<byte> buffer)
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<BotInfoEvent> BotInfo = new System.Collections.Generic.List<BotInfoEvent>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<DamageEvent> Damage = new System.Collections.Generic.List<DamageEvent>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<EntityRecord> Records = new System.Collections.Generic.List<EntityRecord>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public bool BloodMoon
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public int SelfNetId
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public long Tick
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public long WorldTime
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public void Clear()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type BotInfoEvent
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type DamageEvent
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type EntityRecord
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type SenseSnapshotWriter
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: type Snapshot
+src/HordeForge.WasmHost/Abi/Utf8Prefix.cs: Utf8Prefix.public static int Length(byte[] utf8, int capacity)
+src/HordeForge.WasmHost/Abi/Utf8Prefix.cs: type Utf8Prefix
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public bool InheritGuestStandardStreams { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public int MaxModuleSizeBytes { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public int MaximumStackBytes { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public string LogSourcePrefix { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong FuelPerCall { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: WasmHostConfig.public ulong StaticMemoryMaximumBytes { get; set; }
+src/HordeForge.WasmHost/Config/WasmHostConfig.cs: type WasmHostConfig
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunResult(string modId, ModRunStatus status, string message, string details, ulong fuelConsumed)
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ModRunStatus Status { get; }
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public bool Ok
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string Details { get; }
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string Message { get; }
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string ModId { get; }
+src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ulong FuelConsumed { get; }
+src/HordeForge.WasmHost/Core/ModRunResult.cs: type ModRunResult
+src/HordeForge.WasmHost/Core/ModRunStatus.cs: type ModRunStatus
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Init()
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Shutdown()
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Tick()
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult? OnPlayerJoin(int entityId)
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasAdminCommandHandler { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public bool HasPlayerJoinHandler { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long ErrorCalls { get; private set; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long FuelExhaustedCalls { get; private set; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long InitTick { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long TotalCalls { get; private set; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public long TrapCalls { get; private set; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public string Id { get; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ulong TotalFuelConsumed { get; private set; }
+src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public void Dispose()
+src/HordeForge.WasmHost/Core/WasmMod.cs: type WasmMod
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchInit()
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchTick(long tick)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<string> ModIds
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGameHostApi api, WasmHostConfig config)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; private set; }
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public void Dispose()
+src/HordeForge.WasmHost/Core/WasmModHost.cs: type WasmModHost
+src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public const long MaxBytes = 1024 * 1024
+src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static bool TryRead(string path, out string content, out string failureReason)
+src/HordeForge.WasmHost/Registry/ManifestFiles.cs: ManifestFiles.public static string ReadRequired(string path)
+src/HordeForge.WasmHost/Registry/ManifestFiles.cs: type ManifestFiles
+src/HordeForge.WasmHost/Registry/MiniToml.cs: MiniToml.public static TomlValue Parse(string text)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlArray.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public bool Value { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public static readonly TomlBool False = new TomlBool(false)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlBool.public static readonly TomlBool True = new TomlBool(true)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public TomlDouble(double value)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public double Value { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlDouble.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public TomlLong(long value)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public long Value { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlLong.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public TomlString(string value)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlString.public string Value { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public IEnumerable<string> Keys { get; }
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool HasKey(string key)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public bool TryGet(string key, out TomlValue value)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public override string AsString(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlTable.public void Add(string key, TomlValue value)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract TomlTable AsTable(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract long AsInteger(string context)
+src/HordeForge.WasmHost/Registry/MiniToml.cs: TomlValue.public abstract string AsString(string context)
+src/HordeForge.WasmHost/Registry/ModId.cs: ModId.public static bool IsValid(string? id)
+src/HordeForge.WasmHost/Registry/ModId.cs: type ModId
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public IReadOnlyDictionary<string, string> Settings { get; private set; }
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public static ModManifest ParseToml(string toml, string modId)
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? FuelPerCall { get; private set; }
+src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? MaxMemoryBytes { get; private set; }
+src/HordeForge.WasmHost/Registry/ModManifest.cs: type ModManifest
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static IReadOnlyList<string> CollectExtra(string modsDir, string ownModletDir)
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static IReadOnlyList<string> Order(string primaryRoot, IReadOnlyList<string> extraRoots)
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static string ResolveDir(IReadOnlyList<string> roots, string id)
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static string ResolveFile(IReadOnlyList<string> roots, string id, string fileName)
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: type ModuleRoots
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public bool TryGetSetting(string modId, string key, out string value)
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void ClearShared()
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void RemoveMod(string modId)
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void UpdateMod(string modId, IReadOnlyDictionary<string, string>? settings)
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: SettingsTable.public void UpdateShared(IReadOnlyDictionary<string, string> settings)
+src/HordeForge.WasmHost/Registry/SettingsTable.cs: type SettingsTable
+src/HordeForge.WasmHost/Registry/TextSanitizer.cs: TextSanitizer.public static string Clean(string text)
+src/HordeForge.WasmHost/Registry/TextSanitizer.cs: type TextSanitizer
+src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendEscapedCodeUnit(StringBuilder sb, char unit, string hex, ref bool pendingHigh)
+src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void AppendPlainUnit(StringBuilder sb, char unit, ref bool pendingHigh)
+src/HordeForge.WasmHost/Registry/UnicodeEscapes.cs: UnicodeEscapes.public static void EndPendingHighOrThrow(ref bool pendingHigh)
+src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message) : base(message)
+src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public WasmModLoadException(string modId, string message, Exception innerException) : base(message, innerException)
+src/HordeForge.WasmHost/WasmModLoadException.cs: WasmModLoadException.public string ModId { get; }
+src/HordeForge.WasmHost/WasmModLoadException.cs: type WasmModLoadException

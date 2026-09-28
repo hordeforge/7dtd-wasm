@@ -48,8 +48,8 @@ errors repo-wide); a suppression needs a written reason next to it.
 
 ## Repository tools
 
-`tools/doccheck.py`, `tools/versioncheck.py`, `tools/sbom.py` and
-`tools/targetcheck` share one command-line contract:
+`tools/doccheck.py`, `tools/versioncheck.py`, `tools/apicheck.py`,
+`tools/sbom.py` and `tools/targetcheck` share one command-line contract:
 
 - `--help` documents every flag; `--root` (where it applies) selects the
   repository to work on and defaults to the tool's own checkout.
@@ -82,10 +82,22 @@ requested:
 - **Breaking changes bump the minor digit** and say "(breaking)" in their
   changelog entries. Breaking means the guest ABI (docs/ABI.md), the host
   library's public C# surface, or an operator-visible config/wire format.
+- **The public surface is pinned, so a break cannot pass unnoticed.**
+  `tools/apicheck.py` (part of `make check`) compares the public and
+  protected surface of `src/HordeForge.WasmHost` with the committed
+  baseline `tools/api-surface.txt` and fails on any difference, a removal
+  included. Accepting a change is deliberate: bump as the rule above says,
+  write the changelog entry, then regenerate the baseline with
+  `python3 tools/apicheck.py --update`, whose diff lands in the same commit.
+  A member's body and doc comment are not surface, so editing them does not
+  need the baseline rewritten.
 - Historical note for consumers auditing old tags: 0.1.3 shipped a guest
   ABI break in a patch slot before this rule was written down; guests had
   to be rebuilt in the same release, but the version number did not warn
-  them. Do not repeat that shape.
+  them. 0.3.1 repeated it with `WasmModHost.TryInit`, a public member of
+  the published package removed in a patch slot; its changelog entry is
+  marked `(breaking)` so the audit trail is right even though the number
+  does not warn. Both are why `apicheck` exists now.
 
 There is no deprecation policy yet: this is pre-1.0, symbols can disappear
 between minors, and the changelog entry naming the replacement is the only
