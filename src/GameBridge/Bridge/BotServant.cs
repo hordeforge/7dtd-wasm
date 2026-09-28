@@ -141,6 +141,16 @@ namespace HordeForge.GameBridge.Bridge
                 Log.Out("[WasmHost] glide (bad id): " + command);
                 return true;
             }
+            if (!IsPlayer(netId))
+            {
+                // The net id comes from an untrusted guest, and an armed flag
+                // both applies a buff and pins the entity's descent (see
+                // ClampGlideDescent), so without this gate a guest could
+                // steer any world entity, other players included. Gliding is
+                // a player feature: only a live player may be armed.
+                Log.Out("[WasmHost] glide (not a player): " + command);
+                return true;
+            }
             string on = parts[2];
             if (on == "1" || on == "on" || on == "true")
             {
@@ -729,6 +739,20 @@ public int WriteSense(Span<byte> buffer)
             }
             var game = GameManager.Instance;
             return game != null && game.World != null ? game.World.GetEntity(entityId) : null;
+        }
+
+        /// <summary>
+        /// True when the net id names a live player in the loaded world.
+        /// Ownership gate for the glide verb; see TryQueueGlide.
+        /// </summary>
+        private static bool IsPlayer(int netId)
+        {
+            var game = GameManager.Instance;
+            if (game == null || game.World == null)
+            {
+                return false;
+            }
+            return game.World.GetEntity(netId) is EntityPlayer;
         }
 
         // SimCommands arrive from untrusted guests through the queue import.

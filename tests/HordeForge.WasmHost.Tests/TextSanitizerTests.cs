@@ -42,5 +42,27 @@ namespace HordeForge.WasmHost.Tests
         {
             Assert.Equal("deployed their parachute?", TextSanitizer.Clean("deployed their parachute\n"));
         }
+
+        [Theory]
+        [InlineData("admin\u202egnijubma", "admin?gnijubma")]
+        [InlineData("a\u202bb", "a?b")]
+        [InlineData("ok\u2066evil\u2069", "ok?evil?")]
+        [InlineData("ad\ufeffmin", "ad?min")]
+        public void InvisibleBidiFormatCharactersBecomeQuestionMarks(string text, string expected)
+        {
+            Assert.Equal(expected, TextSanitizer.Clean(text));
+        }
+
+        [Theory]
+        // Zero-width space and joiner carry meaning in real typography
+        // (emoji sequences, line breaking), so they must survive.
+        [InlineData("a\u200bb")]
+        [InlineData("family \U0001F468\u200D\U0001F469\u200D\U0001F467")]
+        [InlineData("no\u2060break")]
+        [InlineData("heart \u2764\ufe0f")]
+        public void TypographyZeroWidthCharactersPassThrough(string text)
+        {
+            Assert.Same(text, TextSanitizer.Clean(text));
+        }
     }
 }
