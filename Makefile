@@ -289,12 +289,17 @@ ruff-version:
 # Compile guests from inside samples/ on purpose: cargo discovers
 # config by walking up from the current directory, and the workspace
 # [lints] in samples/Cargo.toml deny every default rustc warning.
+#
 # --locked on every cargo call, for the same reason the dotnet targets
-# pass RestoreLockedMode: a Cargo.toml that gains a dependency without a
-# matching samples/Cargo.lock entry fails the build by name instead of
-# cargo silently re-resolving and rewriting the lock file under the
-# tree, which is how a guest build starts depending on whatever the
-# registry offered that day.
+# pass RestoreLockedMode: samples/Cargo.lock is committed, and without the
+# flag cargo treats it as a cache it is free to rewrite. A Cargo.toml that
+# gains a dependency without a matching lock entry then fails the build by
+# name, instead of cargo silently re-resolving and rewriting the lock file
+# under the tree, which is how a guest build starts depending on whatever
+# the registry offered that day. The workspace has no third-party crates
+# today, so the lock currently pins path edges only, and --locked turns the
+# first external dependency into a committed-and-reviewed decision instead
+# of a silent re-resolution.
 samples:
 	$(call require_cargo)
 	cd samples && $(CARGO) build --locked --release --target wasm32-wasip1

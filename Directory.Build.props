@@ -29,6 +29,18 @@
        integrity and consumers get an exact inventory of what shipped. -->
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- A locked restore is the one that reads the committed lock file as
+         the answer instead of re-resolving and rewriting it. Without it a
+         build can pull a newer patch of a package whose manifest nobody
+         changed, and the next person to commit the regenerated lock file
+         blesses that bump by accident. CI sets CI=true, so every restore a
+         pipeline runs is locked and a manifest that moved without its lock
+         file fails there by name. A developer build stays unlocked, because
+         "make locks" is how a deliberate bump regenerates the file; the
+         Makefile passes RestoreLockedMode on the command line for the gates
+         that must be locked on a developer machine too, and a command-line
+         property overrides this one. -->
+    <RestoreLockedMode Condition="'$(CI)' != ''">true</RestoreLockedMode>
   </PropertyGroup>
 
   <!-- Reproducibility. "latest" here is a floating language version: the same

@@ -102,7 +102,11 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: "**/packages.lock.json"
+      # No -p:RestoreLockedMode here: Directory.Build.props turns it on
+      # wherever CI=true, so the two steps below restore from the committed
+      # lock files and one declaration covers every restore a pipeline runs,
+      # including the ones that never read the Makefile.
       - name: Build the host library
-        run: dotnet build src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=true
+        run: dotnet build src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release
       - name: Run the host test suite
-        run: dotnet test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=true
+        run: dotnet test tests/HordeForge.WasmHost.Tests -c Release
