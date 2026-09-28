@@ -41,6 +41,37 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
+        public void UpdateModReplacesTheModsPreviousSettings()
+        {
+            // A reloaded mod publishes its manifest again: the second update
+            // must replace the first wholesale, or a key the operator deleted
+            // from the manifest keeps answering for the life of the process.
+            var table = new SettingsTable();
+            table.UpdateMod("mod", new Dictionary<string, string> { ["k"] = "old", ["gone"] = "old" });
+            table.UpdateMod("mod", new Dictionary<string, string> { ["k"] = "new" });
+
+            Assert.True(table.TryGetSetting("mod", "k", out string value));
+            Assert.Equal("new", value);
+            Assert.False(table.TryGetSetting("mod", "gone", out string gone));
+            Assert.Equal(string.Empty, gone);
+        }
+
+        [Fact]
+        public void UpdateModWithNoSettingsDropsTheModsOwnKeys()
+        {
+            // A mod whose manifest carries no [settings] block has no key of
+            // its own: the previous generation's must not survive it, and the
+            // shared table answers again.
+            var table = new SettingsTable();
+            table.UpdateShared(new Dictionary<string, string> { ["k"] = "shared" });
+            table.UpdateMod("mod", new Dictionary<string, string> { ["k"] = "mod" });
+            table.UpdateMod("mod", null);
+
+            Assert.True(table.TryGetSetting("mod", "k", out string value));
+            Assert.Equal("shared", value);
+        }
+
+        [Fact]
         public void RemoveModDropsItsSettings()
         {
             var table = new SettingsTable();

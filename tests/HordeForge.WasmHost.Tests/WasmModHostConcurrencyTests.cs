@@ -112,14 +112,19 @@ namespace HordeForge.WasmHost.Tests
                 // The settings import resolves against the mod currently
                 // being called, so a crossed read would hand one guest the
                 // other's value. Every tick line is attributed to the mod id
-                // it was logged under.
+                // it was logged under, and the guest logs one such line per
+                // tick, so the loop has to see a floor's worth of them.
+                int checkedLines = 0;
                 foreach (var entry in api.Logs)
                 {
                     if (entry.Message.Contains("setting="))
                     {
                         Assert.Contains("setting='" + ExpectedSetting(entry.Source) + "'", entry.Message);
+                        checkedLines++;
                     }
                 }
+                Assert.True(checkedLines >= 2 * Iterations,
+                    "only " + checkedLines + " setting lines were checked; the guests did not run");
             }
         }
 
@@ -169,9 +174,11 @@ namespace HordeForge.WasmHost.Tests
                 api.ModSettings["beta"] = new Dictionary<string, string>(StringComparer.Ordinal) { ["welcome"] = "beta-only" };
                 byte[] churn = Fixture("strings");
 
+                int churnEnabledA = 0;
+                int churnEnabledB = 0;
                 RunWorkers(
-                    () => EnableInALoop(host, new[] { "alpha", "beta" }),
-                    () => EnableInALoop(host, new[] { "alpha", "beta" }),
+                    () => EnableInALoop(host, new[] { "alpha", "beta", "churn" }, out churnEnabledA),
+                    () => EnableInALoop(host, new[] { "alpha", "beta", "churn" }, out churnEnabledB),
                     () =>
                     {
                         for (int i = 0; i < Iterations; i++)
@@ -183,38 +190,57 @@ namespace HordeForge.WasmHost.Tests
                     },
                     () => AssertOwnSettingOnly(host, Iterations));
 
+                // The race is only exercised if enables kept entering stores
+                // while the churn worker disposed them. An enable of a mod
+                // that latches on its first success never re-enters, so
+                // without the churn id this loop would prove nothing.
+                Assert.True(churnEnabledA + churnEnabledB > 0,
+                    "no enable ever entered a store, so the unload race did not happen");
+
                 // A racing enable must not have served one guest the other's
                 // setting, and the registry must still agree with the order.
-                // Only the two stable mods carry a setting; the churn mod
-                // legitimately resolves none.
+                int checkedLines = 0;
                 foreach (var entry in api.Logs)
                 {
-                    if (entry.Message.Contains("setting=") && entry.Source.EndsWith("/alpha"))
+                    if (entry.Message.Contains("setting="))
                     {
-                        Assert.Contains("setting='alpha-only'", entry.Message);
-                    }
-                    if (entry.Message.Contains("setting=") && entry.Source.EndsWith("/beta"))
-                    {
-                        Assert.Contains("setting='beta-only'", entry.Message);
+                        Assert.Contains("setting='" + ExpectedSetting(entry.Source) + "'", entry.Message);
+                        checkedLines++;
                     }
                 }
+                Assert.True(checkedLines >= 2 * Iterations,
+                    "only " + checkedLines + " setting lines were checked; the guests did not run");
                 List<string> ids = host.ModIds.ToList();
                 Assert.Equal(new[] { "alpha", "beta" }, ids);
                 Assert.All(ids, id => Assert.True(host.TryGetMod(id, out WasmMod? mod) && mod != null, id));
             }
         }
 
-        private static void EnableInALoop(WasmModHost host, string[] ids)
+        /// <summary>
+        /// Enables the given ids in a loop. The churn mod is unloaded under
+        /// us, so a null result is its documented outcome; the two stable
+        /// mods are always loaded and must return a real result. A
+        /// non-Ok result is an enable that entered a store the unload was
+        /// disposing, which is the fault under test.
+        /// </summary>
+        private static void EnableInALoop(WasmModHost host, string[] ids, out int churnEnabled)
         {
+            churnEnabled = 0;
             for (int i = 0; i < Iterations; i++)
             {
                 foreach (string id in ids)
                 {
                     ModRunResult? result = host.InitModule(id);
-                    // null is the mod being unloaded under us; a non-Ok
-                    // result is an enable that entered a store the unload
-                    // was disposing, which is the fault under test.
-                    Assert.True(result is null || result.Value.Ok, id + ": " + result?.Message);
+                    if (id == "churn")
+                    {
+                        if (result != null)
+                        {
+                            churnEnabled++;
+                        }
+                        continue;
+                    }
+                    Assert.NotNull(result);
+                    Assert.True(result!.Value.Ok, id + ": " + result.Value.Message);
                 }
             }
         }
@@ -267,9 +293,28 @@ namespace HordeForge.WasmHost.Tests
             }
         }
 
+        /// <summary>
+        /// The value a guest under <paramref name="source"/> must see. The
+        /// churn mod has no settings of its own, so its line carries the
+        /// empty value: any other value there is a crossed read, which is
+        /// the only kind this class can produce. An unrecognized source is
+        /// its own failure rather than a default.
+        /// </summary>
         private static string ExpectedSetting(string source)
         {
-            return source.EndsWith("/alpha", StringComparison.Ordinal) ? "alpha-only" : "beta-only";
+            if (source.EndsWith("/alpha", StringComparison.Ordinal))
+            {
+                return "alpha-only";
+            }
+            if (source.EndsWith("/beta", StringComparison.Ordinal))
+            {
+                return "beta-only";
+            }
+            if (source.EndsWith("/churn", StringComparison.Ordinal))
+            {
+                return string.Empty;
+            }
+            return "unexpected source " + source;
         }
     }
 }

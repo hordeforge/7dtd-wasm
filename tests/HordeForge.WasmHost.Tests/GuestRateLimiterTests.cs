@@ -11,10 +11,21 @@ namespace HordeForge.WasmHost.Tests
     /// </summary>
     public sealed class GuestRateLimiterTests
     {
+        /// <summary>
+        /// A limiter whose clock never moves, so every write in a test lands
+        /// in one window. The process clock would do the same, but a host
+        /// that stalls for a second mid-test would roll the window and turn
+        /// a passing cap check into a failure.
+        /// </summary>
+        private static GuestRateLimiter FrozenWindow(int cap)
+        {
+            return new GuestRateLimiter(cap, () => 0);
+        }
+
         [Fact]
         public void AllowsUpToCapThenDrops()
         {
-            var limiter = new GuestRateLimiter(3);
+            var limiter = FrozenWindow(3);
             Assert.True(limiter.TryWrite("mod", out long dropped));
             Assert.Equal(0, dropped);
             Assert.True(limiter.TryWrite("mod", out dropped));
@@ -30,7 +41,7 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void CapsArePerSource()
         {
-            var limiter = new GuestRateLimiter(1);
+            var limiter = FrozenWindow(1);
             Assert.True(limiter.TryWrite("a", out _));
             Assert.True(limiter.TryWrite("b", out _));
             Assert.False(limiter.TryWrite("a", out _));
@@ -47,7 +58,7 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void DescribeDroppedListsOnlyThrottledSources()
         {
-            var limiter = new GuestRateLimiter(1);
+            var limiter = FrozenWindow(1);
             Assert.Equal(string.Empty, limiter.DescribeDropped("lines"));
             Assert.True(limiter.TryWrite("quiet", out _));
             Assert.True(limiter.TryWrite("loud", out _));
@@ -61,7 +72,7 @@ namespace HordeForge.WasmHost.Tests
             // The summary is a run's totals, so it must not depend on the
             // window table's hash order: two runs that drop the same items
             // in a different order print the same line and can be diffed.
-            var limiter = new GuestRateLimiter(1);
+            var limiter = FrozenWindow(1);
             foreach (string source in new[] { "delta", "alpha", "charlie", "bravo" })
             {
                 Assert.True(limiter.TryWrite(source, out _));
@@ -93,8 +104,11 @@ namespace HordeForge.WasmHost.Tests
             }
             string summary = limiter.DescribeDropped("lines");
             Assert.Contains("live=", summary);
-            Assert.DoesNotContain("mod0=", summary);
-            Assert.DoesNotContain("mod199=", summary);
+            // The sweep is what removes them, so the table is the evidence.
+            // Asserting the summary instead would prove nothing: a source
+            // written once is never dropped, so DescribeDropped filters it
+            // out whether or not it was ever evicted.
+            Assert.Equal(1, limiter.TrackedSourceCount);
         }
 
         [Fact]

@@ -104,6 +104,15 @@ namespace HordeForge.WasmHost.Tests
             Assert.Equal(0, telemetry.TotalFailures);
             Assert.Equal(0, telemetry.SlowTicks);
             Assert.Equal(0.0, telemetry.AverageMs);
+            // The two cost counters the summary line prints: left set, the
+            // first line after a restart would open with the previous run's
+            // numbers.
+            Assert.Equal(0.0, telemetry.LastMs);
+            Assert.Equal(0.0, telemetry.WindowMaxMs);
+            Assert.False(telemetry.IsSlow);
+            Assert.Equal(
+                "dispatch: 0.00 ms last, 0.00 ms avg, 0.00 ms max over 0 tick(s); 0 failure(s), 0 slow tick(s)",
+                telemetry.Describe());
             Assert.False(telemetry.HeartbeatDue);
         }
 

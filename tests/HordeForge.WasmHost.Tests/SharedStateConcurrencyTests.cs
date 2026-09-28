@@ -90,12 +90,18 @@ namespace HordeForge.WasmHost.Tests
 
         private static void WriteSources(GuestRateLimiter limiter)
         {
+            // A source's dropped count is a running total, so on a clock
+            // that never rolls a window it can only grow. A read that went
+            // backwards would be a lost update under the racing describe.
+            var lastDropped = new long[Sources];
             for (int i = 0; i < Iterations; i++)
             {
                 for (int s = 0; s < Sources; s++)
                 {
                     limiter.TryWrite("source" + s, out long dropped);
-                    Assert.True(dropped >= 0);
+                    Assert.True(dropped >= lastDropped[s],
+                        "source" + s + " dropped count went backwards: " + dropped + " < " + lastDropped[s]);
+                    lastDropped[s] = dropped;
                 }
             }
         }
@@ -226,15 +232,29 @@ namespace HordeForge.WasmHost.Tests
             // Dispose fills the list under the host gate; an embedder reads
             // it afterwards, and on a second thread. Handing out the live
             // list would let that reader enumerate one being appended to.
+            // The guest shuts down by trapping, so the list really holds a
+            // failure: an empty one would make the copy indistinguishable
+            // from the original.
             var api = new TestGameHostApi();
             var host = new WasmModHost(api, new WasmHostConfig());
-            host.LoadModule("alpha", Fixture("strings"));
+            host.LoadModule("trapshutdown", Wasmtime.Module.ConvertText(
+                "(module (memory (export \"memory\") 1 1)" +
+                "(func (export \"on_enable\") (result i32) i32.const 0)" +
+                "(func (export \"on_tick\") (result i32) i32.const 0)" +
+                "(func (export \"on_shutdown\") (result i32) unreachable)"));
             host.Dispose();
 
             IReadOnlyList<ModRunResult> first = host.ShutdownFailures;
             IReadOnlyList<ModRunResult> second = host.ShutdownFailures;
+            ModRunResult failure = Assert.Single(first);
+            Assert.Equal("trapshutdown", failure.ModId);
+            Assert.Equal(1, second.Count);
+            Assert.Equal(failure.ModId, second[0].ModId);
+            // Each read publishes its own list, and it is read-only, so the
+            // embedder cannot reach back into the host's state through it.
             Assert.NotSame(first, second);
-            Assert.Equal(first.Count, second.Count);
+            Assert.Throws<NotSupportedException>(
+                () => ((IList<ModRunResult>)second).Add(default));
         }
     }
 }

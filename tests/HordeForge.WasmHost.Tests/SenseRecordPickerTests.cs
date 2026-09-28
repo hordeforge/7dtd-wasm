@@ -60,26 +60,23 @@ namespace HordeForge.WasmHost.Tests
             // instead of sorting the whole alive set. The bytes a guest sees
             // are the contract, so the two paths must agree exactly, on a
             // world with duplicates and on one that is already ascending.
-            foreach (bool ascending in new[] { false, true })
+            const int count = 6000;
+            var shuffled = new List<int>(count);
+            var expected = new List<int>(count);
+            for (int i = 0; i < count; i++)
             {
-                const int count = 6000;
-                var shuffled = new List<int>(count);
-                var ascendingIds = new List<int>(count);
-                for (int i = 0; i < count; i++)
-                {
-                    // A stride that shares factors with count, so ids repeat.
-                    int id = (i * 7919) % count;
-                    shuffled.Add(id);
-                    ascendingIds.Add(id);
-                }
-                ascendingIds.Sort();
-                SenseRecordPicker.SelectLowest(shuffled, 41);
-                Assert.Equal(ascendingIds.Take(41), shuffled);
-
-                var alreadySorted = new List<int>(Enumerable.Range(1, count));
-                SenseRecordPicker.SelectLowest(alreadySorted, 41);
-                Assert.Equal(Enumerable.Range(1, 41), alreadySorted);
+                // A stride that shares factors with count, so ids repeat.
+                int id = (i * 7919) % count;
+                shuffled.Add(id);
+                expected.Add(id);
             }
+            expected.Sort();
+            SenseRecordPicker.SelectLowest(shuffled, 41);
+            Assert.Equal(expected.Take(41), shuffled);
+
+            var alreadySorted = new List<int>(Enumerable.Range(1, count));
+            SenseRecordPicker.SelectLowest(alreadySorted, 41);
+            Assert.Equal(Enumerable.Range(1, 41), alreadySorted);
         }
 
         [Fact]

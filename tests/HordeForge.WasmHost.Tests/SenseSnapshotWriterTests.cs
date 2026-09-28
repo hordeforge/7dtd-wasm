@@ -240,9 +240,12 @@ namespace HordeForge.WasmHost.Tests
             Assert.Empty(snapshot.BotInfo);
             // The header fields are the caller's, not the snapshot's.
             Assert.Equal(5, snapshot.Tick);
-            int written = SenseSnapshotWriter.Write(snapshot, new byte[SenseSnapshotWriter.HeaderSize]);
+            // The count has to be read back out of the buffer Write filled: a
+            // fresh zero array would report 0 whatever the writer did.
+            var buffer = new byte[SenseSnapshotWriter.HeaderSize];
+            int written = SenseSnapshotWriter.Write(snapshot, buffer);
             Assert.Equal(SenseSnapshotWriter.HeaderSize, written);
-            Assert.Equal(0u, ReadU32(new byte[SenseSnapshotWriter.HeaderSize], 4));
+            Assert.Equal(0u, ReadU32(buffer, 4));
         }
 
         [Fact]

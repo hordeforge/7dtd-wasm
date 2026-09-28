@@ -12,8 +12,9 @@ namespace HordeForge.WasmHost.Tests
     /// warning names) is read through an injectable monotonic source, so a
     /// run stepped from a virtual clock reports that clock's cost rather than
     /// the host's. These tests pin both halves: the measurement is the
-    /// source's advance, and two runs of the same trace produce the same
-    /// bytes.
+    /// source's advance, and one traced run describes itself with the exact
+    /// bytes a virtual clock makes it produce, so replaying the trace twice
+    /// produces the same bytes.
     /// </summary>
     public sealed class MonotonicTimerTests
     {
@@ -98,7 +99,11 @@ namespace HordeForge.WasmHost.Tests
             // measured twice against a virtual clock, must describe itself
             // with the same bytes, timings included. A source that leaked
             // real time here would put a different number in the same field.
-            Assert.Equal(DescribeRun(), DescribeRun());
+            const string expected =
+                "dispatch: 0.75 ms last, 6.00 ms avg, 30.00 ms max over 6 tick(s); " +
+                "1 failure(s), 1 slow tick(s)|1|6";
+            Assert.Equal(expected, DescribeRun());
+            Assert.Equal(expected, DescribeRun());
         }
 
         [Fact]
@@ -106,17 +111,28 @@ namespace HordeForge.WasmHost.Tests
         {
             // The production default is unchanged: it measures the process
             // monotonic clock, so a dispatch that burns time reports time.
+            // The bound is exact in the only direction that is not flaky: a
+            // source pinned at zero reports 0.0, which this rejects, while
+            // real work can only make the figure larger.
             var timer = MonotonicTimer.Default;
-            double elapsed = timer.ElapsedMs(() =>
+            double before = timer.ReadMs();
+            double elapsed = timer.ElapsedMs(Spin);
+            Assert.True(elapsed > 0.0,
+                "work took measurable time but the process clock reported " +
+                elapsed.ToString(CultureInfo.InvariantCulture) + " ms");
+            Assert.True(timer.ReadMs() >= before);
+        }
+
+        /// <summary>Real work: a JIT-compiled loop, far above clock resolution.</summary>
+        private static void Spin()
+        {
+            long spin = 0;
+            for (int i = 0; i < 2000000; i++)
             {
-                long spin = 0;
-                for (int i = 0; i < 2000000; i++)
-                {
-                    spin += i;
-                }
-                Assert.True(spin >= 0);
-            });
-            Assert.True(elapsed >= 0.0, "elapsed " + elapsed.ToString(CultureInfo.InvariantCulture) + " ms");
+                spin += i;
+            }
+
+            GC.KeepAlive(spin);
         }
 
         /// <summary>
