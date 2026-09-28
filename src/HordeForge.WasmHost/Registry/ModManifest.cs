@@ -30,7 +30,7 @@ namespace HordeForge.WasmHost.Registry
     ///   max_memory_bytes = 33554432    (optional, one wasm page to the wasm32 ceiling)
     ///
     ///   [settings]                     (operator policy served to the guest
-    ///   boss_name = "maci"              through the get_setting host import)
+    ///   boss_name = "dave"              through the get_setting host import)
     /// </summary>
     public sealed class ModManifest
     {

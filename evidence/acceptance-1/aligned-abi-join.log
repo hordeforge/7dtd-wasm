@@ -1406,33 +1406,33 @@ Total: 1026.682954 ms (FindLiveObjects: 42.559574 ms CreateObjectMapping: 50.031
 2026-08-24T13:47:29 67.180 INF Started thread NCS_Writer_0_1
 2026-08-24T13:47:29 67.186 INF [NET] PlayerConnected EntityID=-1, PltfmId='Local_<none>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='', ClientNumber='1'
 2026-08-24T13:47:29 67.224 INF NPPL.Read
-2026-08-24T13:47:29 67.254 INF PlayerLogin: maci1/V 3.1.0
+2026-08-24T13:47:29 67.254 INF PlayerLogin: <player-name-redacted>/V 3.1.0
 2026-08-24T13:47:29 67.255 INF Client IP: 172.17.0.1
-2026-08-24T13:47:29 67.256 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.256 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.257 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.257 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.257 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.257 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.259 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.259 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.259 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.260 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.261 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.261 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
+2026-08-24T13:47:29 67.256 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.256 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.257 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.257 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.257 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.257 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.259 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.259 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.259 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.260 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.261 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.261 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-24T13:47:29 67.263 INF [EncryptionAgreement] Unsupported client device Unknown
-2026-08-24T13:47:29 67.263 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.304 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
-2026-08-24T13:47:29 67.310 INF Allowing player with id Local_maci1
-2026-08-24T13:47:29 67.357 INF RequestToEnterGame: Local_maci1/maci1
+2026-08-24T13:47:29 67.263 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.304 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-24T13:47:29 67.310 INF Allowing player with id Local_<platform-id-redacted>
+2026-08-24T13:47:29 67.357 INF RequestToEnterGame: Local_<platform-id-redacted>/<player-name-redacted>
 2026-08-24T13:47:29 67.408 INF Preparing Localization chunks for clients
 2026-08-24T13:47:29 67.408 INF Localization size: 151 B, chunk count: 1
-2026-08-24T13:47:29 67.408 INF Starting to send Localization to EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'...
-2026-08-24T13:47:29 67.655 INF Sending Localization to EntityID=-1, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1' done
-2026-08-24T13:47:30 68.257 INF RequestToSpawnPlayer: 171, maci1, 5
+2026-08-24T13:47:29 67.408 INF Starting to send Localization to EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'...
+2026-08-24T13:47:29 67.655 INF Sending Localization to EntityID=-1, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1' done
+2026-08-24T13:47:30 68.257 INF RequestToSpawnPlayer: 171, <player-name-redacted>, 5
 2026-08-24T13:47:30 68.438 INF Created player with id=171
 2026-08-24T13:47:30 68.466 INF [PlayerInteractions] persistent player login
-2026-08-24T13:47:30 68.467 INF [WasmHost] player spawned: maci1 (entity 171)
+2026-08-24T13:47:30 68.467 INF [WasmHost] player spawned: <player-name-redacted> (entity 171)
 2026-08-24T13:47:30 68.470 INF [wasm] THE BOSS IS HERE
 2026-08-24T13:47:30 68.482 INF Telnet connection from: 172.17.0.1:46580
 2026-08-24T13:47:30 68.482 INF Started thread TelnetClient_172.17.0.1:46580
@@ -1591,15 +1591,15 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-24T13:49:01 159.246 INF Time: 2.53m FPS: 20.00 Heap: 1505.2MB Max: 1507.5MB Chunks: 191 CGO: 9 Ply: 1 Zom: 0 Ent: 1 (59) Items: 0 CO: 1 RSS: 897.7MB
 2026-08-24T13:49:01 159.279 INF NET: LiteNetLib: Client disconnect from: 172.17.0.1:57152 / 0 (RemoteConnectionClose)
 2026-08-24T13:49:01 159.296 INF NET: LiteNetLib: MT: Client disconnect from: 172.17.0.1:57152 / 0 (RemoteConnectionClose)
-2026-08-24T13:49:01 159.296 INF [NET] PlayerDisconnected EntityID=171, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
+2026-08-24T13:49:01 159.296 INF [NET] PlayerDisconnected EntityID=171, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-24T13:49:01 159.300 INF DynamicMusic: 171 successfully removed from Bloodmoon state cache
 2026-08-24T13:49:01 159.301 INF Client disconnected from dy mesh: Id: 171 Total: 0
-2026-08-24T13:49:01 159.304 INF Player disconnected: EntityID=171, PltfmId='Local_maci1', CrossId='Local_maci1', OwnerID='<unknown/none>', PlayerName='maci1', ClientNumber='1'
+2026-08-24T13:49:01 159.304 INF Player disconnected: EntityID=171, PltfmId='Local_<platform-id-redacted>', CrossId='Local_<platform-id-redacted>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-24T13:49:01 159.304 INF Exited thread NCS_Writer_0_0
 2026-08-24T13:49:01 159.304 INF Exited thread NCS_Reader_0_0
 2026-08-24T13:49:01 159.304 INF Exited thread NCS_Reader_0_1
 2026-08-24T13:49:01 159.304 INF Exited thread NCS_Writer_0_1
-2026-08-24T13:49:01 159.314 INF GMSG: Player 'maci1' left the game
+2026-08-24T13:49:01 159.314 INF GMSG: Player '<player-name-redacted>' left the game
 2026-08-24T13:49:01 159.314 ERR IOException in TelnetClient_172.17.0.1:52732: Unable to write data to the transport connection: The socket has been shut down.
 2026-08-24T13:49:01 159.315 EXC Unable to write data to the transport connection: The socket has been shut down. ---> The socket has been shut down
 

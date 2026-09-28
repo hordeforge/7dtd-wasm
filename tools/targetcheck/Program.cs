@@ -136,9 +136,6 @@ namespace TargetCheck
             {
                 CheckFieldOrProperty(md, t, "playerName", isStatic: false);
                 CheckFieldOrProperty(md, t, "entityId", isStatic: false);
-                // CmdWasm names the remote sender of a load, reload, or
-                // unload by name and address.
-                CheckProperty(md, t, "ip", isStatic: false);
             });
 
             // Bot servant entity APIs (BotServant.cs).

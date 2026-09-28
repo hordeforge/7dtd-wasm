@@ -1,7 +1,7 @@
 // guest-boss-zig: the boss watcher written in Zig, compiled to wasm32-wasi.
 //
 // Prints "THE BOSS IS HERE" to the server console when a player named
-// "maci" (configurable via the [settings] boss_name TOML key) spawns into
+// "dave" (configurable via the [settings] boss_name TOML key) spawns into
 // the world. The name to watch is read through the host get_setting import,
 // so the operator can retune it in wasm-mod.toml without rebuilding.
 //
@@ -30,7 +30,7 @@ const log_info: i32 = 1;
 const status_ok: i32 = 0;
 const setting_not_found: i32 = -1;
 
-const boss_default_name = "maci";
+const boss_default_name = "dave";
 const msg_boss = "THE BOSS IS HERE";
 const msg_loaded = "boss-zig mod loaded";
 

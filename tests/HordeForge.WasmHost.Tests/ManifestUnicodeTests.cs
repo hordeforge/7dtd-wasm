@@ -87,7 +87,7 @@ namespace HordeForge.WasmHost.Tests
         public void UnterminatedQuotedKeyIsRejected()
         {
             Assert.Throws<WasmManifestException>(
-                () => ModManifest.ParseToml("[settings]\n\"boss_name = \"maci\"", "test"));
+                () => ModManifest.ParseToml("[settings]\n\"boss_name = \"dave\"", "test"));
         }
 
         [Theory]

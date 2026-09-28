@@ -6,11 +6,13 @@ orchestrator, and capture evidence.
 
 ## Redaction
 
-The logs are the game's own output, with two kinds of value replaced by a
-placeholder: the Steam account identifiers (`<steam-id-redacted>`) and the
-server's public address (`<server-ip-redacted>`). Both identify a person
-without being needed to read what the run proves. Player names, entity ids,
-tick lines, and the guest's own messages are untouched.
+The logs are the game's own output, with three kinds of value replaced by a
+placeholder: the Steam account identifiers (`<steam-id-redacted>`), the
+server's public address (`<server-ip-redacted>`), and the joining player's
+account (`<platform-id-redacted>`, `<player-name-redacted>`). Each identifies
+a person without being needed to read what the run proves. Entity ids, tick
+lines, and the guest's own messages are untouched, as are the local
+filesystem paths the run recorded.
 
 ## What was proven (passing run, 2026-09-04, exit=0 pass=3)
 

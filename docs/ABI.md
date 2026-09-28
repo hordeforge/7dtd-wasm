@@ -216,7 +216,7 @@ fuel_per_call = 1000000
 max_memory_bytes = 33554432
 
 [settings]
-boss_name = "maci"
+boss_name = "dave"
 ```
 
 - `limits.fuel_per_call` overrides the host default for that module. Must be

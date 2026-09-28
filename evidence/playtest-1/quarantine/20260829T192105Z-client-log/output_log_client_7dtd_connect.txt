@@ -430,7 +430,7 @@ GamePref.PartySharedKillRange = 100
 GamePref.PersistentPlayerProfiles = False
 GamePref.PlayerAutologin = False
 GamePref.PlayerKillingMode = 2
-GamePref.PlayerName = maci
+GamePref.PlayerName = <player-name-redacted>
 GamePref.PlayerSafeZoneHours = 7
 GamePref.PlayerSafeZoneLevel = 5
 GamePref.PlaytestBiome = 3
@@ -781,7 +781,7 @@ The referenced script on this Behaviour (Game Object '<null>') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T03:03:32 24.826 INF Created player with id=175
-2026-08-30T03:03:32 24.832 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=maci, id=175]
+2026-08-30T03:03:32 24.832 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=<player-name-redacted>, id=175]
 2026-08-30T03:03:32 24.832 INF Found own player entity with id 175
 2026-08-30T03:03:32 24.855 INF [PlayerInteractions] JoinedMultplayerServer
 2026-08-30T03:03:32 24.859 INF Respawning: JoinMultiplayer
@@ -812,9 +812,9 @@ Can not play a disabled audio source
 2026-08-30T03:03:34 26.728 INF [7dtd-playtest] wait_ready player-unspawned-live t=1
 2026-08-30T03:03:34 26.728 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready player-unspawned-live t=1"}
 2026-08-30T03:03:34 26.885 INF Respawn almost done
-2026-08-30T03:03:34 26.890 INF GMSG: Player 'maci' joined the game
+2026-08-30T03:03:34 26.890 INF GMSG: Player '<player-name-redacted>' joined the game
 2026-08-30T03:03:34 26.894 INF 8753+0 Origin Reposition (0.0, 0.0, 0.0) to (848.0, 48.0, 640.0)
-2026-08-30T03:03:34 26.990 INF maci onNewBiomeEntered +buffForest_Hazard
+2026-08-30T03:03:34 26.990 INF <player-name-redacted> onNewBiomeEntered +buffForest_Hazard
 2026-08-30T03:03:35 27.482 INF SectionType change from None to Combat
 2026-08-30T03:03:35 27.484 INF Played Combat
 2026-08-30T03:03:35 27.484 INF Fading in Combat
@@ -839,8 +839,8 @@ Can not play a disabled audio source
 2026-08-30T03:03:38 30.838 INF [7dtd-playtest] DONE exit_hint=0 wall_ms=28726
 2026-08-30T03:03:38 30.838 INF [7dtd-playtest] {"v":1,"t":"done","exit_hint":0,"pass":2,"fail":0,"skip":0,"wall_ms":28726}
 2026-08-30T03:03:39 31.655 INF [7dtd-fastconnect] boot hb ticks=6368 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
-2026-08-30T03:03:39 31.979 INF maci WeatherStatusTick  to default
-2026-08-30T03:03:39 31.980 INF maci WeatherBuffUpdate , indoors False
+2026-08-30T03:03:39 31.979 INF <player-name-redacted> WeatherStatusTick  to default
+2026-08-30T03:03:39 31.980 INF <player-name-redacted> WeatherBuffUpdate , indoors False
 2026-08-30T03:03:40 32.272 INF Paused Combat
 2026-08-30T03:03:40 32.272 INF fadeInCo complete on Suspense
 2026-08-30T03:03:40 32.876 INF SectionType change from Suspense to Exploration

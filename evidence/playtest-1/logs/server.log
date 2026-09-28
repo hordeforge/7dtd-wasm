@@ -1318,35 +1318,35 @@ SteamInternal_SetMinidumpSteamID:  Caching Steam ID:  <steam-id-redacted> [API l
 2026-08-29T19:00:02 231.150 INF Started thread NCS_Writer_0_1
 2026-08-29T19:00:02 231.154 INF [NET] PlayerConnected EntityID=-1, PltfmId='Local_<none>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='', ClientNumber='1'
 2026-08-29T19:00:02 231.190 INF NPPL.Read
-2026-08-29T19:00:03 231.207 INF PlayerLogin: maci/V 3.2.0
+2026-08-29T19:00:03 231.207 INF PlayerLogin: <player-name-redacted>/V 3.2.0
 2026-08-29T19:00:03 231.207 INF Client IP: 172.17.0.1
-2026-08-29T19:00:03 231.208 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.208 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.208 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.208 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.208 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.209 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.209 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.210 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:03 231.210 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:03 231.208 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.208 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.208 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.208 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.208 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.209 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.209 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.210 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:03 231.210 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:03 231.210 INF [Steamworks.NET] Auth.AuthenticateUser()
-2026-08-29T19:00:03 231.213 INF [Steamworks.NET] Authenticating player: maci SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
+2026-08-29T19:00:03 231.213 INF [Steamworks.NET] Authenticating player: <player-name-redacted> SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
 2026-08-29T19:00:04 232.610 INF [Steamworks.NET] Authentication callback. ID: <steam-id-redacted>, owner: <steam-id-redacted>, result: k_EAuthSessionResponseOK
-2026-08-29T19:00:04 232.610 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:04 232.611 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:04 232.611 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:04 232.612 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:04 232.612 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:04 232.610 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:04 232.611 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:04 232.611 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:04 232.612 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:04 232.612 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:04 232.612 INF [EncryptionAgreement] Unsupported client device Unknown
-2026-08-29T19:00:04 232.612 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:04 232.657 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:04 232.612 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:04 232.657 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:04 232.659 INF Allowing player with id Steam_<steam-id-redacted>
-2026-08-29T19:00:04 232.758 INF RequestToEnterGame: Steam_<steam-id-redacted>/maci
+2026-08-29T19:00:04 232.758 INF RequestToEnterGame: Steam_<steam-id-redacted>/<player-name-redacted>
 2026-08-29T19:00:04 232.759 INF Preparing Localization chunks for clients
 2026-08-29T19:00:04 232.759 INF Localization size: 151 B, chunk count: 1
-2026-08-29T19:00:04 232.759 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'...
-2026-08-29T19:00:04 233.007 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1' done
-2026-08-29T19:00:21 249.258 INF RequestToSpawnPlayer: 175, maci, 7
+2026-08-29T19:00:04 232.759 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'...
+2026-08-29T19:00:04 233.007 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1' done
+2026-08-29T19:00:21 249.258 INF RequestToSpawnPlayer: 175, <player-name-redacted>, 7
 WARNING: Shader Unsupported: 'Game/SDCS/Skin' - All subshaders removed
 WARNING: Shader Did you use #pragma only_renderers and omit this platform?
 WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
@@ -1363,13 +1363,13 @@ WARNING: Shader Did you use #pragma only_renderers and omit this platform?
 WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
 2026-08-29T19:00:21 249.462 INF Created player with id=175
 2026-08-29T19:00:21 249.480 INF [PlayerInteractions] persistent player login
-2026-08-29T19:00:21 249.480 INF [WasmHost] player spawned: maci (entity 175)
+2026-08-29T19:00:21 249.480 INF [WasmHost] player spawned: <player-name-redacted> (entity 175)
 2026-08-29T19:00:21 249.503 INF [DECO] written 75472, in 16ms
 2026-08-29T19:00:21 249.504 INF [DECO] write thread 0ms
-2026-08-29T19:00:22 250.631 INF Dymesh: Update items to send for maci id: 175  recieved: 0
+2026-08-29T19:00:22 250.631 INF Dymesh: Update items to send for <player-name-redacted> id: 175  recieved: 0
 2026-08-29T19:00:22 250.633 INF Dymesh: Items to send: 0   Added: 0   chunks: 0
-2026-08-29T19:00:24 252.529 INF GMSG: Player 'maci' joined the game
-2026-08-29T19:00:24 252.534 INF PlayerSpawnedInWorld (reason: EnterMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:24 252.529 INF GMSG: Player '<player-name-redacted>' joined the game
+2026-08-29T19:00:24 252.534 INF PlayerSpawnedInWorld (reason: EnterMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:24 252.581 WRN [PROPS] ActionTarget implicitly converted to Vector3, but failed: ActionTarget
 2026-08-29T19:00:24 252.929 WRN [MultiBlockManager][Alignment] SetTerrainAlignmentDirty failed; no terrain-aligned block has been registered at the specified world position: 851, 61, 653
 2026-08-29T19:00:25 254.092 INF Telnet connection from: 172.17.0.1:54178
@@ -1407,17 +1407,17 @@ WARNING: Shader If subshaders removal was intentional, you may have forgotten tu
 2026-08-29T19:00:34 262.890 INF [WasmHost] bot spawned entity 178 at 853,70.90625,645
 2026-08-29T19:00:34 262.891 INF [WasmHost] bot spawned entity 179 at 853,70.90625,645
 2026-08-29T19:00:37 265.387 INF [Steamworks.NET] Authentication callback. ID: <steam-id-redacted>, owner: <steam-id-redacted>, result: k_EAuthSessionResponseAuthTicketCanceled
-2026-08-29T19:00:37 265.387 INF [Steamworks.NET] Kick player for invalid login: <steam-id-redacted> maci
-2026-08-29T19:00:37 265.387 INF [Auth] PlatformAuth authorization failed: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
-2026-08-29T19:00:37 265.390 INF Kicking player (Platform auth failed: AuthTicketCanceled): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:37 265.387 INF [Steamworks.NET] Kick player for invalid login: <steam-id-redacted> <player-name-redacted>
+2026-08-29T19:00:37 265.387 INF [Auth] PlatformAuth authorization failed: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
+2026-08-29T19:00:37 265.390 INF Kicking player (Platform auth failed: AuthTicketCanceled): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:37 265.938 INF DynamicMusic: 175 successfully removed from Bloodmoon state cache
 2026-08-29T19:00:37 265.938 INF Client disconnected from dy mesh: Id: 175 Total: 1
-2026-08-29T19:00:37 265.939 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='1'
+2026-08-29T19:00:37 265.939 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='1'
 2026-08-29T19:00:37 265.940 INF Exited thread NCS_Reader_0_0
 2026-08-29T19:00:37 265.940 INF Exited thread NCS_Writer_0_1
 2026-08-29T19:00:37 265.940 INF Exited thread NCS_Reader_0_1
 2026-08-29T19:00:37 265.940 INF Exited thread NCS_Writer_0_0
-2026-08-29T19:00:37 265.941 INF GMSG: Player 'maci' left the game
+2026-08-29T19:00:37 265.941 INF GMSG: Player '<player-name-redacted>' left the game
 2026-08-29T19:00:37 265.943 INF [PlayerInteractions] persistent player disconnect
 2026-08-29T19:00:37 265.947 INF NET: LiteNetLib: Client disconnect from: 172.17.0.1:49710 / 0 (DisconnectPeerCalled)
 2026-08-29T19:00:37 265.955 ERR IOException in TelnetClient_172.17.0.1:54178: Unable to write data to the transport connection: The socket has been shut down.
@@ -1458,42 +1458,42 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-29T19:03:14 422.450 INF Started thread NCS_Writer_0_1
 2026-08-29T19:03:14 422.450 INF [NET] PlayerConnected EntityID=-1, PltfmId='Local_<none>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='', ClientNumber='2'
 2026-08-29T19:03:14 422.479 INF NPPL.Read
-2026-08-29T19:03:14 422.499 INF PlayerLogin: maci/V 3.2.0
+2026-08-29T19:03:14 422.499 INF PlayerLogin: <player-name-redacted>/V 3.2.0
 2026-08-29T19:03:14 422.499 INF Client IP: 172.17.0.1
-2026-08-29T19:03:14 422.499 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:14 422.499 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:14 422.499 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:03:14 422.499 INF [Steamworks.NET] Auth.AuthenticateUser()
-2026-08-29T19:03:14 422.499 INF [Steamworks.NET] Authenticating player: maci SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
+2026-08-29T19:03:14 422.499 INF [Steamworks.NET] Authenticating player: <player-name-redacted> SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
 2026-08-29T19:03:15 423.798 INF [Steamworks.NET] Authentication callback. ID: <steam-id-redacted>, owner: <steam-id-redacted>, result: k_EAuthSessionResponseOK
-2026-08-29T19:03:15 423.798 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:15 423.798 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:15 423.798 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:15 423.798 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:15 423.798 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:03:15 423.798 INF [EncryptionAgreement] Unsupported client device Unknown
-2026-08-29T19:03:15 423.798 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:15 423.848 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:03:15 423.798 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:15 423.848 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:03:15 423.849 INF Allowing player with id Steam_<steam-id-redacted>
-2026-08-29T19:03:15 423.998 INF RequestToEnterGame: Steam_<steam-id-redacted>/maci
-2026-08-29T19:03:15 423.998 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'...
-2026-08-29T19:03:16 424.249 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2' done
-2026-08-29T19:03:32 440.349 INF RequestToSpawnPlayer: 175, maci, 7
+2026-08-29T19:03:15 423.998 INF RequestToEnterGame: Steam_<steam-id-redacted>/<player-name-redacted>
+2026-08-29T19:03:15 423.998 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'...
+2026-08-29T19:03:16 424.249 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2' done
+2026-08-29T19:03:32 440.349 INF RequestToSpawnPlayer: 175, <player-name-redacted>, 7
 2026-08-29T19:03:32 440.362 INF Created player with id=175
 2026-08-29T19:03:32 440.390 INF [PlayerInteractions] persistent player login
-2026-08-29T19:03:32 440.390 INF [WasmHost] player spawned: maci (entity 175)
+2026-08-29T19:03:32 440.390 INF [WasmHost] player spawned: <player-name-redacted> (entity 175)
 2026-08-29T19:03:32 440.506 WRN [MultiBlockManager][Alignment] SetTerrainAlignmentDirty failed; no terrain-aligned block has been registered at the specified world position: 851, 61, 653
 2026-08-29T19:03:32 440.601 INF Time: 7.31m FPS: 20.00 Heap: 1408.7MB Max: 1505.7MB Chunks: 170 CGO: 3 Ply: 1 Zom: 8 Ent: 13 (18) Items: 0 CO: 1 RSS: 2636.0MB
-2026-08-29T19:03:33 441.650 INF Dymesh: Update items to send for maci id: 175  recieved: 0
+2026-08-29T19:03:33 441.650 INF Dymesh: Update items to send for <player-name-redacted> id: 175  recieved: 0
 2026-08-29T19:03:33 441.650 INF Dymesh: Items to send: 0   Added: 0   chunks: 0
-2026-08-29T19:03:34 442.900 INF GMSG: Player 'maci' joined the game
-2026-08-29T19:03:34 442.900 INF PlayerSpawnedInWorld (reason: JoinMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:03:34 442.900 INF GMSG: Player '<player-name-redacted>' joined the game
+2026-08-29T19:03:34 442.900 INF PlayerSpawnedInWorld (reason: JoinMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:03:34 442.950 WRN [PROPS] ActionTarget implicitly converted to Vector3, but failed: ActionTarget
 2026-08-29T19:03:36 445.093 INF Telnet connection from: 172.17.0.1:39606
 2026-08-29T19:03:36 445.093 INF Started thread TelnetClient_172.17.0.1:39606
@@ -1532,17 +1532,17 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-29T19:03:54 463.051 INF Executing command 'kill 172' by Telnet from 172.17.0.1:39606
 2026-08-29T19:03:56 464.501 INF Executing command 'kill 171' by Telnet from 172.17.0.1:39606
 2026-08-29T19:03:59 468.051 INF [Steamworks.NET] Authentication callback. ID: <steam-id-redacted>, owner: <steam-id-redacted>, result: k_EAuthSessionResponseAuthTicketCanceled
-2026-08-29T19:03:59 468.051 INF [Steamworks.NET] Kick player for invalid login: <steam-id-redacted> maci
-2026-08-29T19:03:59 468.051 INF [Auth] PlatformAuth authorization failed: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
-2026-08-29T19:03:59 468.051 INF Kicking player (Platform auth failed: AuthTicketCanceled): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:03:59 468.051 INF [Steamworks.NET] Kick player for invalid login: <steam-id-redacted> <player-name-redacted>
+2026-08-29T19:03:59 468.051 INF [Auth] PlatformAuth authorization failed: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
+2026-08-29T19:03:59 468.051 INF Kicking player (Platform auth failed: AuthTicketCanceled): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:04:00 468.551 INF DynamicMusic: 175 successfully removed from Bloodmoon state cache
 2026-08-29T19:04:00 468.551 INF Client disconnected from dy mesh: Id: 175 Total: 1
-2026-08-29T19:04:00 468.551 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='2'
+2026-08-29T19:04:00 468.551 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='2'
 2026-08-29T19:04:00 468.551 INF Exited thread NCS_Reader_0_0
 2026-08-29T19:04:00 468.551 INF Exited thread NCS_Reader_0_1
 2026-08-29T19:04:00 468.551 INF Exited thread NCS_Writer_0_0
 2026-08-29T19:04:00 468.551 INF Exited thread NCS_Writer_0_1
-2026-08-29T19:04:00 468.551 INF GMSG: Player 'maci' left the game
+2026-08-29T19:04:00 468.551 INF GMSG: Player '<player-name-redacted>' left the game
 2026-08-29T19:04:00 468.551 INF [PlayerInteractions] persistent player disconnect
 2026-08-29T19:04:00 468.552 INF NET: LiteNetLib: Client disconnect from: 172.17.0.1:49506 / 0 (DisconnectPeerCalled)
 2026-08-29T19:04:00 468.552 ERR IOException in TelnetClient_172.17.0.1:39606: Unable to write data to the transport connection: The socket has been shut down.
@@ -1583,42 +1583,42 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-29T19:21:13 1501.959 INF Started thread NCS_Writer_0_1
 2026-08-29T19:21:13 1501.959 INF [NET] PlayerConnected EntityID=-1, PltfmId='Local_<none>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='', ClientNumber='3'
 2026-08-29T19:21:13 1502.003 INF NPPL.Read
-2026-08-29T19:21:13 1502.032 INF PlayerLogin: maci/V 3.2.0
+2026-08-29T19:21:13 1502.032 INF PlayerLogin: <player-name-redacted>/V 3.2.0
 2026-08-29T19:21:13 1502.032 INF Client IP: 172.17.0.1
-2026-08-29T19:21:13 1502.032 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:13 1502.032 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:13 1502.032 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:21:13 1502.032 INF [Steamworks.NET] Auth.AuthenticateUser()
-2026-08-29T19:21:13 1502.033 INF [Steamworks.NET] Authenticating player: maci SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
+2026-08-29T19:21:13 1502.033 INF [Steamworks.NET] Authenticating player: <player-name-redacted> SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
 2026-08-29T19:21:15 1503.382 INF [Steamworks.NET] Authentication callback. ID: <steam-id-redacted>, owner: <steam-id-redacted>, result: k_EAuthSessionResponseOK
-2026-08-29T19:21:15 1503.382 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:15 1503.382 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:15 1503.382 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:15 1503.382 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:15 1503.382 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:21:15 1503.382 INF [Auth] PlatformAuth authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:15 1503.382 INF [Auth] SteamFamily authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:15 1503.382 INF [Auth] SteamGroups authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:15 1503.382 INF [Auth] BansAndWhitelist authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:15 1503.382 INF [Auth] Crossplay authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:21:15 1503.383 INF [EncryptionAgreement] Unsupported client device Unknown
-2026-08-29T19:21:15 1503.383 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
-2026-08-29T19:21:15 1503.433 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:21:15 1503.383 INF [Auth] Encryption authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
+2026-08-29T19:21:15 1503.433 INF [Auth] Finalizer authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:21:15 1503.434 INF Allowing player with id Steam_<steam-id-redacted>
-2026-08-29T19:21:15 1503.533 INF RequestToEnterGame: Steam_<steam-id-redacted>/maci
-2026-08-29T19:21:15 1503.533 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'...
-2026-08-29T19:21:15 1503.783 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3' done
+2026-08-29T19:21:15 1503.533 INF RequestToEnterGame: Steam_<steam-id-redacted>/<player-name-redacted>
+2026-08-29T19:21:15 1503.533 INF Starting to send Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'...
+2026-08-29T19:21:15 1503.783 INF Sending Localization to EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3' done
 2026-08-29T19:21:33 1521.335 INF Time: 25.32m FPS: 19.99 Heap: 1273.3MB Max: 1505.7MB Chunks: 16 CGO: 0 Ply: 0 Zom: 4 Ent: 12 (26) Items: 0 CO: 0 RSS: 2415.9MB
-2026-08-29T19:21:33 1521.886 INF RequestToSpawnPlayer: 175, maci, 7
+2026-08-29T19:21:33 1521.886 INF RequestToSpawnPlayer: 175, <player-name-redacted>, 7
 2026-08-29T19:21:33 1521.895 INF Created player with id=175
 2026-08-29T19:21:33 1521.901 INF [PlayerInteractions] persistent player login
-2026-08-29T19:21:33 1521.901 INF [WasmHost] player spawned: maci (entity 175)
+2026-08-29T19:21:33 1521.901 INF [WasmHost] player spawned: <player-name-redacted> (entity 175)
 2026-08-29T19:21:33 1522.188 WRN [MultiBlockManager][Alignment] SetTerrainAlignmentDirty failed; no terrain-aligned block has been registered at the specified world position: 851, 61, 653
-2026-08-29T19:21:35 1523.336 INF Dymesh: Update items to send for maci id: 175  recieved: 0
+2026-08-29T19:21:35 1523.336 INF Dymesh: Update items to send for <player-name-redacted> id: 175  recieved: 0
 2026-08-29T19:21:35 1523.336 INF Dymesh: Items to send: 0   Added: 0   chunks: 0
-2026-08-29T19:21:36 1524.586 INF GMSG: Player 'maci' joined the game
-2026-08-29T19:21:36 1524.586 INF PlayerSpawnedInWorld (reason: JoinMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:21:36 1524.586 INF GMSG: Player '<player-name-redacted>' joined the game
+2026-08-29T19:21:36 1524.586 INF PlayerSpawnedInWorld (reason: JoinMultiplayer, position: 850, 61, 642): EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:21:36 1524.586 WRN [PROPS] ActionTarget implicitly converted to Vector3, but failed: ActionTarget
 2026-08-29T19:21:38 1526.729 INF Telnet connection from: 172.17.0.1:38278
 2026-08-29T19:21:38 1526.729 INF Started thread TelnetClient_172.17.0.1:38278
@@ -1663,15 +1663,15 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-29T19:22:16 1564.959 INF NET: LiteNetLib: Client disconnect from: 172.17.0.1:54516 / 0 (Timeout)
 2026-08-29T19:22:16 1564.959 INF NET: LiteNetLib: TimeSinceLastPacket: 5011.207
 2026-08-29T19:22:16 1564.986 INF NET: LiteNetLib: MT: Client disconnect from: 172.17.0.1:54516 / 0 (Timeout)
-2026-08-29T19:22:16 1564.986 INF [NET] PlayerDisconnected EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:22:16 1564.986 INF [NET] PlayerDisconnected EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:22:16 1564.986 INF DynamicMusic: 175 successfully removed from Bloodmoon state cache
 2026-08-29T19:22:16 1564.986 INF Client disconnected from dy mesh: Id: 175 Total: 1
-2026-08-29T19:22:16 1564.986 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='maci', ClientNumber='3'
+2026-08-29T19:22:16 1564.986 INF Player disconnected: EntityID=175, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='Steam_<steam-id-redacted>', PlayerName='<player-name-redacted>', ClientNumber='3'
 2026-08-29T19:22:16 1564.987 INF Exited thread NCS_Writer_0_0
 2026-08-29T19:22:16 1564.987 INF Exited thread NCS_Reader_0_0
 2026-08-29T19:22:16 1564.987 INF Exited thread NCS_Writer_0_1
 2026-08-29T19:22:16 1564.987 INF Exited thread NCS_Reader_0_1
-2026-08-29T19:22:16 1564.987 INF GMSG: Player 'maci' left the game
+2026-08-29T19:22:16 1564.987 INF GMSG: Player '<player-name-redacted>' left the game
 2026-08-29T19:22:16 1564.987 INF [PlayerInteractions] persistent player disconnect
 2026-08-29T19:22:16 1564.990 ERR IOException in TelnetClient_172.17.0.1:38278: Unable to write data to the transport connection: The socket has been shut down.
 2026-08-29T19:22:16 1564.990 EXC Unable to write data to the transport connection: The socket has been shut down. ---> The socket has been shut down
@@ -1710,29 +1710,29 @@ System.Threading._ThreadPoolWaitCallback:PerformWaitCallback()
 2026-08-29T19:31:17 2105.859 INF Started thread NCS_Writer_0_1
 2026-08-29T19:31:17 2105.859 INF [NET] PlayerConnected EntityID=-1, PltfmId='Local_<none>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='', ClientNumber='4'
 2026-08-29T19:31:17 2105.903 INF NPPL.Read
-2026-08-29T19:31:17 2105.950 INF PlayerLogin: maci/V 3.2.0
+2026-08-29T19:31:17 2105.950 INF PlayerLogin: <player-name-redacted>/V 3.2.0
 2026-08-29T19:31:17 2105.950 INF Client IP: 172.17.0.1
-2026-08-29T19:31:17 2105.950 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
-2026-08-29T19:31:17 2105.950 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] PlayerName authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] ServerState authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] MpHostAllowed authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] PlayerId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] DuplicateUserId authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] VersionCheck authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] PlayerSlots authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
+2026-08-29T19:31:17 2105.950 INF [Auth] LegacyModAuthorizations authorization successful: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
 2026-08-29T19:31:17 2105.950 INF [Steamworks.NET] Auth.AuthenticateUser()
-2026-08-29T19:31:17 2105.950 INF [Steamworks.NET] Authenticating player: maci SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
+2026-08-29T19:31:17 2105.950 INF [Steamworks.NET] Authenticating player: <player-name-redacted> SteamId: <steam-id-redacted> TicketLen: 1024 Result: k_EBeginAuthSessionResultOK
 2026-08-29T19:31:33 2121.701 INF Time: 35.32m FPS: 20.00 Heap: 1270.8MB Max: 1505.7MB Chunks: 15 CGO: 0 Ply: 0 Zom: 4 Ent: 16 (26) Items: 0 CO: 0 RSS: 2644.6MB
 2026-08-29T19:32:03 2151.701 INF Time: 35.82m FPS: 20.00 Heap: 1272.9MB Max: 1505.7MB Chunks: 15 CGO: 0 Ply: 0 Zom: 4 Ent: 16 (26) Items: 0 CO: 0 RSS: 2644.5MB
 2026-08-29T19:32:33 2181.733 INF Time: 36.32m FPS: 20.00 Heap: 1267.7MB Max: 1505.7MB Chunks: 15 CGO: 0 Ply: 0 Zom: 4 Ent: 16 (26) Items: 0 CO: 0 RSS: 2644.3MB
-2026-08-29T19:32:44 2192.634 WRN [NET] Received an unexpected package (NetPackagePlayerDisconnect) before authentication was finished from client EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
+2026-08-29T19:32:44 2192.634 WRN [NET] Received an unexpected package (NetPackagePlayerDisconnect) before authentication was finished from client EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
 2026-08-29T19:32:44 2192.818 INF NET: LiteNetLib: Client disconnect from: 172.17.0.1:50031 / 0 (RemoteConnectionClose)
 2026-08-29T19:32:44 2192.834 INF NET: LiteNetLib: MT: Client disconnect from: 172.17.0.1:50031 / 0 (RemoteConnectionClose)
-2026-08-29T19:32:44 2192.834 INF [NET] PlayerDisconnected EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
+2026-08-29T19:32:44 2192.834 INF [NET] PlayerDisconnected EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
 2026-08-29T19:32:44 2192.834 WRN DynamicMusic: -1 was not in Bloodmoon state cache on disconnect
 2026-08-29T19:32:44 2192.834 INF Client disconnected from dy mesh: Id: -1 Total: 0
-2026-08-29T19:32:44 2192.834 INF Player disconnected: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='maci', ClientNumber='4'
+2026-08-29T19:32:44 2192.834 INF Player disconnected: EntityID=-1, PltfmId='Steam_<steam-id-redacted>', CrossId='<unknown/none>', OwnerID='<unknown/none>', PlayerName='<player-name-redacted>', ClientNumber='4'
 2026-08-29T19:32:44 2192.834 INF Exited thread NCS_Reader_0_0
 2026-08-29T19:32:44 2192.834 INF Exited thread NCS_Writer_0_0
 2026-08-29T19:32:44 2192.835 INF Exited thread NCS_Reader_0_1

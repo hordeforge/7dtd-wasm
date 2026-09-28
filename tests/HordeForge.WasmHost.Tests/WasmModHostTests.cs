@@ -695,7 +695,7 @@ namespace HordeForge.WasmHost.Tests
                 Assert.Throws<ObjectDisposedException>(() => host.LoadModule("again", Fixture("strings")));
                 Assert.Throws<ObjectDisposedException>(() => host.DispatchInit());
                 Assert.Throws<ObjectDisposedException>(() => host.DispatchTick(1));
-                Assert.Throws<ObjectDisposedException>(() => host.DispatchPlayerJoin(1, "maci"));
+                Assert.Throws<ObjectDisposedException>(() => host.DispatchPlayerJoin(1, "dave"));
                 Assert.Throws<ObjectDisposedException>(() => host.Unload("strings"));
             }
         }
@@ -881,13 +881,13 @@ fuel_per_call = 5000
 max_memory_bytes = 1048576
 
 [settings]
-boss_name = ""maci""
+boss_name = ""dave""
 greeting = ""hello""
 ";
             ModManifest m = ModManifest.ParseToml(toml, "boss");
             Assert.Equal(5000UL, m.FuelPerCall);
             Assert.Equal(1048576UL, m.MaxMemoryBytes);
-            Assert.Equal("maci", m.Settings["boss_name"]);
+            Assert.Equal("dave", m.Settings["boss_name"]);
             Assert.Equal("hello", m.Settings["greeting"]);
         }
 
@@ -1486,7 +1486,7 @@ greeting = ""hello""
         public void PlayerJoinDispatchPrintsBossMessage()
         {
             // The C guest (samples/guest-boss, built with zig) prints
-            // "THE BOSS IS HERE" when the joining player is named "maci".
+            // "THE BOSS IS HERE" when the joining player is named "dave".
             var (host, api) = NewHost();
             using (host)
             {
@@ -1494,7 +1494,7 @@ greeting = ""hello""
                 Assert.True(boss.HasPlayerJoinHandler);
                 Assert.True(boss.Init().Ok);
 
-                IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin(171, "maci");
+                IReadOnlyList<ModRunResult> joins = host.DispatchPlayerJoin(171, "dave");
                 ModRunResult result = Assert.Single(joins);
                 Assert.True(result.Ok, result.Message + " " + result.Details);
                 Assert.Equal("boss", result.ModId);
@@ -1512,8 +1512,8 @@ greeting = ""hello""
                 host.DispatchInit();
                 host.DispatchPlayerJoin(172, "xela");
                 Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
-                // Case matters: "Maci" is not "maci".
-                host.DispatchPlayerJoin(173, "Maci");
+                // Case matters: "Dave" is not "dave".
+                host.DispatchPlayerJoin(173, "Dave");
                 Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
             }
         }
@@ -1528,7 +1528,7 @@ greeting = ""hello""
             {
                 WasmMod strings = host.LoadModule("strings", Fixture("strings"));
                 Assert.False(strings.HasPlayerJoinHandler);
-                Assert.Empty(host.DispatchPlayerJoin(171, "maci"));
+                Assert.Empty(host.DispatchPlayerJoin(171, "dave"));
                 Assert.True(strings.Tick().Ok);
             }
         }
@@ -1537,7 +1537,7 @@ greeting = ""hello""
         public void ZigBossPrintsForConfiguredName()
         {
             // The Zig guest (samples/guest-boss-zig) reads boss_name through
-            // get_setting; the built-in default is "maci".
+            // get_setting; the built-in default is "dave".
             var (host, api) = NewHost();
             using (host)
             {
@@ -1545,8 +1545,8 @@ greeting = ""hello""
                 Assert.True(boss.HasPlayerJoinHandler);
                 Assert.True(boss.Init().Ok);
 
-                // No setting: the guest falls back to "maci".
-                Assert.True(host.DispatchPlayerJoin(171, "maci").Single().Ok);
+                // No setting: the guest falls back to "dave".
+                Assert.True(host.DispatchPlayerJoin(171, "dave").Single().Ok);
                 Assert.Contains(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
             }
         }
@@ -1561,7 +1561,7 @@ greeting = ""hello""
                 host.LoadModule("boss-zig", Fixture("boss-zig"));
                 host.DispatchInit();
 
-                host.DispatchPlayerJoin(171, "maci");
+                host.DispatchPlayerJoin(171, "dave");
                 Assert.DoesNotContain(api.Logs, l => l.Message.Contains("THE BOSS IS HERE"));
 
                 host.DispatchPlayerJoin(174, "boss");

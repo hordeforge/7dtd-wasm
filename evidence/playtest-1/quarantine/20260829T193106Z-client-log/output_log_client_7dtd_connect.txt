@@ -430,7 +430,7 @@ GamePref.PartySharedKillRange = 100
 GamePref.PersistentPlayerProfiles = False
 GamePref.PlayerAutologin = False
 GamePref.PlayerKillingMode = 2
-GamePref.PlayerName = maci
+GamePref.PlayerName = <player-name-redacted>
 GamePref.PlayerSafeZoneHours = 7
 GamePref.PlayerSafeZoneLevel = 5
 GamePref.PlaytestBiome = 3
@@ -780,7 +780,7 @@ The referenced script on this Behaviour (Game Object '<null>') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T03:21:34 27.254 INF Created player with id=175
-2026-08-30T03:21:34 27.262 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=maci, id=175]
+2026-08-30T03:21:34 27.262 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=<player-name-redacted>, id=175]
 2026-08-30T03:21:34 27.262 INF Found own player entity with id 175
 2026-08-30T03:21:34 27.290 INF [PlayerInteractions] JoinedMultplayerServer
 2026-08-30T03:21:34 27.295 INF Respawning: JoinMultiplayer
@@ -817,9 +817,9 @@ Can not play a disabled audio source
 2026-08-30T03:21:35 28.538 WRN Unexpected case in Sign Data Manager: signRenderer is null
 2026-08-30T03:21:35 28.538 WRN Unexpected case in Sign Data Manager: signRenderer is null
 2026-08-30T03:21:36 29.394 INF Respawn almost done
-2026-08-30T03:21:36 29.399 INF GMSG: Player 'maci' joined the game
+2026-08-30T03:21:36 29.399 INF GMSG: Player '<player-name-redacted>' joined the game
 2026-08-30T03:21:36 29.403 INF 8042+0 Origin Reposition (0.0, 0.0, 0.0) to (848.0, 48.0, 640.0)
-2026-08-30T03:21:36 29.517 INF maci onNewBiomeEntered +buffForest_Hazard
+2026-08-30T03:21:36 29.517 INF <player-name-redacted> onNewBiomeEntered +buffForest_Hazard
 2026-08-30T03:21:37 30.533 INF SectionType change from None to Combat
 2026-08-30T03:21:37 30.537 INF Played Combat
 2026-08-30T03:21:37 30.537 INF Fading in Combat
@@ -839,8 +839,8 @@ Can not play a disabled audio source
 2026-08-30T03:21:40 33.331 INF Fading out Suspense
 2026-08-30T03:21:40 33.331 INF Played Exploration
 2026-08-30T03:21:40 33.331 INF Fading in Exploration
-2026-08-30T03:21:41 34.483 INF maci WeatherStatusTick  to default
-2026-08-30T03:21:41 34.484 INF maci WeatherBuffUpdate , indoors False
+2026-08-30T03:21:41 34.483 INF <player-name-redacted> WeatherStatusTick  to default
+2026-08-30T03:21:41 34.484 INF <player-name-redacted> WeatherBuffUpdate , indoors False
 2026-08-30T03:21:41 34.899 INF Paused Combat
 2026-08-30T03:21:43 36.344 INF Paused Suspense
 2026-08-30T03:21:43 36.345 INF fadeInCo complete on Exploration

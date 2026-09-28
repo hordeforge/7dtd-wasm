@@ -13,11 +13,13 @@ process-start `LD_LIBRARY_PATH` (see `run_acceptance.sh`).
 
 ## Redaction
 
-The logs are the game's own output, with two kinds of value replaced by a
-placeholder: the Steam account identifiers (`<steam-id-redacted>`) and the
-server's public address (`<server-ip-redacted>`). Both identify a person
-without being needed to read what the run proves. Player names, entity ids,
-tick lines, and the guest's own messages are untouched.
+The logs are the game's own output, with three kinds of value replaced by a
+placeholder: the Steam account identifiers (`<steam-id-redacted>`), the
+server's public address (`<server-ip-redacted>`), and the joining player's
+account (`<platform-id-redacted>`, `<player-name-redacted>`). Each identifies
+a person without being needed to read what the run proves. Entity ids, tick
+lines, and the guest's own messages are untouched, as are the local
+filesystem paths the run recorded.
 
 ## Evidence
 
@@ -71,21 +73,22 @@ version:
 
 ## Player join event (boss demo)
 
-`boss-join-server.log` captures a live join by a loadgen bot
-(`--name maci`, which the harness names `maci1`):
+`boss-join-server.log` captures a live join by a loadgen bot, whose name
+is redacted (`<player-name-redacted>`; the harness appends the client id to
+the name it is given):
 
 ```
-RequestToSpawnPlayer: 171, maci1, 5
-[WasmHost] player spawned: maci1
+RequestToSpawnPlayer: 171, <player-name-redacted>, 5
+[WasmHost] player spawned: <player-name-redacted>
 ```
 
 The join reached the bridge and was dispatched to the guest's
-`on_player_join` handler. The guest compares the name exactly, so `maci1`
-does not print "THE BOSS IS HERE"; the exact `maci` match is covered by the
-host test suite (`PlayerJoinDispatchPrintsBossMessage`). The loadgen
-harness always appends its client id to bot names, so a live join with the
-bare name "maci" needs a real client; the exact-match behavior itself is
-unit-verified.
+`on_player_join` handler. The guest compares the name exactly, so the
+harness-suffixed name did not print "THE BOSS IS HERE"; the exact match is
+covered by the host test suite (`PlayerJoinDispatchPrintsBossMessage`). The
+loadgen harness always appends its client id to bot names, so a live join
+under the bare configured name needs a real client; the exact-match
+behavior itself is unit-verified.
 
 Hook findings from the live run: `GameManager.OnClientSpawned` and
 `GameManager.PlayerSpawnedInWorld` never fire on the dedicated server for
@@ -96,12 +99,12 @@ point the game logs on every join, and the bridge patches that method.
 
 `aligned-abi-join.log` is a second live run after the ABI was aligned with
 the sibling zdtd-server contract (bare hook exports, TOML config). The
-dist `boss-zig` module's `wasm-mod.toml` was temporarily set to
-`boss_name = "maci1"` (the loadgen bot's actual name, since the harness
-appends its client id), and the join produced:
+dist `boss-zig` module's `wasm-mod.toml` was temporarily set to the
+loadgen bot's actual name (the harness appends its client id), and the join
+produced:
 
 ```
-[WasmHost] player spawned: maci1 (entity 171)
+[WasmHost] player spawned: <player-name-redacted> (entity 171)
 [wasm] THE BOSS IS HERE
 ```
 

@@ -112,7 +112,7 @@ max_memory_bytes = 33554432
 # Operator policy served to the guest through the get_setting host import.
 # The guest's own [settings] win over shared settings with the same key.
 [settings]
-boss_name = "maci"
+boss_name = "dave"
 ```
 
 ## wasm.toml (shared)

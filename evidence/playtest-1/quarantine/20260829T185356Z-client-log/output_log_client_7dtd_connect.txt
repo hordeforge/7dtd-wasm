@@ -452,7 +452,7 @@ GamePref.PartySharedKillRange = 100
 GamePref.PersistentPlayerProfiles = False
 GamePref.PlayerAutologin = False
 GamePref.PlayerKillingMode = 2
-GamePref.PlayerName = maci
+GamePref.PlayerName = <player-name-redacted>
 GamePref.PlayerSafeZoneHours = 7
 GamePref.PlayerSafeZoneLevel = 5
 GamePref.PlaytestBiome = 3
@@ -803,7 +803,7 @@ The referenced script on this Behaviour (Game Object '<null>') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T02:46:53 25.395 INF Created player with id=175
-2026-08-30T02:46:53 25.401 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=maci, id=175]
+2026-08-30T02:46:53 25.401 INF [PartyQuests] Player registered: [type=EntityPlayerLocal, name=<player-name-redacted>, id=175]
 2026-08-30T02:46:53 25.402 INF Found own player entity with id 175
 2026-08-30T02:46:53 25.406 INF [PlayerInteractions] JoinedMultplayerServer
 2026-08-30T02:46:53 25.411 INF Respawning: EnterMultiplayer
@@ -834,9 +834,9 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T02:46:55 27.299 INF [7dtd-playtest] wait_ready player-unspawned-live t=1
 2026-08-30T02:46:55 27.299 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"wait_ready player-unspawned-live t=1"}
 2026-08-30T02:46:56 27.905 INF Respawn almost done
-2026-08-30T02:46:56 27.910 INF GMSG: Player 'maci' joined the game
+2026-08-30T02:46:56 27.910 INF GMSG: Player '<player-name-redacted>' joined the game
 2026-08-30T02:46:56 27.914 INF 9491+0 Origin Reposition (0.0, 0.0, 0.0) to (848.0, 48.0, 640.0)
-2026-08-30T02:46:56 28.008 INF maci onNewBiomeEntered +buffForest_Hazard
+2026-08-30T02:46:56 28.008 INF <player-name-redacted> onNewBiomeEntered +buffForest_Hazard
 2026-08-30T02:46:57 29.454 INF [7dtd-playtest] ready player=175 pos=(850.00, 61.08, 642.00)
 2026-08-30T02:46:57 29.455 INF [7dtd-playtest] {"v":1,"t":"log","level":"info","msg":"ready player=175 pos=(850.00, 61.08, 642.00)"}
 2026-08-30T02:46:57 29.461 INF [7dtd-playtest] PASS parachute/parachute_equip item resolved=True 
@@ -857,6 +857,6 @@ The referenced script on this Behaviour (Game Object 'Camera') is missing!
 2026-08-30T02:46:59 31.585 INF [7dtd-playtest] DONE exit_hint=0 wall_ms=29436
 2026-08-30T02:46:59 31.586 INF [7dtd-playtest] {"v":1,"t":"done","exit_hint":0,"pass":2,"fail":0,"skip":0,"wall_ms":29436}
 2026-08-30T02:47:00 32.085 INF [7dtd-fastconnect] boot hb ticks=7142 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done
-2026-08-30T02:47:01 32.991 INF maci WeatherStatusTick  to default
-2026-08-30T02:47:01 32.992 INF maci WeatherBuffUpdate , indoors False
+2026-08-30T02:47:01 32.991 INF <player-name-redacted> WeatherStatusTick  to default
+2026-08-30T02:47:01 32.992 INF <player-name-redacted> WeatherBuffUpdate , indoors False
 2026-08-30T02:47:05 37.096 INF [7dtd-fastconnect] boot hb ticks=8483 focused=True rib=True vsync=0 tfr=-1 static=True loginDone=True openMM=False action=done

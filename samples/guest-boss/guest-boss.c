@@ -1,7 +1,7 @@
 /*
  * guest-boss: a C guest mod for the HordeForge WasmHost.
  *
- * When a player named "maci" spawns into the world, this module prints
+ * When a player named "dave" spawns into the world, this module prints
  * "THE BOSS IS HERE" to the server console via the host log import.
  *
  * Built with the zig compiler ("make boss" in the Makefile runs exactly
@@ -74,7 +74,7 @@ i32 hf_mod_on_tick(void)
 /* Optional export: called when a player spawns into the world, with the
  * entity id (zdtd passes slot and entity id; we have no ECS slot). The name
  * is fetched through the host import into this module's own buffer, then
- * compared exactly ("maci" is case-sensitive). */
+ * compared exactly ("dave" is case-sensitive). */
 __attribute__((export_name("on_player_join")))
 i32 hf_mod_on_player_join(i32 entity_id)
 {
@@ -82,8 +82,8 @@ i32 hf_mod_on_player_join(i32 entity_id)
     i32 n = hf_get_join_player_name((i32)(long)JOIN_NAME, (i32)sizeof(JOIN_NAME));
     if (n != 4)
         return 0;
-    if (JOIN_NAME[0] == 'm' && JOIN_NAME[1] == 'a' &&
-        JOIN_NAME[2] == 'c' && JOIN_NAME[3] == 'i')
+    if (JOIN_NAME[0] == 'd' && JOIN_NAME[1] == 'a' &&
+        JOIN_NAME[2] == 'v' && JOIN_NAME[3] == 'e')
     {
         hf_log_info(MSG_BOSS);
     }

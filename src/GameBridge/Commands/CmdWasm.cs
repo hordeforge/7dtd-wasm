@@ -179,8 +179,11 @@ namespace HordeForge.GameBridge.Commands
         /// server log, which outlives the session the way the module tree
         /// does. The game marks a command issued at the local console
         /// (IsLocalGame) and carries a remote client for anything typed over
-        /// telnet or in game. The name and address come from the client, so
-        /// they are cleaned like any other client-derived text.
+        /// telnet or in game. The account name is the whole attribution: the
+        /// client address names a person and adds nothing the name does not
+        /// already carry, so it stays out of a log that outlives the session
+        /// and travels with bug reports. The name is client-derived, so it is
+        /// cleaned like any other client-derived text.
         /// </summary>
         private static string Describe(CommandSenderInfo senderInfo)
         {
@@ -194,7 +197,7 @@ namespace HordeForge.GameBridge.Commands
                 return "remote sender (no client)";
             }
             string name = client.playerName ?? string.Empty;
-            return "player '" + TextSanitizer.Clean(name) + "' (" + TextSanitizer.Clean(client.ip) + ")";
+            return "player '" + TextSanitizer.Clean(name) + "'";
         }
 
         private static void Output(string line)

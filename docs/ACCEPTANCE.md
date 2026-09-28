@@ -45,7 +45,7 @@ After the ABI was aligned with the zdtd-server contract (bare hook
 exports, TOML config), the container acceptance was re-run: a loadgen bot
 join dispatched `on_player_join` to the Zig guest, which printed
 "THE BOSS IS HERE" for the name configured in its `wasm-mod.toml`
-(`boss_name = "maci1"`, set to the bot's harness-appended name). Evidence:
+(`boss_name = "<player-name-redacted>"`, set to the bot's harness-appended name). Evidence:
 `evidence/acceptance-1/aligned-abi-join.log`.
 
 Live-run finding fixed in this pass: `RequestToSpawnPlayer`'s int

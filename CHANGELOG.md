@@ -206,6 +206,26 @@ operator, embedder, and guest author.
   framework's reference assemblies, so the compiler kept the argument
   nullable and every dereference below it failed the build
   (CS8602). Replaced with explicit null and length tests.
+- `wasm load`, `wasm reload`, and `wasm unload` no longer write the
+  sender's client address next to the account name in the server log. The
+  address names a person and adds nothing the name does not already carry,
+  and that log outlives the session and travels with bug reports. The
+  account name is still the whole attribution, so the operator can still
+  see who compiled and started guest code; `tools/targetcheck` no longer
+  gates on the `ClientInfo.ip` property nothing reads.
+- The committed run evidence under `evidence/` no longer carries the
+  joining player's account name and platform account id, which the game
+  logs next to every join. They are replaced by
+  `<player-name-redacted>` and `<platform-id-redacted>`, joining the Steam
+  id and server address already redacted there; each evidence README says
+  so, and the acceptance notes that quote those lines were rewritten to
+  match. Entity ids, tick lines, guest messages, and the local filesystem
+  paths the runs recorded are untouched.
+- The sample boss guest, its manifest, the tests, and the docs that quote
+  them named a real player as the name the guest watches for. The default
+  is now `dave`, which identifies nobody, and the built guest fixtures
+  match. A sample that ships a person's handle in its default is personal
+  data in a committed config, not a demo value.
 - A quoted string in `wasm.toml` or `wasm-mod.toml` accepted raw control
   characters, so a stray CR, NUL, ESC, NEL, or DEL rode the guest string ABI
   inside a setting value and, from there, into a log line or a chat message
@@ -1152,8 +1172,8 @@ All guests (Rust, C, Zig), fixtures, tests, and docs updated.
 ### Verified live (aligned ABI + TOML config)
 
 Second container acceptance run after the alignment: the Zig guest printed
-"THE BOSS IS HERE" for `boss_name = "maci1"` read from its wasm-mod.toml
-(no rebuild), with the join dispatched as `player spawned: maci1 (entity
+"THE BOSS IS HERE" for `boss_name = "<player-name-redacted>"` read from its wasm-mod.toml
+(no rebuild), with the join dispatched as `player spawned: <player-name-redacted> (entity
 171)`. Evidence: `evidence/acceptance-1/aligned-abi-join.log`. The run
 fixed a Harmony postfix naming bug: `RequestToSpawnPlayer`'s int
 parameters are `_chunkViewDim` and `_nearEntityId` (not the player's id),
@@ -1170,14 +1190,14 @@ so the postfix must not declare `_entityId`; the entity id comes from
   forwards the joining player's name. Guests without the handler are
   unaffected.
 - `samples/guest-boss`: a C guest built with the zig compiler that prints
-  "THE BOSS IS HERE" to the console when the player "maci" spawns. Built
+  "THE BOSS IS HERE" to the console when the player <player-name-redacted> spawns. Built
   via `make boss`, staged in `dist/Mods/Wasm/boss`, covered by three new
   host tests (26 total).
 
 ### Verified live (container acceptance run)
 
-- A real player join (loadgen bot, named `maci1` by the harness) reached
-  the bridge (`[WasmHost] player spawned: maci1`) and was dispatched to
+- A real player join (loadgen bot, named `<player-name-redacted>` by the harness) reached
+  the bridge (`[WasmHost] player spawned: <player-name-redacted>`) and was dispatched to
   the guest handler. Evidence: `evidence/acceptance-1/boss-join-server.log`.
 - Hook findings: `GameManager.OnClientSpawned` and
   `GameManager.PlayerSpawnedInWorld` never fire on the dedicated server

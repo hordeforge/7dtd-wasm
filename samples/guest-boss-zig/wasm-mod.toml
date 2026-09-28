@@ -15,4 +15,4 @@ max_memory_bytes = 33554432
 # Operator policy exposed to the guest through the get_setting host import.
 # The guest reads boss_name and matches it exactly (case-sensitive).
 [settings]
-boss_name = "maci"
+boss_name = "dave"

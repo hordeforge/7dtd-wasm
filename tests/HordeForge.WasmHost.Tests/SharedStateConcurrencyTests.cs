@@ -241,15 +241,15 @@ namespace HordeForge.WasmHost.Tests
                 "(module (memory (export \"memory\") 1 1)" +
                 "(func (export \"on_enable\") (result i32) i32.const 0)" +
                 "(func (export \"on_tick\") (result i32) i32.const 0)" +
-                "(func (export \"on_shutdown\") (result i32) unreachable)"));
+                "(func (export \"on_shutdown\") (result i32) unreachable))"));
             host.Dispose();
 
             IReadOnlyList<ModRunResult> first = host.ShutdownFailures;
             IReadOnlyList<ModRunResult> second = host.ShutdownFailures;
             ModRunResult failure = Assert.Single(first);
             Assert.Equal("trapshutdown", failure.ModId);
-            Assert.Equal(1, second.Count);
-            Assert.Equal(failure.ModId, second[0].ModId);
+            ModRunResult secondFailure = Assert.Single(second);
+            Assert.Equal(failure.ModId, secondFailure.ModId);
             // Each read publishes its own list, and it is read-only, so the
             // embedder cannot reach back into the host's state through it.
             Assert.NotSame(first, second);
