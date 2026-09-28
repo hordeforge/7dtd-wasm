@@ -460,16 +460,7 @@ namespace HordeForge.WasmHost.Core
 
         private void DefineHostApi()
         {
-            _linker.DefineFunction<int, int, int>(AbiConstants.HostModule, "log", (Caller caller, int level, int ptr, int len) =>
-            {
-                string message = ReadGuestString(caller, ptr, len);
-                _api.Log(LogSource(), level, message);
-            });
-
-            _linker.DefineFunction<long>(AbiConstants.HostModule, AbiConstants.ImportTick, caller =>
-            {
-                return Tick;
-            });
+            DefineLogAndTick(AbiConstants.HostModule);
 
             _linker.DefineFunction<long>(AbiConstants.HostModule, "get_world_time", caller =>
             {
@@ -516,16 +507,7 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         private void DefineZdtdCompatibilityApi()
         {
-            _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, "log", (caller, level, ptr, len) =>
-            {
-                string message = ReadGuestString(caller, ptr, len);
-                _api.Log(LogSource(), level, message);
-            });
-
-            _linker.DefineFunction<long>(AbiConstants.ZdtdHostModule, AbiConstants.ImportTick, caller =>
-            {
-                return Tick;
-            });
+            DefineLogAndTick(AbiConstants.ZdtdHostModule);
 
             _linker.DefineFunction<int, int, int>(AbiConstants.ZdtdHostModule, AbiConstants.ImportConfig, (caller, outPtr, outCap) =>
             {
@@ -614,6 +596,24 @@ namespace HordeForge.WasmHost.Core
                     return AbiConstants.QueryNoAnswer;
                 }
                 return WriteGuestString(caller, outPtr, outCap, answer, AbiConstants.QueryBufferTooSmall);
+            });
+        }
+
+        /// <summary>
+        /// The log and tick imports, which the hordeforge and zdtd host
+        /// modules define identically.
+        /// </summary>
+        private void DefineLogAndTick(string hostModule)
+        {
+            _linker.DefineFunction<int, int, int>(hostModule, "log", (Caller caller, int level, int ptr, int len) =>
+            {
+                string message = ReadGuestString(caller, ptr, len);
+                _api.Log(LogSource(), level, message);
+            });
+
+            _linker.DefineFunction<long>(hostModule, AbiConstants.ImportTick, caller =>
+            {
+                return Tick;
             });
         }
 

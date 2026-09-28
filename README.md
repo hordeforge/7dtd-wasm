@@ -84,7 +84,7 @@ flowchart LR
     T --> D["WasmModHost.DispatchTick"]
     D --> F["fresh fuel per call"]
     F --> G["guest on_tick"]
-    G -->|"zdtd.sense"| S["world snapshot (ZBS3)"]
+    G -->|"zdtd.sense"| S["world snapshot (ZBS4)"]
     G -->|"zdtd.queue"| Q["bot move / look / shoot"]
     G -->|"hordeforge.log"| L["game log"]
     G -->|"get_setting"| K["per-mod + shared settings"]

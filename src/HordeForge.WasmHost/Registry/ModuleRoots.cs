@@ -22,19 +22,16 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         public static IReadOnlyList<string> Order(string primaryRoot, IReadOnlyList<string> extraRoots)
         {
-            var ordered = new List<string>(1 + (extraRoots?.Count ?? 0));
+            var ordered = new List<string>(1 + extraRoots.Count);
             if (!string.IsNullOrEmpty(primaryRoot) && Directory.Exists(primaryRoot))
             {
                 ordered.Add(primaryRoot);
             }
-            if (extraRoots != null)
+            foreach (string extra in extraRoots)
             {
-                foreach (string extra in extraRoots)
+                if (!string.IsNullOrEmpty(extra) && Directory.Exists(extra) && !ordered.Contains(extra))
                 {
-                    if (!string.IsNullOrEmpty(extra) && Directory.Exists(extra) && !Contains(ordered, extra))
-                    {
-                        ordered.Add(extra);
-                    }
+                    ordered.Add(extra);
                 }
             }
             return ordered;
@@ -96,7 +93,7 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         public static string ResolveDir(IReadOnlyList<string> roots, string id)
         {
-            if (roots == null || !ModId.IsValid(id))
+            if (!ModId.IsValid(id))
             {
                 return string.Empty;
             }
@@ -117,7 +114,7 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         public static string ResolveFile(IReadOnlyList<string> roots, string id, string fileName)
         {
-            if (roots == null || !ModId.IsValid(id) || string.IsNullOrEmpty(fileName))
+            if (!ModId.IsValid(id) || string.IsNullOrEmpty(fileName))
             {
                 return string.Empty;
             }
@@ -160,18 +157,6 @@ namespace HordeForge.WasmHost.Registry
             foreach (string child in children)
             {
                 if (string.Equals(Path.GetFileName(child), id, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static bool Contains(List<string> ordered, string candidate)
-        {
-            foreach (string existing in ordered)
-            {
-                if (string.Equals(existing, candidate, StringComparison.Ordinal))
                 {
                     return true;
                 }

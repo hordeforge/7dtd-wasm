@@ -68,8 +68,8 @@ are net8; any C# mod forces EAC off.
       the installed server; `make bridge-check` gates.
 - [x] Goal 6: per-mod manifests (`wasm-mod.json` at the time; the canonical
       format is now `wasm-mod.toml`, JSON still accepted: ADR 0007) with
-      fuel and memory ceilings (tests `ManifestMemoryCeilingIsEnforced`,
-      `MalformedManifestIsRejected`).
+      fuel and memory ceilings (tests `TomlManifestLimitsAreEnforcedAtLoad`,
+      `MalformedTomlManifestIsRejected`).
 - [ ] In-game acceptance on a live dedicated server: a containerized live
       server run succeeded (bot servant, on_player_join; see
       `evidence/acceptance-1/` and docs/ACCEPTANCE.md). Still unproven: the

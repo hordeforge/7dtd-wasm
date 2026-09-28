@@ -37,43 +37,48 @@ namespace HordeForge.GameBridge.Commands
                 case "list":
                     foreach (string line in StatusLines("modules:"))
                     {
-                        SingletonMonoBehaviour<SdtdConsole>.Instance.Output(line);
+                        Output(line);
                     }
                     break;
 
                 case "load":
                     int loaded = BridgeHost.LoadAllModules();
-                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output("loaded " + loaded + " new module(s)");
+                    Output("loaded " + loaded + " new module(s)");
                     break;
 
                 case "reload":
                     if (_params.Count < 2)
                     {
-                        SingletonMonoBehaviour<SdtdConsole>.Instance.Output("usage: wasm reload <id>");
+                        Output("usage: wasm reload <id>");
                         break;
                     }
                     // The id is echoed back to the console and telnet clients;
                     // clean it like log text so control characters typed at
                     // the console cannot drive terminals.
-                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Reload(_params[1]) ? "reloaded " + TextSanitizer.Clean(_params[1]) : "reload failed or module not found: " + TextSanitizer.Clean(_params[1]));
+                    Output(BridgeHost.Reload(_params[1]) ? "reloaded " + TextSanitizer.Clean(_params[1]) : "reload failed or module not found: " + TextSanitizer.Clean(_params[1]));
                     break;
 
                 case "unload":
                     if (_params.Count < 2)
                     {
-                        SingletonMonoBehaviour<SdtdConsole>.Instance.Output("usage: wasm unload <id>");
+                        Output("usage: wasm unload <id>");
                         break;
                     }
-                    SingletonMonoBehaviour<SdtdConsole>.Instance.Output(BridgeHost.Unload(_params[1]) ? "unloaded " + TextSanitizer.Clean(_params[1]) : "not loaded: " + TextSanitizer.Clean(_params[1]));
+                    Output(BridgeHost.Unload(_params[1]) ? "unloaded " + TextSanitizer.Clean(_params[1]) : "not loaded: " + TextSanitizer.Clean(_params[1]));
                     break;
 
                 default:
                     foreach (string line in StatusLines("status:"))
                     {
-                        SingletonMonoBehaviour<SdtdConsole>.Instance.Output(line);
+                        Output(line);
                     }
                     break;
             }
+        }
+
+        private static void Output(string line)
+        {
+            SingletonMonoBehaviour<SdtdConsole>.Instance.Output(line);
         }
 
         private static IEnumerable<string> StatusLines(string header)

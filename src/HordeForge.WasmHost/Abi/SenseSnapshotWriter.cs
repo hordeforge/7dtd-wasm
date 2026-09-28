@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -123,11 +124,11 @@ namespace HordeForge.WasmHost.Abi
             /// <summary>True during a blood moon night.</summary>
             public bool BloodMoon;
             /// <summary>Entity records (players, zombies, bots).</summary>
-            public System.Collections.Generic.List<EntityRecord> Records = new System.Collections.Generic.List<EntityRecord>();
+            public List<EntityRecord> Records = new List<EntityRecord>();
             /// <summary>Damage events for the tick.</summary>
-            public System.Collections.Generic.List<DamageEvent> Damage = new System.Collections.Generic.List<DamageEvent>();
+            public List<DamageEvent> Damage = new List<DamageEvent>();
             /// <summary>Bot loadout info events for the tick.</summary>
-            public System.Collections.Generic.List<BotInfoEvent> BotInfo = new System.Collections.Generic.List<BotInfoEvent>();
+            public List<BotInfoEvent> BotInfo = new List<BotInfoEvent>();
 
             /// <summary>Drops all records and events so the snapshot can be reused for the next call.</summary>
             public void Clear()

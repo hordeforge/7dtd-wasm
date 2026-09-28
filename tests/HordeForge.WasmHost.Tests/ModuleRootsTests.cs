@@ -48,7 +48,7 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
-        public void OrderHandlesNullExtras()
+        public void OrderHandlesEmptyExtras()
         {
             string primary = Dir("primary");
             var ordered = ModuleRoots.Order(primary, Array.Empty<string>());

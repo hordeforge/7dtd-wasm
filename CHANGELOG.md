@@ -29,6 +29,16 @@ Codename: Quarantine (7dtd-wasm).
   changes restore time, not what is trusted.
 - The acceptance image build ignores its own directory (`.dockerignore`),
   so recorded run logs no longer enter the build context or bust the cache.
+- `WasmModHost` runs `DispatchTick`, `DispatchInit`, and
+  `DispatchPlayerJoin` through one private `Dispatch` walk instead of three
+  copies of the same loop, and the `log` and `tick` imports are defined once
+  for both the `hordeforge` and `zdtd` host modules.
+- `BridgeHost` formats a failed call for the log through one `Describe`
+  helper, and the `ModRunResult?` unwrap in `Reload` and `Unload` uses a
+  pattern match. Log lines are unchanged.
+- `ModApi.ApplyHarmonyPatches` posts each hook through one `Patch` helper
+  (same targets, same messages).
+- `CmdWasm` writes console output through one `Output` helper.
 
 ### Fixed
 
@@ -57,6 +67,18 @@ Codename: Quarantine (7dtd-wasm).
   reaches a committed lock file without a recorded license, and the SBOM
   skips lock files under `evidence/` (a frozen playtest record, not a
   shipped artifact).
+- `BotServant.PruneDeadBots` collects dead ids into the pooled scratch list
+  instead of allocating one per call, matching the pooling the sense path
+  already does.
+
+### Removed
+
+- `ModuleRoots.Contains` (an ordinal string search that `List.Contains`
+  already does) and the null checks on `Order`, `ResolveDir`, and
+  `ResolveFile` parameters, which the non-nullable signatures already
+  require. One manifest test that duplicated another, and the redundant
+  InlineData cases in the duplicate malformed-manifest theory, are gone
+  (the surviving theory keeps every case).
 
 ## [0.3.1] - 2026-09-21
 

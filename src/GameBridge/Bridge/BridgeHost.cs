@@ -143,22 +143,17 @@ namespace HordeForge.GameBridge.Bridge
                 IReadOnlyList<ModRunResult> results = host.DispatchTick(_tick);
                 for (int i = 0; i < results.Count; i++)
                 {
-                    if (results[i].Ok)
+                    ModRunResult result = results[i];
+                    if (result.Ok)
                     {
                         continue;
                     }
-                    string source = "tick/" + (results[i].ModId.Length > 0
-                        ? results[i].ModId
+                    string source = "tick/" + (result.ModId.Length > 0
+                        ? result.ModId
                         : i < ids.Count ? ids[i] : "?");
                     if (DispatchFailureLimiter.TryWrite(source, out _))
                     {
-                        // Trap messages and backtraces can embed guest-chosen
-                        // strings (module and function name sections); they
-                        // pass through the same control-character filter as
-                        // guest log text so a hostile module cannot forge
-                        // server log lines.
-                        Log.Out("[WasmHost] tick: " + TextSanitizer.Clean(results[i].Message) +
-                                (results[i].Details.Length > 0 ? " (" + TextSanitizer.Clean(results[i].Details) + ")" : ""));
+                        Log.Out("[WasmHost] tick: " + Describe(result));
                     }
                 }
             }
@@ -204,9 +199,7 @@ namespace HordeForge.GameBridge.Bridge
                         // Results are attributed by ModId (join dispatch calls
                         // only the mods that export the handler, so list index
                         // does not identify the module).
-                        Log.Out("[WasmHost] on_player_join " + TextSanitizer.Clean(result.ModId) + ": " +
-                                TextSanitizer.Clean(result.Message) +
-                                (result.Details.Length > 0 ? " (" + TextSanitizer.Clean(result.Details) + ")" : ""));
+                        Log.Out("[WasmHost] on_player_join " + TextSanitizer.Clean(result.ModId) + ": " + Describe(result));
                     }
                 }
             }
@@ -245,6 +238,20 @@ namespace HordeForge.GameBridge.Bridge
                 AddDropped(lines, DispatchFailureLimiter, "tick failure logs");
                 return lines;
             }
+        }
+
+        /// <summary>
+        /// A failed call's message and details, ready to log. Trap messages
+        /// and backtraces can embed guest-chosen strings (module and
+        /// function name sections); they pass through the same
+        /// control-character filter as guest log text so a hostile module
+        /// cannot forge server log lines.
+        /// </summary>
+        private static string Describe(ModRunResult result)
+        {
+            string details = result.Details;
+            return TextSanitizer.Clean(result.Message) +
+                   (details.Length > 0 ? " (" + TextSanitizer.Clean(details) + ")" : "");
         }
 
         /// <summary>Appends the limiter's dropped summary when it has one.</summary>
@@ -415,8 +422,7 @@ namespace HordeForge.GameBridge.Bridge
             ModRunResult result = mod.Init();
             if (!result.Ok)
             {
-                Log.Warning("[WasmHost] on_enable of " + id + ": " + TextSanitizer.Clean(result.Message) +
-                            (result.Details.Length > 0 ? " (" + TextSanitizer.Clean(result.Details) + ")" : ""));
+                Log.Warning("[WasmHost] on_enable of " + id + ": " + Describe(result));
             }
         }
 
@@ -441,16 +447,11 @@ namespace HordeForge.GameBridge.Bridge
                     return false;
                 }
                 ModRunResult? oldShutdown = host.Unload(id);
-                if (oldShutdown.HasValue)
+                // The reload proceeds either way, but the failed goodbye of
+                // the old instance must reach the log like an unload's would.
+                if (oldShutdown is { Ok: false } shutdown)
                 {
-                    ModRunResult shutdown = oldShutdown.GetValueOrDefault();
-                    // The reload proceeds either way, but the failed goodbye of
-                    // the old instance must reach the log like an unload's would.
-                    if (!shutdown.Ok)
-                    {
-                        Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " +
-                                    TextSanitizer.Clean(shutdown.Message) + (shutdown.Details.Length > 0 ? " (" + TextSanitizer.Clean(shutdown.Details) + ")" : ""));
-                    }
+                    Log.Warning("[WasmHost] reload of " + id + ": shutdown of previous instance failed: " + Describe(shutdown));
                 }
                 _settings?.RemoveMod(id);
                 _gameApi?.UnregisterConfig(id);
@@ -475,11 +476,10 @@ namespace HordeForge.GameBridge.Bridge
                     return false;
                 }
                 ModRunResult? maybeShutdown = host.Unload(id);
-                if (!maybeShutdown.HasValue)
+                if (maybeShutdown is not { } shutdown)
                 {
                     return false;
                 }
-                ModRunResult shutdown = maybeShutdown.GetValueOrDefault();
                 _settings?.RemoveMod(id);
                 _gameApi?.UnregisterConfig(id);
                 if (!shutdown.Ok)
@@ -487,8 +487,7 @@ namespace HordeForge.GameBridge.Bridge
                     // Fail soft: the mod is gone either way, but a trapped or
                     // failing shutdown must reach the operator instead of a
                     // bare "unloaded" from the console command.
-                    Log.Warning("[WasmHost] unload of " + id + ": " + TextSanitizer.Clean(shutdown.Message) +
-                                (shutdown.Details.Length > 0 ? " (" + TextSanitizer.Clean(shutdown.Details) + ")" : ""));
+                    Log.Warning("[WasmHost] unload of " + id + ": " + Describe(shutdown));
                 }
                 return true;
             }

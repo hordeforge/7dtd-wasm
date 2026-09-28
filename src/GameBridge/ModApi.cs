@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using HordeForge.GameBridge.Bridge;
 using HordeForge.GameBridge.Hooks;
 using HarmonyLib;
@@ -57,33 +58,29 @@ namespace HordeForge.GameBridge
             try
             {
                 var harmony = new Harmony("hordeforge.7dtd.wasmhost");
-
-                var tickTarget = AccessTools.Method(typeof(GameManager), "Update");
-                if (tickTarget == null)
-                {
-                    Log.Warning("[WasmHost] GameManager.Update not found; tick hook disabled");
-                }
-                else
-                {
-                    harmony.Patch(tickTarget, postfix: new HarmonyMethod(typeof(GameTickHook).GetMethod(nameof(GameTickHook.Postfix))));
-                    Log.Out("[WasmHost] patched GameManager.Update");
-                }
-
-                var spawnTarget = AccessTools.Method(typeof(GameManager), "RequestToSpawnPlayer");
-                if (spawnTarget == null)
-                {
-                    Log.Warning("[WasmHost] GameManager.RequestToSpawnPlayer not found; player join hook disabled");
-                }
-                else
-                {
-                    harmony.Patch(spawnTarget, postfix: new HarmonyMethod(typeof(PlayerSpawnHook).GetMethod(nameof(PlayerSpawnHook.Postfix))));
-                    Log.Out("[WasmHost] patched GameManager.RequestToSpawnPlayer");
-                }
+                Patch(harmony, "Update", "tick", typeof(GameTickHook).GetMethod(nameof(GameTickHook.Postfix)));
+                Patch(harmony, "RequestToSpawnPlayer", "player join", typeof(PlayerSpawnHook).GetMethod(nameof(PlayerSpawnHook.Postfix)));
             }
             catch (Exception ex)
             {
                 Log.Error("[WasmHost] failed to apply Harmony patches: " + ex);
             }
+        }
+
+        /// <summary>
+        /// Posts one hook onto a GameManager method, reporting a target the
+        /// game no longer ships instead of failing the whole patch pass.
+        /// </summary>
+        private static void Patch(Harmony harmony, string method, string label, MethodInfo postfix)
+        {
+            var target = AccessTools.Method(typeof(GameManager), method);
+            if (target == null)
+            {
+                Log.Warning("[WasmHost] GameManager." + method + " not found; " + label + " hook disabled");
+                return;
+            }
+            harmony.Patch(target, postfix: new HarmonyMethod(postfix));
+            Log.Out("[WasmHost] patched GameManager." + method);
         }
     }
 }

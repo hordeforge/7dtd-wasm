@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using HordeForge.WasmHost.Abi;
 
 namespace HordeForge.GameBridge.Bridge
@@ -617,7 +618,9 @@ namespace HordeForge.GameBridge.Bridge
                 return;
             }
             // Removal during enumeration invalidates the enumerator, so
-            // dead ids are collected first and removed after the loop.
+            // dead ids are collected first and removed after the loop; the
+            // scratch buffer is pooled because this runs from the sense path
+            // at tick rate.
             var dead = _deadIds;
             dead.Clear();
             foreach (int id in _bots)
@@ -796,14 +799,14 @@ namespace HordeForge.GameBridge.Bridge
         // yaw into every later sense snapshot.
         private static bool TryParseId(string text, out int value)
         {
-            return int.TryParse(text, System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out value);
+            return int.TryParse(text, NumberStyles.Integer,
+                CultureInfo.InvariantCulture, out value);
         }
 
         private static bool TryParseFloat(string text, out float value)
         {
-            return float.TryParse(text, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out value)
+            return float.TryParse(text, NumberStyles.Float,
+                CultureInfo.InvariantCulture, out value)
                 && !float.IsNaN(value) && !float.IsInfinity(value);
         }
     }

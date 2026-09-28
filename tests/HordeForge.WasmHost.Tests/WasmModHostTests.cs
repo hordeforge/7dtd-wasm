@@ -513,36 +513,11 @@ namespace HordeForge.WasmHost.Tests
         }
 
         [Fact]
-        public void ManifestMemoryCeilingIsEnforced()
-        {
-            // The hello module declares a 32 MiB memory maximum; a manifest
-            // ceiling of 1 MiB must reject it at load.
-            var (host, _) = NewHost();
-            using (host)
-            {
-                var manifest = ModManifest.ParseToml("[limits]\nmax_memory_bytes = 1048576\n", "hello");
-                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(() => host.LoadModule("hello", Fixture("hello"), manifest));
-                Assert.Contains("exceeds the effective cap", ex.Message);
-            }
-        }
-
-        [Fact]
         public void ManifestFuelAboveCeilingIsRejected()
         {
             WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
                 () => ModManifest.ParseToml("[limits]\nfuel_per_call = 99999999999\n", "x"));
             Assert.Contains("ceiling", ex.Message);
-        }
-
-        [Theory]
-        [InlineData("not toml")]
-        [InlineData("[limits]\nfuel_per_call = 0\n")]
-        [InlineData("[limits]\nfuel_per_call = -5\n")]
-        [InlineData("[limits]\nmax_memory_bytes = \"big\"\n")]
-        [InlineData("future = [abc\n")]
-        public void MalformedManifestIsRejected(string toml)
-        {
-            Assert.Throws<WasmModLoadException>(() => ModManifest.ParseToml(toml, "bad"));
         }
 
         [Fact]
@@ -599,9 +574,12 @@ greeting = ""hello""
         [Theory]
         [InlineData("not toml")]
         [InlineData("[limits]\nfuel_per_call = 0\n")]
+        [InlineData("[limits]\nfuel_per_call = -5\n")]
         [InlineData("[limits]\nfuel_per_call = 99999999999\n")]
+        [InlineData("[limits]\nmax_memory_bytes = \"big\"\n")]
         [InlineData("[settings]\nbad = [1, 2]\n")]
         [InlineData("key without equals\n")]
+        [InlineData("future = [abc\n")]
         [InlineData("[limits\nfuel_per_call = 1\n")]
         public void MalformedTomlManifestIsRejected(string toml)
         {
@@ -611,6 +589,8 @@ greeting = ""hello""
         [Fact]
         public void TomlManifestLimitsAreEnforcedAtLoad()
         {
+            // The hello module declares a 32 MiB memory maximum; a manifest
+            // ceiling of 1 MiB must reject it at load.
             var (host, _) = NewHost();
             using (host)
             {

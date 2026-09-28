@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace HordeForge.WasmHost.Registry
@@ -12,12 +13,12 @@ namespace HordeForge.WasmHost.Registry
     public sealed class SettingsTable
     {
         private readonly Dictionary<string, IReadOnlyDictionary<string, string>> _perMod =
-            new Dictionary<string, IReadOnlyDictionary<string, string>>(System.StringComparer.Ordinal);
+            new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _shared =
-            new Dictionary<string, string>(System.StringComparer.Ordinal);
+            new Dictionary<string, string>(StringComparer.Ordinal);
 
         private static readonly IReadOnlyDictionary<string, string> EmptySettings =
-            new Dictionary<string, string>(System.StringComparer.Ordinal);
+            new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>Registers (or replaces) a module's settings from its manifest.</summary>
         public void UpdateMod(string modId, IReadOnlyDictionary<string, string>? settings)
