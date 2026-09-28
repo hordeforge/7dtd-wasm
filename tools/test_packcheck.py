@@ -30,6 +30,7 @@ MANIFEST = """\
 
 PACKED = (
     '    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />\n'
+    '    <None Include="../../LICENSE" Pack="true" PackagePath="/" />\n'
     '    <None Include="../../README.md" Pack="true" PackagePath="/" />\n'
 )
 
@@ -120,15 +121,31 @@ class CheckTest(unittest.TestCase):
         findings = packcheck.check(root)
         self.assertTrue(any("README.md is declared but not packed" in f for f in findings))
         self.assertTrue(any("THIRD-PARTY-NOTICES.md is not packed" in f for f in findings))
+        self.assertTrue(any("LICENSE is not packed" in f for f in findings))
+
+    def test_license_missing_while_notices_ship_is_reported(self):
+        root = complete_repo(
+            packed=PACKED.replace(
+                '    <None Include="../../LICENSE" Pack="true" PackagePath="/" />\n', ""
+            )
+        )
+        findings = packcheck.check(root)
+        self.assertTrue(
+            any("LICENSE is not packed" in f for f in findings),
+            "the notices link to LICENSE, so a package without it ships a dead reference",
+        )
+        self.assertFalse(any("THIRD-PARTY-NOTICES.md is not packed" in f for f in findings))
 
     def test_a_file_without_pack_true_is_not_a_packed_file(self):
         root = complete_repo(
             packed='    <None Include="../../README.md" />\n'
             '    <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" />\n'
+            '    <None Include="../../LICENSE" Pack="true" />\n'
         )
         findings = packcheck.check(root)
         self.assertTrue(any("README.md is declared but not packed" in f for f in findings))
         self.assertFalse(any("THIRD-PARTY-NOTICES.md" in f for f in findings))
+        self.assertFalse(any("LICENSE is not packed" in f for f in findings))
 
     def test_license_id_reads_the_spdx_id_from_the_license_header(self):
         self.assertEqual(packcheck.license_id(packcheck.ROOT), "MIT")

@@ -7,7 +7,7 @@ third-party binaries alongside our own, and the licenses below apply to them.
 `make dist` copies this file and `LICENSE` into
 `dist/Mods/1_HordeForge_WasmHost/` next to the binaries they cover, so the
 link above resolves in the shipped modlet. The NuGet package
-(`HordeForge.WasmHost`) carries this file as well.
+(`HordeForge.WasmHost`) carries both files as well.
 
 Every NuGet component below is pinned in a committed `packages.lock.json`
 with a SHA-512 content hash, and `make dist` writes a CycloneDX inventory to

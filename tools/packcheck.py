@@ -17,7 +17,8 @@ This reads `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj` and checks:
   * `TargetFrameworks` still declares the frameworks README.md promises
   * `PackageLicenseExpression` matches the license in LICENSE
   * `PackageReadmeFile` is declared and the file it names is packed
-  * THIRD-PARTY-NOTICES.md is packed
+  * THIRD-PARTY-NOTICES.md and LICENSE are packed, so the link the notices
+    open on ("see [LICENSE](LICENSE)") resolves inside the package
 
 The declared version is not checked here; tools/versioncheck.py owns the
 agreement between the manifest, the modlet and the changelog.
@@ -122,6 +123,11 @@ def check(root: pathlib.Path) -> list[str]:
 
     if NOTICES.name not in packed_files(manifest):
         findings.append(f"{CSPROJ}: {NOTICES.name} is not packed")
+    if LICENSE.name not in packed_files(manifest):
+        findings.append(
+            f"{CSPROJ}: {LICENSE.name} is not packed, so the link "
+            f"{NOTICES.name} opens on does not resolve inside the package"
+        )
 
     return findings
 

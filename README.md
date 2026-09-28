@@ -166,17 +166,19 @@ tested nothing is the worst possible answer).
 
 Copy `dist/Mods` into the dedicated server's `Mods/` folder, start the server
 with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the
-server console. The staged native engine (`Native/libwasmtime.so`,
-`.dylib`, or `.dll`) matches the OS and architecture of the machine that ran
-`make dist`, so build on the platform family your server runs on (Linux or
-Windows; macOS has no dedicated server).
+server console. Copying the staged tree over an existing `Mods/` replaces the
+files it carries, `Mods/Wasm/<id>/config.toml` among them, so keep operator
+edits somewhere the copy does not reach before re-staging. The staged native
+engine (`Native/libwasmtime.so`, `.dylib`, or `.dll`) matches the OS and
+architecture of the machine that ran `make dist`, so build on the platform
+family your server runs on (Linux or Windows; macOS has no dedicated server).
 
 Code that embeds the host library in its own .NET project takes it as a NuGet
 package instead: `make pack` writes
 `artifacts/packages/HordeForge.WasmHost.<version>.nupkg` with a
-netstandard2.0 and a net8.0 assembly, the README, and the third-party
-notices for the shipped Wasmtime closure. The package is not on a public
-feed yet, so reference it from a local one (`dotnet nuget add source
+netstandard2.0 and a net8.0 assembly, the README, and the license and
+third-party notices for the shipped Wasmtime closure. The package is not on
+a public feed yet, so reference it from a local one (`dotnet nuget add source
 ./artifacts/packages`, then `dotnet add package HordeForge.WasmHost`) or
 add a `ProjectReference` to `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj`.
 The Wasmtime binding comes along as a declared dependency of the package

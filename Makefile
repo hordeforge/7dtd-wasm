@@ -434,6 +434,8 @@ dist: build fixtures bridge
 	# consumers and vuln scanners know exactly what shipped.
 	$(PYTHON) tools/sbom.py --root . --output dist/SBOM.json
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
+	@echo "  Copying over an installed Mods/ replaces the files the tree carries,"
+	@echo "  Mods/Wasm/<id>/config.toml among them. Keep operator edits elsewhere first."
 
 # The publishable library package, the artifact a consumer installs with a
 # package manager. Built here rather than only on release so a manifest that

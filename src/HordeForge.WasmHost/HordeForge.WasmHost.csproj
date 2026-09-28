@@ -33,9 +33,14 @@
   </ItemGroup>
 
   <!-- Wasmtime is Apache-2.0 WITH LLVM-exception, so the package carries the
-       attribution for it and the rest of the shipped closure. -->
+       attribution for it and the rest of the shipped closure. LICENSE
+       travels with the notices because they link to it ("see
+       [LICENSE](LICENSE)"), and a package whose notices point at a file it
+       does not contain leaves a consumer reading our terms through a dead
+       reference. -->
   <ItemGroup>
     <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="/" />
     <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
