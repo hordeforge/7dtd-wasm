@@ -132,6 +132,7 @@ make build          # host + tests
 make test           # run the sandbox test suite
 make bridge-check   # verify the game API targets on your server install
 make dist           # stage the modlet under dist/ (plus a CycloneDX SBOM)
+make pack           # pack the host library as a NuGet package under artifacts/
 ```
 
 `make build` and `make test` are all a new contributor needs: they want a .NET
@@ -146,6 +147,7 @@ is missing before it fails:
 | `make samples` / `make samples-check` | `make toolchain` |
 | `make boss` / `make boss-zig` | zig |
 | `make dist` | everything `make fixtures` needs, plus a .NET 8 SDK and Python 3 |
+| `make pack` | a .NET 8 SDK and Python 3 |
 
 `make toolchain` populates `.cargo/` and `.rustup/` inside the checkout using
 rustup from your PATH, so no Rust is installed system-wide; CI runs the same
@@ -157,7 +159,15 @@ with EAC off (any C# mod forces `-noeac`), and run `wasm status` from the
 server console. The staged native engine (`Native/libwasmtime.so`,
 `.dylib`, or `.dll`) matches the OS and architecture of the machine that ran
 `make dist`, so build on the platform family your server runs on (Linux or
-Windows; macOS has no dedicated server). The `hello` sample module logs on
+Windows; macOS has no dedicated server).
+
+Code that embeds the host library in its own .NET project takes it as a NuGet
+package instead: `make pack` writes
+`artifacts/packages/HordeForge.WasmHost.<version>.nupkg` with a
+netstandard2.0 and a net8.0 assembly, the README, and the third-party
+notices for the shipped Wasmtime closure.
+
+The `hello` sample module logs on
 load, reports every 100 ticks, and sends a chat greeting every 1000 ticks.
 
 The Makefile drives a POSIX shell (GNU make plus `sh`): the in-project

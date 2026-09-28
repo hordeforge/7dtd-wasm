@@ -16,6 +16,10 @@
     <Description>Embeddable WebAssembly mod host for 7 Days to Die dedicated servers: untrusted wasm32-wasip1 guest mods under fuel, memory, and module size limits on an embedded Wasmtime engine.</Description>
     <PackageTags>7dtd;wasm;wasmtime;sandbox;modding;mod-host</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- The README travels inside the package: nuget.org renders it on the
+         listing, and it is the only place the install and usage story is
+         written. Without it "dotnet pack" warns and the listing is bare. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/hordeforge/7dtd-wasm</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <Deterministic>true</Deterministic>
@@ -29,6 +33,7 @@
        attribution for it and the rest of the shipped closure. -->
   <ItemGroup>
     <None Include="../../THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
 </Project>

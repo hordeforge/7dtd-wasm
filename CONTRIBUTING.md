@@ -79,8 +79,9 @@ next to the parser.
 
 ## Repository tools
 
-`tools/doccheck.py`, `tools/versioncheck.py`, `tools/apicheck.py`,
-`tools/sbom.py` and `tools/targetcheck` share one command-line contract:
+`tools/doccheck.py`, `tools/versioncheck.py`, `tools/packcheck.py`,
+`tools/apicheck.py`, `tools/sbom.py` and `tools/targetcheck` share one
+command-line contract:
 
 - `--help` documents every flag; `--root` (where it applies) selects the
   repository to work on and defaults to the tool's own checkout.
@@ -133,3 +134,22 @@ requested:
 There is no deprecation policy yet: this is pre-1.0, symbols can disappear
 between minors, and the changelog entry naming the replacement is the only
 notice a removal gets.
+
+## Packaging
+
+`HordeForge.WasmHost` ships two artifacts, and both are built by a target
+rather than assembled by hand:
+
+- `make pack` builds the NuGet package into `artifacts/packages/`. It runs
+  `tools/packcheck.py` first, which fails when the manifest in
+  `src/HordeForge.WasmHost/HordeForge.WasmHost.csproj` loses a field a
+  consumer sees: the identity fields, the license expression (it must match
+  `LICENSE`), the readme (`PackageReadmeFile` plus the file being packed),
+  and `THIRD-PARTY-NOTICES.md`, which has to travel inside the package
+  because the shipped closure includes Apache-2.0 WITH LLVM-exception
+  Wasmtime. `make pack` runs on `make check-ci`, so a package that no longer
+  packs or no longer declares its terms fails on the same gate as a broken
+  test. The version itself is owned by `tools/versioncheck.py`.
+- `make dist` assembles the game modlet under `dist/Mods` plus the sample
+  guests and the CycloneDX SBOM. It needs a dedicated server install, so it
+  stays out of the CI gate.

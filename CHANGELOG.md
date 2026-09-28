@@ -8,6 +8,13 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Added
 
+- `make pack` builds the publishable library as a NuGet package under
+  `artifacts/packages/`, and `tools/packcheck.py` gates the package metadata
+  it depends on (identity fields, the license expression against LICENSE,
+  the readme, and the third-party notices). Both run on `make check-ci`, so a
+  package that stops packing or stops declaring its terms fails the gate
+  instead of the publish step. The README now ships inside the package, which
+  is what the nuget.org listing renders.
 - Per-tick dispatch telemetry: a once-a-minute heartbeat, a warning when a
   dispatch overruns half a frame, and the run's cost and failure totals in
   `wasm status` and at shutdown (`HordeForge.WasmHost.Core.TickTelemetry`).

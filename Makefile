@@ -131,7 +131,7 @@ SLN = HordeForge.WasmHost.sln
 # those targets outright when the lock file has not been restored yet.
 WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
 
-.PHONY: help build test toolchain samples samples-check boss boss-zig fixtures bridge bridge-check dist check check-ci clean
+.PHONY: help build test toolchain samples samples-check boss boss-zig fixtures bridge bridge-check dist pack check check-ci clean
 
 help:
 	@echo "Targets:"
@@ -150,6 +150,7 @@ help:
 	@echo "  make bridge-check   validate game API targets against GAME_DIR"
 	@echo "  make dist           assemble the modlet + sample guest under dist/"
 	@echo "                      (also writes dist/SBOM.json from the lock files)"
+	@echo "  make pack           pack the host library as a NuGet package under artifacts/packages/"
 	@echo "  make check          docs gate + sbom tests + tools lint + guest lint gate + build + test + bridge + bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
 	@echo "  make clean          remove build output, staged fixtures and dist/"
@@ -293,6 +294,18 @@ dist: build fixtures bridge
 	$(PYTHON) tools/sbom.py --root . -o dist/SBOM.json
 	@echo "Dist staged under dist/ (copy dist/Mods into the dedicated server's Mods/ folder)"
 
+# The publishable library package, the artifact a consumer installs with a
+# package manager. Built here rather than only on release so a manifest that
+# no longer packs (a readme that moved, a package path that no longer
+# resolves) fails on the same gate as everything else. "make dist" assembles
+# the game modlet instead; it needs a server install, this does not.
+PACKAGE_OUT := artifacts/packages
+
+pack:
+	@$(PYTHON) tools/packcheck.py
+	$(DOTNET) pack src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) -o $(PACKAGE_OUT)
+	@echo "NuGet package staged under $(PACKAGE_OUT)/"
+
 check: export RESTORE_LOCKED := true
 check: check-ci
 	$(MAKE) bridge
@@ -306,6 +319,7 @@ check-ci: export RESTORE_LOCKED := true
 check-ci:
 	$(PYTHON) tools/doccheck.py
 	$(PYTHON) tools/versioncheck.py
+	$(PYTHON) tools/packcheck.py
 	$(PYTHON) tools/apicheck.py
 	$(PYTHON) -m unittest discover -s tools
 	$(call require_ruff)
@@ -314,6 +328,7 @@ check-ci:
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test
+	$(MAKE) pack
 
 clean:
-	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj dist
+	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj dist artifacts

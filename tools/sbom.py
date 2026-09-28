@@ -224,8 +224,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as error:
             print(f"sbom: cannot write {args.output}: {error}", file=sys.stderr)
             return 2
-        print(f"sbom: wrote {len(bom['components'])} components to {args.output}",
-              file=sys.stderr)
+        print(f"sbom: wrote {len(bom['components'])} components to {args.output}", file=sys.stderr)
     else:
         print(text, end="")
     return 0
