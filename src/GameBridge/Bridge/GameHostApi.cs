@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using HordeForge.WasmHost.Abi;
+using HordeForge.WasmHost.Core;
 using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Bridge
@@ -23,7 +24,9 @@ namespace HordeForge.GameBridge.Bridge
         private readonly BotServant _servant;
         // Prefix the host composes its per-module log source tag from, kept
         // here so a module's log window can be dropped on the same unload
-        // that drops its config; see ForgetModule.
+        // that drops its config; see ForgetModule. The tag itself comes from
+        // WasmModHost.LogSourceFor, so the key dropped here is the key the
+        // host wrote to.
         private readonly string _logSourcePrefix;
         // Per-mod raw config (config.toml) cache, registered at module load
         // and invalidated on reload; a guest looping on the config import
@@ -206,7 +209,12 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public void ForgetModule(string modId)
         {
-            LogLimiter.ForgetSource(_logSourcePrefix + "/" + modId);
+            // The tag the host composes for this module's guest log lines,
+            // named by the host itself: recomposing it here would drop a
+            // window under a key the limiter never wrote to, and a module
+            // reloaded inside the second its previous generation saturated
+            // the cap would start inside that window.
+            LogLimiter.ForgetSource(WasmModHost.LogSourceFor(_logSourcePrefix, modId));
             CommandLimiter.ForgetSource(modId);
             SenseLimiter.ForgetSource(modId);
             // The two caps keyed by the module id itself, so a reloaded

@@ -566,7 +566,8 @@ namespace HordeForge.WasmHost.Core
                     SetCurrentMod(mod.Id);
                     // Pattern-matched, not a ModRunResult? local narrowed by
                     // HasValue: the compiler drops the not-null state of a
-                    // nullable value-type local at a loop back-edge.
+                    // nullable value-type local at a loop back-edge. The
+                    // pattern unwraps, so result is the struct itself.
                     if (invoke(mod) is ModRunResult result)
                     {
                         results.Add(result);
@@ -848,14 +849,21 @@ namespace HordeForge.WasmHost.Core
         }
 
         /// <summary>
-        /// The tag a guest called under <paramref name="modId"/> logs
-        /// under, built once per guest call rather than per log line.
+        /// The tag a guest called under <paramref name="modId"/> logs under:
+        /// <paramref name="prefix"/> alone for an empty id, otherwise the
+        /// prefix, a slash, and the id. Public and static because the host
+        /// and its embedders key per-module state on this exact string: the
+        /// bridge's log rate limiter is keyed on it, and its ForgetModule
+        /// drops that window on unload. An embedder that recomposed the tag
+        /// itself would silently fail to drop the window of a module reloaded
+        /// inside the second its previous generation saturated the cap, so
+        /// the one place this host names a module is the one place to ask.
         /// </summary>
-        private string LogSourceFor(string modId)
+        public static string LogSourceFor(string prefix, string modId)
         {
-            return modId.Length == 0
-                ? _config.LogSourcePrefix
-                : _config.LogSourcePrefix + "/" + modId;
+            return modId == null || modId.Length == 0
+                ? prefix
+                : prefix + "/" + modId;
         }
 
         /// <summary>
@@ -867,7 +875,7 @@ namespace HordeForge.WasmHost.Core
         private void SetCurrentMod(string modId)
         {
             _currentModId = modId;
-            _currentLogSource = LogSourceFor(modId);
+            _currentLogSource = LogSourceFor(_config.LogSourcePrefix, modId);
         }
 
         /// <summary>

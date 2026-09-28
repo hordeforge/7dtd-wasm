@@ -13,6 +13,12 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 
 ### Added
 
+- `WasmModHost.LogSourceFor(prefix, modId)` names the log source tag the
+  host attributes a module's guest lines under. The bridge keyed its per
+  module log rate limiter on the same string and recomposed it, so the two
+  could drift apart: the limiter would drop a window under a key it never
+  wrote to, and a module reloaded inside the second its previous
+  generation saturated the cap would start inside that window.
 - Per-guest dispatch cost: `WasmMod.LastCallMs` records what the most recent
   call to a guest cost in wall clock, and the slow-dispatch warning names the
   guest that spent the frame. The aggregate cost said the frame was lost, not

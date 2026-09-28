@@ -917,6 +917,33 @@ greeting = ""hello""
         }
 
         [Fact]
+        public void GuestLogSourceEqualsTheTagTheHostPublishes()
+        {
+            // The bridge's log rate limiter is keyed on this exact string and
+            // drops the module's window on unload through the same call, so a
+            // host that attributed lines under a tag LogSourceFor does not
+            // name would leave a reloaded module inside the previous
+            // generation's window.
+            var (host, api) = NewHost(c => c.LogSourcePrefix = "wf");
+            using (host)
+            {
+                host.LoadModule("alpha", Fixture("strings"));
+                host.DispatchTick(1);
+
+                Assert.NotEmpty(api.Logs);
+                Assert.All(api.Logs, l => Assert.Equal(WasmModHost.LogSourceFor("wf", "alpha"), l.Source));
+            }
+        }
+
+        [Fact]
+        public void LogSourceForFallsBackToTheBarePrefixWithoutAModId()
+        {
+            Assert.Equal("wasm", WasmModHost.LogSourceFor("wasm", string.Empty));
+            Assert.Equal("wasm", WasmModHost.LogSourceFor("wasm", null!));
+            Assert.Equal("wasm/alpha", WasmModHost.LogSourceFor("wasm", "alpha"));
+        }
+
+        [Fact]
         public void InitModuleReturnsNullForAnUnknownId()
         {
             var (host, _) = NewHost();
