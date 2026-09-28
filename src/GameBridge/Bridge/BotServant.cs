@@ -797,8 +797,14 @@ namespace HordeForge.GameBridge.Bridge
                 // The world owns the id now; tracking it makes it the
                 // calling module's bot, and no other module may drive it.
                 _botOwners.Add(modId, e.entityId);
+                // Invariant, fixed-point: the default float format follows the
+                // server's locale (a comma decimal separator there makes the
+                // three coordinates unreadable) and its precision grows with
+                // the magnitude, so the same spawn prints different bytes on
+                // two machines and a replayed run cannot be diffed against
+                // the one that diverged.
                 Log.Out("[WasmHost] bot spawned entity " + e.entityId + " for " + modId +
-                        " at " + pos.x + "," + pos.y + "," + pos.z);
+                        " at " + FormatCoord(pos.x) + "," + FormatCoord(pos.y) + "," + FormatCoord(pos.z));
                 return true;
             }
             catch (Exception ex)
@@ -806,6 +812,13 @@ namespace HordeForge.GameBridge.Bridge
                 WarnCapped("bot/spawn", "bot spawn failed (world not ready?): " + ex.Message);
                 return false;
             }
+        }
+
+        // One decimal is a tenth of a block, finer than a spawn point means
+        // and short enough to keep the line greppable.
+        private static string FormatCoord(float value)
+        {
+            return value.ToString("0.0", CultureInfo.InvariantCulture);
         }
 
         private void PruneDeadBots()

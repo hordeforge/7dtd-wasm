@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using HordeForge.WasmHost;
 using HordeForge.WasmHost.Config;
@@ -56,6 +55,32 @@ namespace HordeForge.GameBridge.Bridge
         // thread must be seen by every reader here, none of which holds
         // Gate when it asks for the clock.
         private static volatile Func<int> _clockMs = () => Environment.TickCount;
+
+        // Monotonic source behind the per-tick dispatch measurement. Same
+        // rule as _clockMs and for the same reason: the measured cost is
+        // printed into the run's own heartbeat, status, and shutdown lines,
+        // so a replayed run must read its cost from the same clock the
+        // original did. Defaults to the process clock; a driver that steps
+        // virtual time replaces this and the whole bridge follows.
+        private static MonotonicTimer _timer = MonotonicTimer.Default;
+
+        /// <summary>
+        /// Timer the per-tick dispatch cost is measured with, the sub-
+        /// millisecond half of the pair <see cref="ClockMs"/> and this make
+        /// up. Set before <see cref="Start"/> to drive the bridge from a
+        /// virtual clock. Never null.
+        /// </summary>
+        public static MonotonicTimer Timer
+        {
+            get
+            {
+                return _timer;
+            }
+            set
+            {
+                _timer = value ?? throw new ArgumentNullException(nameof(value));
+            }
+        }
 
         /// <summary>
         /// The millisecond clock every bridge rate window measures against.
@@ -116,9 +141,6 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>How often a suppressed line count is logged per source.</summary>
         private const int SuppressedLogEvery = 100;
-
-        /// <summary>Stopwatch ticks converted to milliseconds.</summary>
-        private static readonly double MillisecondsPerTimestampTick = 1000.0 / Stopwatch.Frequency;
 
         // Wall-clock cost of the per-tick dispatch: guest counters say how
         // often a mod failed, never how much of the game frame it ate.
@@ -252,9 +274,8 @@ namespace HordeForge.GameBridge.Bridge
                 // once-a-minute heartbeat ever prints. Taking it here instead
                 // would allocate two objects per tick for nothing.
                 IReadOnlyList<string>? ids = null;
-                long startedAt = Stopwatch.GetTimestamp();
-                IReadOnlyList<ModRunResult> results = host.DispatchTick(_tick);
-                double elapsedMs = (Stopwatch.GetTimestamp() - startedAt) * MillisecondsPerTimestampTick;
+                IReadOnlyList<ModRunResult> results = Array.Empty<ModRunResult>();
+                double elapsedMs = Timer.ElapsedMs(() => results = host.DispatchTick(_tick));
                 int failures = 0;
                 for (int i = 0; i < results.Count; i++)
                 {

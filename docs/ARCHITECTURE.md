@@ -218,10 +218,14 @@ in CI, not only on a host that already has a toolchain config.
   replaceable clock rather than the process clock at their own call sites.
   It defaults to `Environment.TickCount`; a driver that steps its own time
   (a test, or a simulation replaying a run) replaces it before `Start` and
-  the whole bridge follows that time. Two inputs stay real by nature: the
-  shared `wasm.toml`'s mtime decides when guests see new settings, and
-  `Stopwatch` measures the dispatch cost in the telemetry. Both feed logs
-  and a file read, never a guest's tick.
+  the whole bridge follows that time. The dispatch cost the telemetry prints
+  is the sub-millisecond half of the same pair: `BridgeHost.Timer`
+  (`MonotonicTimer`) measures it and defaults to the process
+  `Stopwatch`, so a driver replaces both and the run's heartbeat, status,
+  and shutdown lines report the driver's time rather than the host's. One
+  input stays real by nature: the shared `wasm.toml`'s mtime decides when
+  guests see new settings. It feeds a log and a file read, never a guest's
+  tick.
 - The module scan sorts each tree's directories ordinally, so the load order
   (which fixes the order every later tick dispatches mods in) does not follow
   the order the filesystem enumerates them in.

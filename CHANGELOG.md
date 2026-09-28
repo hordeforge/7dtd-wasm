@@ -139,6 +139,19 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   then never loaded, because Windows has no directory by that name and stores
   one without its trailing space or period. Such ids are rejected with the
   rest, so a mod is either loadable on every platform or reported.
+- The per-tick dispatch cost was measured on a hardwired `Stopwatch`
+  (`BridgeHost.Tick`), the one clock in the bridge that no driver could
+  replace. It is the only value in the run's own log lines that a replay
+  could not reproduce, so two runs of the same inputs disagreed on the
+  heartbeat, `wasm status`, and shutdown lines and the diff named the clock
+  rather than the guest. It is measured through `BridgeHost.Timer`
+  (`MonotonicTimer`), a replaceable monotonic source that defaults to the
+  process clock, so production timing is unchanged and a simulation reports
+  its own.
+- The bot spawn log line printed its position with the default float
+  format, which follows the server's locale: on a comma-decimal server the
+  three coordinates were unreadable, and the same spawn printed different
+  bytes on two machines. Positions are now fixed-point and invariant.
 - `make dist` staged the modlet with the third-party notices but not the
   project's own MIT LICENSE, so the shipped tree linked to a file that was
   not in it. Both travel in `dist/Mods/1_HordeForge_WasmHost/` now.
