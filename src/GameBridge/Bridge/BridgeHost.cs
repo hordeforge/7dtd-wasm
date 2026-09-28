@@ -533,7 +533,7 @@ namespace HordeForge.GameBridge.Bridge
         /// True when the id is a plain folder name under WasmRoot. Ids arrive
         /// from console input ("wasm reload &lt;id&gt;") and from directory
         /// names on disk, so this keeps module paths inside Mods/Wasm and
-        /// control characters out of log output; see ModIds.IsValid.
+        /// control characters out of log output; see ModId.IsValid.
         /// </summary>
         public static bool IsValidModId(string id)
         {

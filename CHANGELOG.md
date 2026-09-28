@@ -86,6 +86,15 @@ Codename: Quarantine (7dtd-wasm).
 
 ### Fixed
 
+- `make check` failed on a clean tree. `tools/api-surface.txt` predated
+  `TickTelemetry`, `WasmModHost.ShutdownFailures`, `InitModule`,
+  `MaxModuleSizeBytes`, and `WasmPageBytes`, and recorded three
+  `Snapshot` fields with their namespace-qualified `List<>` instead of the
+  spelling the source uses, so `apicheck.py` read the drift as a surface
+  shrink. The baseline is regenerated; no member was removed, so the
+  version does not move. `tools/sbom.py` had drifted out of the pinned
+  ruff's format since it was last run, and `BridgeHost.IsValidModId`
+  pointed its reader at `ModIds.IsValid` rather than `ModId.IsValid`.
 - A raw lone surrogate in a manifest string (basic or literal) reached the
   settings table instead of being rejected, while the `\uXXXX` form already
   was. Such a value has no UTF-8 form and cannot round-trip the guest
@@ -127,6 +136,11 @@ Codename: Quarantine (7dtd-wasm).
   The console surface (`wasm load` and `wasm reload`, no signature check and
   no recorded operator) and the absence of a module-count cap are named in
   the operational notes, and the threat model link is one click away.
+- `docs/ARCHITECTURE.md` gains the source layout it is canonical for: the
+  folder map of both `src/` projects, the dependency direction between the
+  bridge and the host library, the rules that decide which folder new code
+  goes in, and the source link that lets the net8 suite cover
+  `GuestRateLimiter`.
 - Decision and requirement documents that had drifted from the code:
   ADR 0007 no longer claims the JSON manifest is still accepted (ADR 0005
   superseded it), PRD 0001 no longer claims undeclared-maximum modules are

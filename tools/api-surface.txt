@@ -63,9 +63,9 @@ src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public c
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const int RecordSize = 40
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public const uint Magic = 0x3453425a
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: SenseSnapshotWriter.public static int Write(Snapshot snapshot, Span<byte> buffer)
-src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<BotInfoEvent> BotInfo = new System.Collections.Generic.List<BotInfoEvent>()
-src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<DamageEvent> Damage = new System.Collections.Generic.List<DamageEvent>()
-src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public System.Collections.Generic.List<EntityRecord> Records = new System.Collections.Generic.List<EntityRecord>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public List<BotInfoEvent> BotInfo = new List<BotInfoEvent>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public List<DamageEvent> Damage = new List<DamageEvent>()
+src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public List<EntityRecord> Records = new List<EntityRecord>()
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public bool BloodMoon
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public int SelfNetId
 src/HordeForge.WasmHost/Abi/SenseSnapshotWriter.cs: Snapshot.public long Tick
@@ -94,6 +94,23 @@ src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public string ModId {
 src/HordeForge.WasmHost/Core/ModRunResult.cs: ModRunResult.public ulong FuelConsumed { get; }
 src/HordeForge.WasmHost/Core/ModRunResult.cs: type ModRunResult
 src/HordeForge.WasmHost/Core/ModRunStatus.cs: type ModRunStatus
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public bool HeartbeatDue
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public bool IsSlow
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public const double SlowDispatchMs = 25.0
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public const int WindowTicks = 1200
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public const long HeartbeatIntervalTicks = 1200
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public double AverageMs
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public double LastMs
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public double WindowMaxMs
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public long LastTick
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public long SlowTicks
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public long Ticks
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public long TotalFailures
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public static string FormatMilliseconds(double value)
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public string Describe()
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public void Record(long tick, double elapsedMs, int failures)
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: TickTelemetry.public void Reset()
+src/HordeForge.WasmHost/Core/TickTelemetry.cs: type TickTelemetry
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Init()
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Shutdown()
 src/HordeForge.WasmHost/Core/WasmMod.cs: WasmMod.public ModRunResult Tick()
@@ -112,11 +129,15 @@ src/HordeForge.WasmHost/Core/WasmMod.cs: type WasmMod
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchInit()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchPlayerJoin(int entityId, string playerName)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> DispatchTick(long tick)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<ModRunResult> ShutdownFailures
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public IReadOnlyList<string> ModIds
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? InitModule(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public ModRunResult? Unload(string id)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmMod LoadModule(string id, byte[] wasmBytes, ModManifest? manifest = null)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public WasmModHost(IGameHostApi api, WasmHostConfig config)
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public bool TryGetMod(string id, out WasmMod? mod)
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public const long WasmPageBytes = 65536
+src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public int MaxModuleSizeBytes
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public long Tick { get; private set; }
 src/HordeForge.WasmHost/Core/WasmModHost.cs: WasmModHost.public void Dispose()
 src/HordeForge.WasmHost/Core/WasmModHost.cs: type WasmModHost

@@ -23,6 +23,79 @@ auditable embed that enforces hard limits and exposes a narrow game API.
  Mods/Wasm/wasm.toml                        shared limits and settings
 ```
 
+## Source layout
+
+`src/` holds two projects that depend one way on each other, and one folder
+per concern inside each. A folder is a namespace: the path under `src/` is
+the namespace below the assembly root, so a type sits in the folder that
+owns its concern and nowhere else.
+
+```text
+src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
+                              the only publishable artifact
+  Abi/                       the guest contract: import and export names,
+                              status codes, IGameHostApi, the sense snapshot
+                              wire format, the UTF-8 cut helper
+  Config/                    WasmHostConfig: the limits the host builds its
+                              engine with and validates at construction
+  Core/                      the host itself: WasmModHost, WasmMod, the
+                              per-call result and status types, tick telemetry.
+                              The only area that references Wasmtime
+  Registry/                  mod metadata off disk: the manifest parser
+                              (MiniToml and the ModManifest it produces),
+                              module roots, the settings table, mod id
+                              validation, and two text helpers
+                              (UnicodeEscapes, TextSanitizer)
+  WasmModLoadException.cs    the one type Core and Registry both throw, so it
+                              sits in the root namespace, in neither
+
+src/GameBridge/              (net48) the in-game mod
+  ModApi.cs                  the game's entry point
+  Bridge/                    host wiring and the game side of the host API:
+                              BridgeHost, GameHostApi, WasmSettingsProvider,
+                              NativeBootstrap, BotServant, GuestRateLimiter
+  Hooks/                     the Harmony patches
+  Commands/                  the "wasm" console command
+
+tools/                       the repository gates; each Python tool's tests
+                             sit beside it as test_<tool>.py, and targetcheck/
+                             is the one C# project among them
+tests/HordeForge.WasmHost.Tests/
+                             one net8 project, flat, one file per subject
+                             named <Subject>Tests.cs
+```
+
+The placement rules the layout exists to enforce:
+
+- The bridge references the host library. The host library references
+  Wasmtime and never the game, the bridge, or a Unity type, which is why
+  the host suite runs with no server install.
+- Core consumes `Abi`, `Config`, and `Registry`, not the other way round.
+  The one edge that runs up, `Registry.ModManifest` to
+  `WasmModHost.WasmPageBytes`, is a published constant: the page size is a
+  wasm32 protocol fact, so it belongs in `Abi/`, but moving it is a
+  published-surface break and waits for the next minor (see CONTRIBUTING).
+  Anything else in those three areas that needs a live module belongs in
+  Core.
+- A file at the root of a project is an entry point or a type several
+  areas share: `ModApi` is where the game starts the mod,
+  `WasmModLoadException` is what a rejected module raises everywhere.
+- `UnicodeEscapes` and `TextSanitizer` are in `Registry/` because that is
+  where they have always been, not because the registry owns them:
+  `UnicodeEscapes` is private to `MiniToml`, and no `Registry` type calls
+  `TextSanitizer`, which the bridge uses to keep guest text out of forged
+  log and chat lines. Both are public members of the published package, so
+  putting either in the folder that matches it is a surface move that needs
+  a minor bump (see CONTRIBUTING).
+- `GameBridge` is net48 because it references game assemblies, so the net8
+  test project cannot reference it. A bridge class that carries no game
+  reference but needs suite coverage is source-linked into the test
+  project, as `GuestRateLimiter` is. That is the only accepted way to
+  cover bridge code from the host suite.
+- New host code goes in the folder that owns the concern, not in the
+  nearest existing file. New guest-facing surface goes under `Abi/` alone,
+  because [docs/ABI.md](ABI.md) is canonical for it.
+
 ## Host library (HordeForge.WasmHost)
 
 Owns one Wasmtime engine and linker per host instance, and one store per
