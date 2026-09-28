@@ -15,6 +15,20 @@ operator, embedder, and guest author.
 
 ### Added
 
+- `HordeForge.WasmHost.Registry.TextSanitizer.Describe(exception)` renders a
+  caught exception as one log line: type, message, and stack, with the line
+  breaks a stack trace carries collapsed to spaces. Every host-side failure
+  line used to concatenate the exception raw, so one engine fault wrote a
+  dozen lines into the server logfile, none of them carrying the module id
+  or tick number the line it came from names. The two paths that reported
+  only `ex.Message` (a store or module that would not release, and a
+  shutdown loop that threw) now carry the stack too.
+- `BridgeHost.TickNumber`, the tick the host is on, so the tick hook's own
+  catch can name it. A bridge fault that escaped the dispatch threw on every
+  tick and wrote an uncapped stack trace at 20 Hz, the one signal that says
+  the guest dispatch itself is broken drowning the logfile. The hook's
+  failure lines are now capped like every other per-tick failure path, with
+  the suppressed count reported.
 - `HordeForge.WasmHost.Config.SharedLimits.TryApply(config, path, out reason)`
   applies a shared `wasm.toml` `[limits]` table over the code defaults on a
   `WasmHostConfig`, so the middle step of the documented load order
@@ -256,6 +270,12 @@ operator, embedder, and guest author.
   sample from the clock then poisoned every average and sum it reached,
   including the per-guest cost in the slow-dispatch warning. The bridge's
   copy already reported zero for it; the host copy now does too.
+- A Harmony patch that threw was caught around the whole pass, so the tick
+  hook failing on one game version left the player-join hook unpatched too,
+  and the line named neither target. Each patch is now attempted and
+  reported on its own ("failed to patch GameManager.Update (tick hook
+  disabled)"), so an operator can tell which game event stopped reaching
+  the guests and which one still does.
 - A per-mod `max_memory_bytes` above the effective cap is ignored by design
   (a manifest can only tighten), and nothing said so: a module the operator
   believed was capped tighter than the host cap ran under the host cap

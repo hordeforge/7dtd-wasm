@@ -177,7 +177,7 @@ namespace HordeForge.GameBridge.Bridge
                     // stack names the call that broke, which the message
                     // alone does not. The line is rate capped, so the stack
                     // cannot cost more than one write per second.
-                    global::Log.Warning("[WasmHost] get_world_time failed: " + ex + "; guests read 0 until it recovers");
+                    global::Log.Warning("[WasmHost] get_world_time failed: " + TextSanitizer.Describe(ex) + "; guests read 0 until it recovers");
                 }
                 else if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
                 {
@@ -489,7 +489,7 @@ namespace HordeForge.GameBridge.Bridge
                 string from = modId != null && modId.Length > 0
                     ? " from guest " + TextSanitizer.Clean(modId)
                     : " (no mod id on this call)";
-                global::Log.Warning("[WasmHost] send_chat failed" + from + ": " + ex.Message);
+                global::Log.Warning("[WasmHost] send_chat failed" + from + ": " + TextSanitizer.Describe(ex));
 
                 return false;
             }

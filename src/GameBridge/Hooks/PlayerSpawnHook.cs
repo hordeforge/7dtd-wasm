@@ -1,4 +1,5 @@
 using HordeForge.GameBridge.Bridge;
+using HordeForge.WasmHost.Registry;
 
 namespace HordeForge.GameBridge.Hooks
 {
@@ -25,7 +26,7 @@ namespace HordeForge.GameBridge.Hooks
             }
             catch (System.Exception ex)
             {
-                Log.Error("[WasmHost] player spawn hook failed: " + ex);
+                Log.Error("[WasmHost] player spawn hook failed: " + TextSanitizer.Describe(ex));
             }
         }
     }

@@ -835,7 +835,7 @@ namespace HordeForge.WasmHost.Core
                 }
                 catch (Exception ex)
                 {
-                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: " + ex);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "config failed: " + TextSanitizer.Describe(ex));
                     return 0;
                 }
                 return copy;
@@ -871,7 +871,7 @@ namespace HordeForge.WasmHost.Core
                     // The wire contract is "0 = no data", but a host-side
                     // failure must not leave the brain silently blind: report
                     // through the capped log path so it can be diagnosed.
-                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: " + ex);
+                    _api.Log(_currentLogSource, AbiConstants.LogError, "sense failed: " + TextSanitizer.Describe(ex));
                     return 0;
                 }
             });
@@ -1085,10 +1085,14 @@ namespace HordeForge.WasmHost.Core
             }
             catch (Exception ex)
             {
+                // The exception, not just its message: a Dispose that throws
+                // does so inside the engine's own frames, and only the stack
+                // says which handle refused to go. The embedder logs this
+                // result verbatim, so the context has to travel inside it.
                 return new ModRunResult(
                     mod.Id,
                     ModRunStatus.Error,
-                    "engine resources could not be released: " + ex.Message,
+                    "engine resources could not be released: " + TextSanitizer.Describe(ex),
                     string.Empty,
                     0UL);
             }
@@ -1142,6 +1146,18 @@ namespace HordeForge.WasmHost.Core
                         {
                             _shutdownFailures.Add(releaseFailure.Value);
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        // The same blast radius seen from the shutdown call
+                        // itself: one mod must not end the loop and leak the
+                        // engine for the life of the process.
+                        _shutdownFailures.Add(new ModRunResult(
+                            mod.Id,
+                            ModRunStatus.Error,
+                            "dispose failed: " + TextSanitizer.Describe(ex),
+                            string.Empty,
+                            0UL));
                     }
                     finally
                     {

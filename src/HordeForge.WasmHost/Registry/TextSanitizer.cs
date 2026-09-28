@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 namespace HordeForge.WasmHost.Registry
@@ -84,6 +85,54 @@ namespace HordeForge.WasmHost.Registry
                 }
             }
             return -1;
+        }
+
+        /// <summary>
+        /// The exception's type, message, and stack as a single line: the
+        /// line breaks a stack trace carries become spaces, and the stripped
+        /// characters <see cref="Clean"/> would render as '?' become spaces
+        /// too, so a logged failure stays one log entry. Without this a host
+        /// fault reported with its exception fills a dozen lines of the
+        /// server logfile that a line-oriented reader sees as a dozen
+        /// unrelated entries, none of them carrying the module id or tick
+        /// number the surrounding line names. Inner exceptions are included
+        /// by the same flattening. Empty for a null exception.
+        /// </summary>
+        public static string Describe(Exception? exception)
+        {
+            if (exception == null)
+            {
+                return string.Empty;
+            }
+            return Flatten(exception.ToString());
+        }
+
+        private static string Flatten(string text)
+        {
+            if (text.Length == 0)
+            {
+                return text;
+            }
+            var sb = new StringBuilder(text.Length);
+            bool pendingSpace = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (IsStripped(c) || char.IsWhiteSpace(c))
+                {
+                    // One space for the whole run, so a stack trace reads as
+                    // "at Frame at Frame" rather than as padded gaps.
+                    pendingSpace = sb.Length > 0;
+                    continue;
+                }
+                if (pendingSpace)
+                {
+                    sb.Append(' ');
+                    pendingSpace = false;
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
         }
     }
 }
