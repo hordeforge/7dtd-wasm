@@ -444,7 +444,7 @@ namespace HordeForge.GameBridge.Bridge
                 // mod-derived line.
                 string from = modId != null && modId.Length > 0
                     ? " from guest " + TextSanitizer.Clean(modId)
-                    : " (no mod id on this call)");
+                    : " (no mod id on this call)";
                 global::Log.Warning("[WasmHost] send_chat failed" + from + ": " + ex.Message);
 
                 return false;

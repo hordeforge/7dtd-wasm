@@ -1066,9 +1066,27 @@ namespace HordeForge.WasmHost.Core
                 }
                 _mods.Clear();
                 _modOrder.Clear();
-                _linker.Dispose();
-                _engine.Dispose();
-                _disposed = true;
+                // The linker holds the engine's resolution tables and the
+                // engine the compiled code of every module it compiled, so
+                // neither release may be skipped because the one before it
+                // threw. _disposed is set either way: the loop above has
+                // already run, so a second Dispose would find nothing left
+                // to release and would only rethrow the same failure.
+                try
+                {
+                    _linker.Dispose();
+                }
+                finally
+                {
+                    try
+                    {
+                        _engine.Dispose();
+                    }
+                    finally
+                    {
+                        _disposed = true;
+                    }
+                }
             }
         }
     }

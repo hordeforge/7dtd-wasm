@@ -210,6 +210,33 @@ operator, embedder, and guest author.
   module's command is refused with a `glide (not owner of <id>)` line. A
   module that unloads or reloads drops the flags it armed, with the buff
   that went with them, so no flag outlives the module that owned it.
+- `GameHostApi.send_chat` had a stray `)` in the line that names the
+  calling module in its failure log, so the net48 bridge mod did not compile
+  at all.
+- The `config` and `sense` host imports of the `zdtd` module called a
+  `LogSource()` that does not exist, so the library did not compile at all.
+  They report under the calling module's own log tag (`_currentLogSource`),
+  the same value the two adjacent failure paths in those imports already
+  use, which is what `SenseFailureIsLoggedNotSilentlySwallowed` asserts.
+- A module whose store would not release (Wasmtime throws when a store is
+  still in use) kept its compiled machine code for the life of the process:
+  `WasmMod.Dispose` released the store first and let its exception skip the
+  module handle, and had already marked itself disposed, so a retry was a
+  no-op. Every such unload (a repeated `wasm reload` of a module whose
+  shutdown left the store busy) grew the engine's memory. Both handles are
+  now released whatever the first one does, and the store's exception still
+  reaches the caller as a release failure.
+- `WasmModHost.Dispose` released the linker before the engine and let a
+  throw from the first skip the second, so the engine, which owns the
+  compiled code of every module it compiled, could be stranded for the life
+  of the process. Both are now released whatever the other does.
+- The bridge never released the per-module state of the modules it dropped
+  with a whole host: `BridgeHost.Shutdown` and a `Start` rebuilt over a
+  failed one nulled the servant and settings, so the bots those modules had
+  spawned stayed in the world as zombie bodies no later servant could drive
+  or despawn, growing by up to the bot cap on every restart of the mod
+  within one server process. Both paths now run the same per-module release
+  an explicit `wasm unload` does, before the engine goes.
 - `tests/HordeForge.WasmHost.Tests/LogShim.cs` was excluded from the test
   compile by an explicit `<Compile Remove>`, so neither type in it was in the
   suite: a second `Log` that `GameLogShim` already provides, and a

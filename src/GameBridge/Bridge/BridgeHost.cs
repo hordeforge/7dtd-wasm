@@ -148,9 +148,14 @@ namespace HordeForge.GameBridge.Bridge
                 }
                 // A previous Start that failed partway leaves a live engine
                 // behind; rebuilding over it without disposal would leak
-                // every module loaded in that attempt.
+                // every module loaded in that attempt. Its modules' bridge
+                // state goes with it: the bots it spawned are real world
+                // entities, and the servant that tracked them is about to be
+                // replaced, so anything left behind would be a live zombie
+                // the new servant can neither drive nor despawn.
                 if (_host != null)
                 {
+                    ReleaseAllModuleState(_host);
                     _host.Dispose();
                     _host = null;
                 }
@@ -564,6 +569,26 @@ namespace HordeForge.GameBridge.Bridge
             _gameApi?.UnregisterConfig(id);
             _gameApi?.ForgetModule(id);
             _servant?.ReleaseModule(id);
+        }
+
+        /// <summary>
+        /// <see cref="ReleaseModuleState"/> for every module a host still has
+        /// loaded, so the two paths that drop a whole host (a start rebuilt
+        /// over a failed one, and shutdown) release the same per-module state
+        /// an explicit unload does. Without it the servant's bots stayed in
+        /// the world as untracked zombie bodies: the mod that spawned them
+        /// was gone and the servant that could despawn them was replaced on
+        /// the next Start, so each Start/Shutdown cycle added up to
+        /// MaxBotCount live entities nobody could reach again.
+        /// </summary>
+        private static void ReleaseAllModuleState(WasmModHost host)
+        {
+            // ModIds hands out a fresh copy, so the walk survives the
+            // per-module release it is driving.
+            foreach (string id in host.ModIds)
+            {
+                ReleaseModuleState(id);
+            }
         }
 
         /// <summary>
@@ -1036,6 +1061,13 @@ namespace HordeForge.GameBridge.Bridge
             {
                 if (_host != null)
                 {
+                    // Before the engine goes: the bots the servants spawned
+                    // are world entities, not engine state, so nothing below
+                    // would despawn them and they would outlive the host in
+                    // the world. Start can run again after this (the mod is
+                    // reloaded within the server process), and the fresh
+                    // servant would know nothing about them.
+                    ReleaseAllModuleState(_host);
                     // The last heartbeat is an hour old on a long-running
                     // server, so the run's totals are logged here: without
                     // them a shutdown leaves no summary of what the guests

@@ -213,6 +213,16 @@ namespace HordeForge.WasmHost.Core
         /// Releases the mod's store (its instance and linear memory) and the
         /// compiled module's native handle. Safe to call more than once;
         /// callers must have removed the mod from dispatch first.
+        ///
+        /// Both handles are released even when the first one refuses: the
+        /// store is a separate native allocation from the compiled machine
+        /// code, and Wasmtime throws from Store.Dispose when the store is
+        /// still in use. Releasing only the store, with _disposed already
+        /// set, left the compiled code resident until finalization, so every
+        /// unload that hit that path (a repeated "wasm reload" of a module
+        /// whose shutdown left the store busy) grew the engine's memory for
+        /// the life of the process. The store's exception still propagates
+        /// so the caller reports the failure.
         /// </summary>
         public void Dispose()
         {
@@ -221,8 +231,14 @@ namespace HordeForge.WasmHost.Core
                 return;
             }
             _disposed = true;
-            _store.Dispose();
-            _module.Dispose();
+            try
+            {
+                _store.Dispose();
+            }
+            finally
+            {
+                _module.Dispose();
+            }
         }
 
         /// <summary>
