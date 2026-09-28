@@ -140,9 +140,19 @@ namespace HordeForge.GameBridge.Bridge
 
                 WasmRoot = Path.Combine(Path.GetDirectoryName(modletDir) ?? string.Empty, "Wasm");
                 ModuleTreeRoots.Clear();
-                ModuleTreeRoots.AddRange(ModuleRoots.Order(
-                    WasmRoot,
-                    ModuleRoots.CollectExtra(Path.GetDirectoryName(modletDir) ?? string.Empty, modletDir)));
+                string extraFailure;
+                IReadOnlyList<string> extraRoots = ModuleRoots.CollectExtra(
+                    Path.GetDirectoryName(modletDir) ?? string.Empty, modletDir, out extraFailure);
+                if (extraFailure.Length > 0)
+                {
+                    // Without this the modlet-carried Wasm trees are simply
+                    // absent, and the operator sees a server that loaded
+                    // fewer modules than they staged with nothing in the log
+                    // to say why.
+                    Log.Warning("[WasmHost] modlet-carried module trees unavailable: " +
+                                TextSanitizer.Clean(extraFailure) + "; only " + WasmRoot + " is scanned");
+                }
+                ModuleTreeRoots.AddRange(ModuleRoots.Order(WasmRoot, extraRoots));
                 // A modlet-carried tree can ship its own shared limits; the
                 // top-level Mods/Wasm/wasm.toml still wins when both exist.
                 string sharedTomlPath = Path.Combine(WasmRoot, "wasm.toml");
@@ -362,6 +372,7 @@ namespace HordeForge.GameBridge.Bridge
                     AddDropped(lines, _gameApi.SenseLimiter, "sense snapshots");
                     AddDropped(lines, _gameApi.WorldTimeErrorLimiter, "world time failures");
                     AddDropped(lines, _gameApi.ChatRejectLimiter, "chat rejection logs");
+                    AddDropped(lines, _gameApi.ConfigErrorLimiter, "config read failures");
                 }
                 if (_servant != null)
                 {
@@ -570,15 +581,25 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Reads a module's raw config.toml (served to the guest verbatim via
-        /// the zdtd config import; the host never parses it). Missing or
-        /// unreadable files register as empty so the guest keeps its defaults.
+        /// the zdtd config import; the host never parses it). A module that
+        /// ships no config registers as empty so the guest keeps its
+        /// defaults; a file that exists but cannot be read registers empty
+        /// too, and says why: the guest sees the same 0 either way, so the
+        /// reason has to reach the log here or not at all.
         /// </summary>
         private static string ReadRawConfig(string id)
         {
             string path = ResolveModuleFile(id, "config.toml");
-            return path.Length > 0 && ManifestFiles.TryRead(path, out string content, out _)
-                ? content
-                : string.Empty;
+            if (path.Length == 0)
+            {
+                return string.Empty;
+            }
+            if (ManifestFiles.TryRead(path, out string content, out string failureReason))
+            {
+                return content;
+            }
+            _gameApi?.ReportConfigReadFailure(id, failureReason);
+            return string.Empty;
         }
 
         /// <summary>

@@ -63,7 +63,8 @@ namespace HordeForge.WasmHost.Tests
             Directory.CreateDirectory(Path.Combine(mods, "a-mod", "Wasm"));
             Directory.CreateDirectory(Path.Combine(mods, "bridge", "Wasm"));
             Directory.CreateDirectory(Path.Combine(mods, "plain"));
-            var extras = ModuleRoots.CollectExtra(mods, Path.Combine(mods, "bridge"));
+            var extras = ModuleRoots.CollectExtra(mods, Path.Combine(mods, "bridge"), out string failure);
+            Assert.Empty(failure);
             Assert.Equal(
                 new[]
                 {
@@ -76,8 +77,25 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void CollectExtraHandlesMissingModsDir()
         {
-            var extras = ModuleRoots.CollectExtra(Path.Combine(_base, "nope"), Path.Combine(_base, "bridge"));
+            // No Mods/ folder is a server carrying no modlets, not a failure:
+            // the caller must not be handed a warning for an empty result.
+            var extras = ModuleRoots.CollectExtra(
+                Path.Combine(_base, "nope"), Path.Combine(_base, "bridge"), out string failure);
             Assert.Empty(extras);
+            Assert.Empty(failure);
+        }
+
+        [Fact]
+        public void CollectExtraReportsAnUnreadableModsDir()
+        {
+            // A mods path the runtime rejects outright stands in for the
+            // permission and IO failures a real server hits. An empty list
+            // with no reason is indistinguishable from "no modlet carries a
+            // Wasm tree", which is why the reason exists.
+            string invalid = Path.Combine(_base, "bad\0name");
+            var extras = ModuleRoots.CollectExtra(invalid, Path.Combine(_base, "bridge"), out string failure);
+            Assert.Empty(extras);
+            Assert.Contains("cannot list modlets", failure, StringComparison.Ordinal);
         }
 
         [Fact]

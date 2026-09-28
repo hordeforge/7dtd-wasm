@@ -41,17 +41,33 @@ namespace HordeForge.WasmHost.Registry
         /// Collects each staged modlet's own Wasm/ folder, sorted by modlet
         /// name, excluding the bridge's own modlet (its sibling Mods/Wasm is
         /// the primary root already).
+        ///
+        /// <paramref name="failureReason"/> is empty on success and names the
+        /// operation that failed otherwise (the Mods/ listing, or the
+        /// modlet path the caller passed). A silent empty list is not
+        /// distinguishable from "no modlet carries a Wasm tree", which is
+        /// the difference between a server that loads its mods and one that
+        /// silently runs without them, so the reason is reported rather than
+        /// dropped.
         /// </summary>
-        public static IReadOnlyList<string> CollectExtra(string modsDir, string ownModletDir)
+        public static IReadOnlyList<string> CollectExtra(string modsDir, string ownModletDir, out string failureReason)
         {
             var found = new List<string>();
+            failureReason = string.Empty;
             string[] modlets;
             try
             {
                 modlets = Directory.GetDirectories(modsDir);
             }
-            catch (Exception)
+            catch (DirectoryNotFoundException)
             {
+                // No Mods/ folder is a server carrying no modlets, not a
+                // failure the operator has to see.
+                return found;
+            }
+            catch (Exception ex)
+            {
+                failureReason = "cannot list modlets under " + modsDir + " (" + ex.Message + ")";
                 return found;
             }
             string ownFull;
@@ -59,8 +75,9 @@ namespace HordeForge.WasmHost.Registry
             {
                 ownFull = Path.GetFullPath(ownModletDir);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                failureReason = "cannot resolve the bridge modlet path " + ownModletDir + " (" + ex.Message + ")";
                 return found;
             }
             Array.Sort(modlets, StringComparer.Ordinal);

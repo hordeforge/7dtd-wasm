@@ -40,6 +40,7 @@ namespace HordeForge.GameBridge.Bridge
             SenseLimiter = new GuestRateLimiter(GuestRateLimiter.MaxSensePerSecond, clock);
             WorldTimeErrorLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
             ChatRejectLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
+            ConfigErrorLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, clock);
         }
 
         /// <summary>Per-module log rate limiter; exposed for "wasm status".</summary>
@@ -71,6 +72,15 @@ namespace HordeForge.GameBridge.Bridge
         /// "wasm status".
         /// </summary>
         public GuestRateLimiter ChatRejectLimiter { get; }
+
+        /// <summary>
+        /// Per-module cap on the "config.toml unreadable" log line. A mod
+        /// whose config file is present but unusable (permissions, oversize,
+        /// not UTF-8) gets an empty config served, and a guest looping on the
+        /// import would otherwise report it at fuel rate. Exposed for
+        /// "wasm status".
+        /// </summary>
+        public GuestRateLimiter ConfigErrorLimiter { get; }
 
         /// <summary>
         /// Longest chat message accepted from a guest, counted in Unicode
@@ -187,12 +197,42 @@ namespace HordeForge.GameBridge.Bridge
                 _rawConfigs[modId] = content;
                 return false;
             }
-            if (ManifestFiles.TryRead(path, out string raw, out _))
+            if (ManifestFiles.TryRead(path, out string raw, out string failureReason))
             {
                 content = raw;
             }
+            else
+            {
+                // The file exists but could not be served. The guest reads
+                // 0 ("no config") either way, so dropping the reason here
+                // would leave the mod running on defaults with nothing in
+                // the log to explain why.
+                ReportConfigReadFailure(modId, failureReason);
+            }
             _rawConfigs[modId] = content;
             return content.Length > 0;
+        }
+
+        /// <summary>
+        /// Reports a config.toml that is present but could not be read,
+        /// bounded like the other guest output paths. Shared with
+        /// BridgeHost's load-time read, which registers the same file.
+        /// </summary>
+        internal void ReportConfigReadFailure(string modId, string reason)
+        {
+            if (!ConfigErrorLimiter.TryWrite(GuestRateLimiter.SourceKey("config/", modId), out long dropped))
+            {
+                if (dropped % GuestRateLimiter.SuppressedReportEvery == 1)
+                {
+                    global::Log.Out("[WasmHost] suppressed " + dropped + " config read failure log(s) from guest " +
+                                    TextSanitizer.Clean(modId));
+                }
+                return;
+            }
+            // The reason quotes the file path and the IO message, so it is
+            // cleaned like every other mod-derived line.
+            global::Log.Warning("[WasmHost] config.toml of " + TextSanitizer.Clean(modId) + " is unusable (" +
+                                TextSanitizer.Clean(reason) + "); the guest gets no config and its defaults");
         }
 
         public bool TryQueueCommand(string modId, string command)

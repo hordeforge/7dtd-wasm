@@ -196,7 +196,7 @@ src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public static ModMa
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? FuelPerCall { get; private set; }
 src/HordeForge.WasmHost/Registry/ModManifest.cs: ModManifest.public ulong? MaxMemoryBytes { get; private set; }
 src/HordeForge.WasmHost/Registry/ModManifest.cs: type ModManifest
-src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static IReadOnlyList<string> CollectExtra(string modsDir, string ownModletDir)
+src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static IReadOnlyList<string> CollectExtra(string modsDir, string ownModletDir, out string failureReason)
 src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static IReadOnlyList<string> Order(string primaryRoot, IReadOnlyList<string> extraRoots)
 src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static string ResolveDir(IReadOnlyList<string> roots, string id)
 src/HordeForge.WasmHost/Registry/ModuleRoots.cs: ModuleRoots.public static string ResolveFile(IReadOnlyList<string> roots, string id, string fileName)

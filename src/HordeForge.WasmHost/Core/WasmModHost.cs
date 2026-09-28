@@ -880,14 +880,24 @@ namespace HordeForge.WasmHost.Core
                     if (_mods.TryGetValue(_modOrder[i], out WasmMod? mod))
                     {
                         _currentModId = mod.Id;
-                        ModRunResult shutdown = mod.Shutdown();
-                        if (!shutdown.Ok)
+                        try
                         {
-                            // Kept rather than dropped: the embedder reads them
-                            // after Dispose to report a failed goodbye.
-                            _shutdownFailures.Add(shutdown);
+                            ModRunResult shutdown = mod.Shutdown();
+                            if (!shutdown.Ok)
+                            {
+                                // Kept rather than dropped: the embedder reads them
+                                // after Dispose to report a failed goodbye.
+                                _shutdownFailures.Add(shutdown);
+                            }
+                            mod.Dispose();
                         }
-                        mod.Dispose();
+                        finally
+                        {
+                            // Same rule as Unload and Dispatch: no mod is current
+                            // once the call is over, so nothing after the loop can
+                            // resolve settings or a log tag against the last one.
+                            _currentModId = string.Empty;
+                        }
                     }
                 }
                 _mods.Clear();
