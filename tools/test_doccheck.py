@@ -170,8 +170,12 @@ class MainTest(unittest.TestCase):
         self.assertNotIn("doccheck: ok", err)
 
     def test_unreadable_file_is_a_finding_not_a_crash(self):
-        if os.geteuid() == 0:
-            self.skipTest("root bypasses file permissions")
+        # chmod 0o000 denies reads only where the filesystem carries POSIX
+        # permission bits. NTFS has none, so the file stays readable there and
+        # the premise of the test, not just the guard, is false. os.geteuid
+        # does not exist on Windows either, so the skip has to come first.
+        if os.name != "posix" or os.geteuid() == 0:
+            self.skipTest("file permissions do not deny reads on this platform")
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
             locked = root / "locked.md"
