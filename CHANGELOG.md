@@ -870,6 +870,15 @@ operator, embedder, and guest author.
   goes to stdout and progress to stderr, and exit codes are 0 pass, 1 check
   failed, 2 usage error. `versioncheck.py` moved its messages to stderr and
   gained `--root`.
+- The C and Zig guests are held to the same posture as the rest of the tree.
+  `make boss` compiled the C guest with no warning flag at all, so a source
+  tree where rustc and clippy are denied could still build a C guest that
+  warned; it now passes `-Wall -Wextra -Wpedantic -Werror -Wshadow -Wundef
+  -Wcast-qual -Wstrict-prototypes`, and `make boss-zig` runs `zig fmt
+  --check` on the Zig guest, the one source directory whose formatting
+  nothing checked. The ruff gate covered `tools/` and nothing else, so
+  `evidence/acceptance-1/telnet_session.py` shipped unlinted; `make check-ci`
+  now runs both ruff commands over `tools evidence`.
 
 ### Removed
 

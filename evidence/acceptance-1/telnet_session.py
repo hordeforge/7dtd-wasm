@@ -17,8 +17,9 @@ import os
 import socket
 import sys
 import time
+from pathlib import Path
 
-PASSWORD_ENV = "ZDT_TELNET_PASSWORD"
+PASSWORD_ENV = "ZDT_TELNET_PASSWORD"  # noqa: S105 - the env var's name, not a password
 
 
 def drain(sock, window):
@@ -30,7 +31,7 @@ def drain(sock, window):
                 break
             data += chunk
             sock.settimeout(window)
-    except socket.timeout:
+    except TimeoutError:
         pass
     return data
 
@@ -64,12 +65,14 @@ def main(argv: list[str] | None = None) -> int:
         transcript.append(drain(sock, 1.5))
 
     sock.close()
-    with open(args.outfile, "wb") as f:
+    with Path(args.outfile).open("wb") as f:
         for chunk in transcript:
             f.write(chunk)
             f.write(b"\n---\n")
-    print(f"transcript written to {args.outfile} "
-          f"({sum(len(c) for c in transcript)} bytes)", file=sys.stderr)
+    print(
+        f"transcript written to {args.outfile} ({sum(len(c) for c in transcript)} bytes)",
+        file=sys.stderr,
+    )
     return 0
 
 

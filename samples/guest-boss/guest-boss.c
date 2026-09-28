@@ -7,7 +7,9 @@
  * Built with the zig compiler ("make boss" in the Makefile runs exactly
  * these flags, from the repository root, and emits into samples/target/ so
  * no build artifact lands in a guest source directory):
- *   zig cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
+ *   zig cc -target wasm32-wasi -O2 -nostdlib -Wall -Wextra -Wpedantic \
+ *          -Werror -Wshadow -Wundef -Wcast-qual -Wstrict-prototypes \
+ *          -Wl,--no-entry \
  *          -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
  *          -o samples/target/guest-boss.wasm samples/guest-boss/guest-boss.c
  *

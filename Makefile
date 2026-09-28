@@ -316,10 +316,19 @@ samples-check:
 # The C guest (samples/guest-boss) is compiled with zig to wasm32-wasi
 # (preview 1). -nostdlib keeps it free of WASI libc imports; --max-memory
 # declares the 32 MiB maximum the host requires.
+#
+# The warning set is the guest's lint gate, and it is the same posture the
+# other two languages get: rustc warnings and clippy are denied in
+# samples/Cargo.toml, and every diagnostic is an error here. Without it a
+# C guest compiled with no warning flags at all is a source of bugs no
+# other tool in this repository would report. -Wmissing-prototypes is
+# deliberately absent: the exported on_* functions have no declaration to
+# be missing, since the wasm export is their only entry point.
+boss: C_WARNINGS = -Wall -Wextra -Wpedantic -Werror -Wshadow -Wundef -Wcast-qual -Wstrict-prototypes
 boss:
 	$(call require_zig,boss)
 	mkdir -p samples/target
-	$(ZIG) cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
+	$(ZIG) cc -target wasm32-wasi -O2 -nostdlib $(C_WARNINGS) -Wl,--no-entry \
 	  -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
 	  -o samples/target/guest-boss.wasm samples/guest-boss/guest-boss.c
 
@@ -327,8 +336,14 @@ boss:
 # -fno-entry module (without it everything is dead-code eliminated).
 # Like the C guest, the module is emitted straight into samples/target/
 # so no build artifact lands inside a guest source directory.
+#
+# "zig fmt --check" is the Zig half of the tree's format gate: ruff format
+# runs for tools/ and rustfmt is the guest default, so a Zig guest was the
+# one source directory whose formatting nothing checked. The pinned zig
+# ships the formatter, so this adds no second tool to install.
 boss-zig:
 	$(call require_zig,boss-zig)
+	$(ZIG) fmt --check samples/guest-boss-zig/
 	mkdir -p samples/target
 	cd samples/guest-boss-zig && $(ZIG) build-exe src/main.zig \
 	  -target wasm32-wasi -O ReleaseSmall -fno-entry -fstrip -rdynamic \
@@ -475,8 +490,8 @@ check-ci:
 	$(PYTHON) tools/apicheck.py
 	$(PYTHON) -m unittest discover -s tools
 	$(call require_ruff)
-	ruff check tools
-	ruff format --check tools
+	ruff check tools evidence
+	ruff format --check tools evidence
 	$(MAKE) samples-check
 	$(MAKE) build
 	$(MAKE) test
