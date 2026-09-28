@@ -301,36 +301,14 @@ namespace HordeForge.WasmHost.Core
         {
             ThrowIfDisposed();
             Tick = tick;
-            _results.Clear();
-            List<string> order = _modOrder;
-            Dictionary<string, WasmMod> mods = _mods;
-            for (int i = 0; i < order.Count; i++)
-            {
-                if (mods.TryGetValue(order[i], out WasmMod? mod))
-                {
-                    _currentModId = mod.Id;
-                    _results.Add(mod.Tick());
-                }
-            }
-            return _results;
+            return Dispatch(static mod => mod.Tick());
         }
 
         /// <summary>Invokes init on every loaded mod, in load order.</summary>
         public IReadOnlyList<ModRunResult> DispatchInit()
         {
             ThrowIfDisposed();
-            _results.Clear();
-            List<string> order = _modOrder;
-            Dictionary<string, WasmMod> mods = _mods;
-            for (int i = 0; i < order.Count; i++)
-            {
-                if (mods.TryGetValue(order[i], out WasmMod? mod))
-                {
-                    _currentModId = mod.Id;
-                    _results.Add(mod.Init());
-                }
-            }
-            return _results;
+            return Dispatch(static mod => mod.Init());
         }
 
         /// <summary>
@@ -349,23 +327,7 @@ namespace HordeForge.WasmHost.Core
             _currentJoinName = playerName ?? string.Empty;
             try
             {
-                _results.Clear();
-                List<string> order = _modOrder;
-                Dictionary<string, WasmMod> mods = _mods;
-                for (int i = 0; i < order.Count; i++)
-                {
-                    if (!mods.TryGetValue(order[i], out WasmMod? mod))
-                    {
-                        continue;
-                    }
-                    _currentModId = mod.Id;
-                    ModRunResult? result = mod.OnPlayerJoin(entityId);
-                    if (result.HasValue)
-                    {
-                        _results.Add(result.GetValueOrDefault());
-                    }
-                }
-                return _results;
+                return Dispatch(mod => mod.OnPlayerJoin(entityId));
             }
             finally
             {
@@ -374,6 +336,34 @@ namespace HordeForge.WasmHost.Core
                 // the stale name from this join to later calls.
                 _currentJoinName = string.Empty;
             }
+        }
+
+        /// <summary>
+        /// Walks the loaded mods in load order, calls
+        /// <paramref name="invoke"/> on each, and collects the results the
+        /// mod reports (a null result means the mod does not handle the
+        /// event). The tick and init delegates are static, so tick-rate
+        /// dispatch allocates nothing.
+        /// </summary>
+        private IReadOnlyList<ModRunResult> Dispatch(Func<WasmMod, ModRunResult?> invoke)
+        {
+            _results.Clear();
+            List<string> order = _modOrder;
+            Dictionary<string, WasmMod> mods = _mods;
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (!mods.TryGetValue(order[i], out WasmMod? mod))
+                {
+                    continue;
+                }
+                _currentModId = mod.Id;
+                ModRunResult? result = invoke(mod);
+                if (result.HasValue)
+                {
+                    _results.Add(result.GetValueOrDefault());
+                }
+            }
+            return _results;
         }
 
         private ulong? DeclaredMemoryMaximumBytes(Module module)

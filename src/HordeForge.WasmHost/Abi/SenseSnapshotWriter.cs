@@ -222,6 +222,9 @@ namespace HordeForge.WasmHost.Abi
             WriteU32(b, ref p, unchecked((uint)v));
         }
 
+        // BitConverter.SingleToInt32Bits is .NET Core only, and this library
+        // also targets netstandard2.0 for the net48 bridge, so the f32 bit
+        // pattern is read through an explicit-layout union instead.
         private static void WriteF32(Span<byte> b, ref int p, float v)
         {
             FloatBits bits = default;

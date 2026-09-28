@@ -289,16 +289,17 @@ namespace HordeForge.WasmHost.Registry
                 throw new FormatException("line " + lineNumber + ": unterminated array");
             }
             string inner = text.Substring(1, text.Length - 2).Trim();
-            var array = new TomlArray();
-            if (inner.Length == 0)
+            if (inner.Length > 0)
             {
-                return array;
+                // Items are parsed so a malformed one still fails the load,
+                // then dropped: no manifest field reads array elements, and
+                // a value used as a scalar is rejected by AsString below.
+                foreach (string item in SplitArrayItems(inner))
+                {
+                    ParseValue(item.Trim(), lineNumber, depth + 1);
+                }
             }
-            foreach (string item in SplitArrayItems(inner))
-            {
-                array.Add(ParseValue(item.Trim(), lineNumber, depth + 1));
-            }
-            return array;
+            return new TomlArray();
         }
 
         /// <summary>
@@ -495,15 +496,13 @@ namespace HordeForge.WasmHost.Registry
         }
     }
 
+    /// <summary>
+    /// An array value. The parser validates its items but keeps none: no
+    /// manifest field reads array elements, and using one as a scalar is
+    /// rejected by the As* methods.
+    /// </summary>
     internal sealed class TomlArray : TomlValue
     {
-        private readonly List<TomlValue> _items = new List<TomlValue>();
-
-        public void Add(TomlValue value)
-        {
-            _items.Add(value);
-        }
-
         public override string AsString(string context)
         {
             throw new FormatException(context + " must be a string");

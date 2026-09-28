@@ -15,9 +15,6 @@ namespace HordeForge.GameBridge
         /// <summary>Path of this modlet folder (the game sets it before InitMod).</summary>
         public static string ModPath { get; private set; } = string.Empty;
 
-        /// <summary>True once the host is fully started.</summary>
-        public static bool HostStarted { get; private set; }
-
         // Harmony patches must be applied at most once per process: a second
         // InitMod would stack duplicate postfixes and dispatch every game
         // event to guests twice.
@@ -36,7 +33,6 @@ namespace HordeForge.GameBridge
 
                 BridgeHost.Start();
                 ApplyHarmonyPatches();
-                HostStarted = true;
             }
             catch (Exception ex)
             {

@@ -30,9 +30,11 @@ namespace HordeForge.GameBridge.Bridge
         // The brain speaks radians; the game speaks degrees.
         private const float RadiansToDegrees = 57.2957795f;
 
-        // Weapon pool damage (index matches the brain's weapon ids:
-        // pistol 0, shotgun 1, ak 2, sniper 3, auto 4, smg 5).
-        private static readonly int[] WeaponDamage = { 12, 18, 14, 45, 12, 10 };
+        // Damage of the pistol every bot carries (the brain's weapon id 0).
+        // Loadout records are not wired yet, so the other weapon ids of the
+        // zdtd pool (shotgun 1, ak 2, sniper 3, auto 4, smg 5) have no
+        // servant-side damage to read.
+        private const int PistolDamage = 12;
 
         // Glider item tag (matches the parachute mod's items.xml patch and
         // preset.toml [rules.glide] item_tag). A worn item whose ItemClass
@@ -379,11 +381,11 @@ public int WriteSense(Span<byte> buffer)
 
         private float VerticalVelocity(int netId, UnityEngine.Vector3 position, long tick, out UnityEngine.Vector3 prevPos)
         {
-            prevPos = position;
+            bool known = _lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) last);
+            prevPos = known ? last.Pos : position;
             float vy = 0f;
-            if (_lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) last))
+            if (known)
             {
-                prevPos = last.Pos;
                 long dtTicks = tick - last.Tick;
                 if (dtTicks > 0 && dtTicks <= 10)
                 {
@@ -391,7 +393,7 @@ public int WriteSense(Span<byte> buffer)
                     vy = (position.y - last.Pos.y) / (dtTicks * 0.05f);
                 }
             }
-            if (!_lastPos.TryGetValue(netId, out (long Tick, UnityEngine.Vector3 Pos) current) || current.Tick != tick)
+            if (!known || last.Tick != tick)
             {
                 _lastPos[netId] = (tick, position);
             }
@@ -719,13 +721,7 @@ public int WriteSense(Span<byte> buffer)
             {
                 return;
             }
-            int dmg = WeaponDamage[0];
-            // Stage 2: all bots carry the pistol (weapon 0) until loadout
-            // records are wired; the brain's default matches.
-            if (head)
-            {
-                dmg *= 2;
-            }
+            int dmg = head ? PistolDamage * 2 : PistolDamage;
             var source = new DamageSourceEntity(EnumDamageSource.External, EnumDamageTypes.Piercing, botId);
             targetAlive.DamageEntity(source, dmg, head, 1f);
             Log.Out("[WasmHost] bot " + botId + " shot " + targetId + " dmg=" + dmg + (head ? " head" : ""));
