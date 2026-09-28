@@ -344,6 +344,26 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
   `evidence/playtest-1/run_server.sh` fail when `dist/Mods` is not staged.
   Docker creates a missing bind-mount source as an empty directory, so a
   forgotten `make dist` used to start a server with no modlet and exit 0.
+- Every `dotnet` target in the Makefile now passes
+  `ContinuousIntegrationBuild=true`, not just the ones a CI environment
+  variable happens to reach. Two builds of the same source on a developer
+  machine produced different bytes before: the SDK wrote the absolute
+  checkout path into the PDB and a wall-clock timestamp with it. Source paths
+  are now normalized to `/_/`, and the DLL, PDB and packed library are
+  byte-identical across builds. The NuGet archive itself still is not
+  comparable by hash: `dotnet pack` stamps its OPC core-properties part with
+  a build-time GUID and the current time, and no MSBuild property changes
+  that. Compare the extracted package.
+- `make clean` removes `samples/target/`, which held the compiled guests and
+  was the one build output it left behind.
+- The three versions the Makefile reads out of their declaring files (ruff
+  from `pyproject.toml`, the staged Wasmtime version from the NuGet lock
+  file, the guest Rust channel from `samples/rust-toolchain.toml`) come from
+  `tools/pinned.py`, which parses each file in its own format and fails by
+  name when a version is missing, instead of a regex quoted into a shell
+  that prints nothing when the pattern stops matching. `make dist` now stops
+  before staging rather than reaching for a native engine under an empty
+  version.
 - The join log line no longer writes the player name. It reads
   `[WasmHost] player spawned (entity 171); name dispatched to guests`: the
   entity id is what the dispatch is keyed on, and the server log outlives the

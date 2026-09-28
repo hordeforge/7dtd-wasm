@@ -19,6 +19,16 @@ PYTHON ?= $(shell command -v python3 2>/dev/null || command -v python 2>/dev/nul
 export RUSTUP_HOME := $(PWD)/.rustup
 export CARGO_HOME := $(PWD)/.cargo
 
+# Every dotnet target below builds with ContinuousIntegrationBuild on. The
+# property is what makes the SDK normalize source paths (DeterministicSourcePaths)
+# and honor SOURCE_DATE_EPOCH for embedded timestamps, so the same source
+# produces the same assembly and the same .nupkg from /home/you and from the
+# CI checkout. Directory.Build.props turns the same property on when the CI
+# environment variable is set, which covers a GitHub Actions run; this line
+# covers "make pack" on a developer machine, which otherwise ships the
+# absolute checkout path inside the PDB and a wall-clock timestamp with it.
+CIBUILD ?= -p:ContinuousIntegrationBuild=true
+
 # The in-project toolchain is gitignored, so a fresh clone has no cargo at
 # $(CARGO) and every guest target would fail with a bare "No such file or
 # directory" from sh. These two guards turn that into a named instruction.
@@ -126,8 +136,10 @@ RUSTUP ?= rustup
 # the preflight below checks for, and the same one the CI install step gets
 # from "make ruff-version".
 # Recursively expanded (=) like WASMTIME_VERSION, so the read happens only in
-# the targets that gate on it.
-RUFF_VERSION = $(shell $(PYTHON) -c "import re; print(re.search(r'required-version = \"==(.+?)\"', open('pyproject.toml').read()).group(1))")
+# the targets that gate on it. tools/pinned.py parses each declaring file in
+# its own format and fails by name when a version is missing, rather than the
+# Makefile carrying a quoted regex that silently prints nothing.
+RUFF_VERSION = $(shell $(PYTHON) tools/pinned.py ruff)
 
 SLN = HordeForge.WasmHost.sln
 
@@ -138,7 +150,7 @@ SLN = HordeForge.WasmHost.sln
 # targets that stage the native engine: an eagerly evaluated $(shell) starts
 # a python interpreter on every "make", including "make clean", and fails
 # those targets outright when the lock file has not been restored yet.
-WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/HordeForge.WasmHost/packages.lock.json')); print(next(m['Wasmtime']['resolved'] for m in d['dependencies'].values() if 'Wasmtime' in m))")
+WASMTIME_VERSION = $(shell $(PYTHON) tools/pinned.py wasmtime)
 
 # The Rust channel the guests are built and linted with, read from
 # samples/rust-toolchain.toml: the file rustup itself resolves when cargo runs
@@ -146,7 +158,7 @@ WASMTIME_VERSION = $(shell $(PYTHON) -c "import json; d = json.load(open('src/Ho
 # used to be the floating "stable", which lets a guest binary depend on the day
 # the machine last synced its toolchain. Lazily expanded for the same reason
 # as WASMTIME_VERSION above. Bump it by editing that file.
-RUST_TOOLCHAIN = $(shell $(PYTHON) -c "import re; print(re.search(r'channel = \"(.+?)\"', open('samples/rust-toolchain.toml').read()).group(1))")
+RUST_TOOLCHAIN = $(shell $(PYTHON) tools/pinned.py rust)
 
 # The zig release the C and Zig guests compile against, as declared by
 # require_zig below. The Zig guest is source that only builds on the pinned
@@ -176,7 +188,7 @@ help:
 	@echo "  make pack           pack the host library as a NuGet package under artifacts/packages/"
 	@echo "  make check          everything check-ci runs, plus bridge and bridge-check"
 	@echo "  make check-ci       the half of check that needs no game install (CI entry point)"
-	@echo "  make clean          remove build output, staged fixtures and dist/"
+	@echo "  make clean          remove build output, samples/target, dist/ and artifacts/"
 	@echo "  GAME_DIR=...        point bridge and bridge-check at a server install"
 	@echo "  ZDTD_SERVER=...     zdtd-server checkout holding the plugins fixtures and dist copy"
 	@echo
@@ -186,14 +198,14 @@ help:
 	@echo "committed fixtures and needs none of the three."
 
 build:
-	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED)
+	$(DOTNET) build $(SLN) -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 # The edit-test loop. TEST_FILTER is a VSTest filter expression, so a single
 # test or class runs without touching anything else:
 #   make test TEST_FILTER='FullyQualifiedName~WasmModHostTests'
 #   make test TEST_FILTER='Name~FuelExhausted'
 test:
-	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",)
+	$(DOTNET) test tests/HordeForge.WasmHost.Tests -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",)
 
 # Populate the in-project rustup toolchain. RUSTUP_HOME and CARGO_HOME are
 # exported at the top of this file, so this installs nothing system-wide and
@@ -283,12 +295,16 @@ fixtures: samples boss boss-zig
 	cp $(ZDTD_SERVER)/mods/parachute/config.toml                tests/fixtures/parachute-config.toml
 
 bridge:
-	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED)
+	$(DOTNET) build src/GameBridge/GameBridge.csproj -c Release -p:GAME_DIR="$(GAME_DIR)" -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD)
 
 bridge-check:
-	$(DOTNET) run -c Release --project tools/targetcheck -p:RestoreLockedMode=$(RESTORE_LOCKED) -- "$(GAME_DIR)"
+	$(DOTNET) run -c Release --project tools/targetcheck -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) -- "$(GAME_DIR)"
 
 dist: build fixtures bridge
+	@test -n "$(WASMTIME_VERSION)" || { \
+	  echo "make: the pinned Wasmtime version is empty, so the native engine to stage is unknown."; \
+	  echo "  Run: $(PYTHON) tools/pinned.py wasmtime   (it names the file it could not read)"; \
+	  exit 1; }
 	rm -rf dist && mkdir -p dist/Mods/1_HordeForge_WasmHost/Native dist/Mods/Wasm/hello
 	# Modlet: the net48 bridge plus its full dependency closure
 	# (Wasmtime.Dotnet.dll, HordeForge.WasmHost.dll, IndexRange, System.Memory).
@@ -332,11 +348,18 @@ dist: build fixtures bridge
 # no longer packs (a readme that moved, a package path that no longer
 # resolves) fails on the same gate as everything else. "make dist" assembles
 # the game modlet instead; it needs a server install, this does not.
+#
+# ContinuousIntegrationBuild makes the payload reproducible: two packs of the
+# same source produce byte-identical DLLs, XML docs, README and THIRD-PARTY
+# NOTICES. The archive around them is not, and NuGet gives no switch for it:
+# package/services/metadata/core-properties carries a build-time GUID in its
+# part name and a random relationship id, and the OPC parts carry the current
+# time as their zip entry date. Compare the extracted package, not its hash.
 PACKAGE_OUT := artifacts/packages
 
 pack:
 	@$(PYTHON) tools/packcheck.py
-	$(DOTNET) pack src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) -o $(PACKAGE_OUT)
+	$(DOTNET) pack src/HordeForge.WasmHost/HordeForge.WasmHost.csproj -c Release -p:RestoreLockedMode=$(RESTORE_LOCKED) $(CIBUILD) -o $(PACKAGE_OUT)
 	@echo "NuGet package staged under $(PACKAGE_OUT)/"
 
 check: export RESTORE_LOCKED := true
@@ -364,4 +387,4 @@ check-ci:
 	$(MAKE) pack
 
 clean:
-	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj dist artifacts
+	rm -rf src/*/bin src/*/obj tests/*/bin tests/*/obj tools/targetcheck/bin tools/targetcheck/obj samples/target dist artifacts
