@@ -38,13 +38,13 @@ the operator summary; that one is what a security review is aimed with.
   player (`GameHostApi.SendChat`). Through the zdtd `queue` import it drives
   the bot servant, which creates entity bodies, teleports the ones it tracks,
   applies buffs, and applies damage. The servant gates who may **fire** (a
-  live servant bot) but not who may be **hit**: `bot shoot <bot> <entity>`
-  damages any living entity, players included, at up to
-  `MaxCommandsPerSecond` (200/s). Bot bodies are owned by the servant, not by
-  the guest that fires them, so two guests can shoot each other's bots. The
-  same global, unpartitioned state applies to the `glide` flags: any guest can
-  arm or clear the flag on any player. See `docs/THREAT_MODEL.md` sections 5
-  and 8.
+  live servant bot the calling module owns) but not who may be **hit**:
+  `bot shoot <bot> <entity>` damages any living entity, players included, at
+  up to `MaxCommandsPerSecond` (200/s). One guest cannot fire through another
+  guest's bots; the ownership check runs before the shot. The `glide` flags
+  are partitioned the same way, so one guest cannot clear another's flag, but
+  nothing stops a guest from arming one on any player. See
+  `docs/THREAT_MODEL.md` sections 5 and 8.
 - **The console surface**: `wasm load`, `wasm reload <id>`, and `wasm
   unload <id>` compile and instantiate a file from `Mods/Wasm` (or a staged
   modlet's `Wasm/` folder) inside the game process. The bridge performs no
@@ -58,7 +58,7 @@ the operator summary; that one is what a security review is aimed with.
   under. A third-party modlet therefore changes what loads and under which
   limits, with only the effective-limits line at start to show for it
   (`src/HordeForge.WasmHost/Registry/ModuleRoots.cs:53`,
-  `src/GameBridge/Bridge/BridgeHost.cs:168`). See
+  `src/GameBridge/Bridge/BridgeHost.cs:181`). See
   `docs/THREAT_MODEL.md` sections 3 and 8.
 - **The bridge itself**: a bug in `1_HordeForge_WasmHost` runs with game
   privileges. It is small, reviewed, and all its game API targets are

@@ -172,7 +172,8 @@ namespace HordeForge.WasmHost.Registry
         /// </summary>
         private static bool IsLeafName(string? fileName)
         {
-            if (string.IsNullOrEmpty(fileName)
+            if (fileName == null
+                || fileName.Length == 0
                 || fileName.IndexOf('/') >= 0
                 || fileName.IndexOf('\\') >= 0
                 || fileName == "."
