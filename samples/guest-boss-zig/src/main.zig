@@ -5,10 +5,12 @@
 // the world. The name to watch is read through the host get_setting import,
 // so the operator can retune it in wasm-mod.toml without rebuilding.
 //
-// Build (zig 0.16), same flags as "make boss-zig" in the Makefile:
+// Build (zig 0.16), same flags as "make boss-zig" in the Makefile, which
+// runs from samples/guest-boss-zig and emits into samples/target/ so no
+// build artifact lands in a guest source directory:
 //   zig build-exe src/main.zig -target wasm32-wasi -O ReleaseSmall \
 //     -fno-entry -fstrip -rdynamic --max-memory=33554432 \
-//     -femit-bin=guest-boss-zig.wasm
+//     -femit-bin=../target/guest-boss-zig.wasm
 // -rdynamic is load-bearing: without it the @export'ed symbols are
 // dead-code eliminated in release builds and the module has no hooks.
 //

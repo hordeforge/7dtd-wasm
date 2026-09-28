@@ -12,9 +12,9 @@ pub const HOST_MODULE: &str = "hordeforge";
 pub const ZDTD_HOST_MODULE: &str = "zdtd";
 
 /// Guest export names. The host requires init and tick; shutdown, player
-/// join, and admin command are optional. The optional ones have no
-/// Rust-side helper, so a guest still writes the `#[export_name]` itself and
-/// can build it from the constant here instead of spelling the string.
+/// join, and admin command are optional. `#[export_name]` takes a string
+/// literal, so a guest writes the name in the attribute; these name the same
+/// strings the host resolves, for comparison or for building one at runtime.
 pub const EXPORT_INIT: &str = "on_enable";
 pub const EXPORT_TICK: &str = "on_tick";
 pub const EXPORT_SHUTDOWN: &str = "on_shutdown";
@@ -22,6 +22,9 @@ pub const EXPORT_SHUTDOWN: &str = "on_shutdown";
 /// [`join_player_name`].
 pub const EXPORT_PLAYER_JOIN: &str = "on_player_join";
 /// Optional: `(cmd_ptr, cmd_len, out_ptr, out_cap) -> i32` (zdtd surface).
+/// The host resolves and signature-checks the export at load but does not
+/// dispatch it yet (see docs/ABI.md), so a handler written today is never
+/// called.
 pub const EXPORT_ADMIN_COMMAND: &str = "on_admin_command";
 
 /// Status codes returned by guest exports. Zero always means ok.
@@ -205,7 +208,8 @@ pub fn queue_command(command: &str) -> bool {
 /// Fills `out` with the binary world snapshot ('ZBS4', see docs/ABI.md) and
 /// returns the bytes written, or 0 when there is no world data to report.
 pub fn sense_snapshot(out: &mut [u8]) -> usize {
-    // token 0 asks the host for a full snapshot with no delta base.
+    // The host accepts the token and ignores it: every call writes a full
+    // snapshot, so any value gives the same bytes.
     // SAFETY: the host writes at most out.len() bytes into the buffer.
     let written = unsafe { sense(out.as_mut_ptr() as i32, out.len() as i32, 0) };
     if written <= 0 {

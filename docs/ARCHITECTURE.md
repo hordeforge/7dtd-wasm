@@ -40,14 +40,17 @@ src/HordeForge.WasmHost/     (netstandard2.0, net8.0) the embeddable host,
   Config/                    WasmHostConfig: the limits the host builds its
                               engine with and validates at construction
   Core/                      the host itself: WasmModHost, WasmMod, the
-                              per-call result and status types, tick telemetry.
+                              per-call result and status types, tick telemetry,
+                              and BotOwnershipRegistry (which module owns each
+                              tracked bot id).
                               The only area that references Wasmtime
   Registry/                  mod metadata off disk: the bounded manifest read
                               (ManifestFiles), the manifest parser (MiniToml
                               and the ModManifest it produces), module roots,
                               the settings table, mod id validation, and two
                               text helpers (UnicodeEscapes, TextSanitizer)
-  WasmModLoadException.cs    the load failure Registry and Core both raise
+  WasmModLoadException.cs    the load failure Core raises, and the base of the
+                             two failures Registry raises beneath it
   WasmManifestException.cs   its subtype, for a manifest the parser rejected
   ManifestReadException.cs   a manifest file that could not be read at all;
                               the three stay together in the root namespace,
@@ -71,15 +74,20 @@ tools/                       the repository gates; each Python tool's tests
                              is the one C# project among them
 tests/HordeForge.WasmHost.Tests/
                              one net8 project, flat, one file per subject
-                             named <Subject>Tests.cs. Two files are not a
+                             named <Subject>Tests.cs. Four files are not a
                              subject: FuzzDriver.cs is the shared fuzz
                              driver, TestGameHostApi.cs the IGameHostApi
-                             double the tests assert against
+                             double the tests assert against, and LogShim.cs
+                             and GameLogShim.cs the game-log stand-ins the
+                             source-linked bridge files need in a suite with
+                             no game assemblies
 
 samples/                     the guest side, one directory per module, each
-                             holding its source and the wasm-mod.toml that
-                             configures it (never its build output, which
-                             goes to samples/target/)
+                             module holding its source and the wasm-mod.toml
+                             that configures it (never its build output,
+                             which goes to samples/target/). guest-common
+                             and the guest-fixtures crates carry no
+                             manifest
   Cargo.toml                 the Rust workspace: guest-common, guest-hello
                              and the five guest-fixtures crates
   rust-toolchain.toml        the pinned channel, read by "make toolchain"
@@ -92,9 +100,10 @@ samples/                     the guest side, one directory per module, each
                              A folder of crates, not a crate itself
   guest-boss/                the C guest (guest-boss.c, compiled by zig cc)
   guest-boss-zig/            the Zig guest (src/main.zig)
-  parachute/                 wasm-mod.toml only: the manifest for the
-  zdtd-fps-bot/              unmodified third-party modules built in the
-                             sibling checkout the Makefile points at
+  parachute/                 wasm-mod.toml only
+  zdtd-fps-bot/              wasm-mod.toml only: unmodified third-party
+                             modules built in the sibling checkout the
+                             Makefile points at
 ```
 
 The placement rules the layout exists to enforce:
@@ -119,9 +128,9 @@ The placement rules the layout exists to enforce:
   where they have always been, not because the registry owns them:
   `UnicodeEscapes` is private to `MiniToml`, and no `Registry` type calls
   `TextSanitizer`, which the bridge uses to keep guest text out of forged
-  log and chat lines. Both are public members of the published package, so
-  putting either in the folder that matches it is a surface move that needs
-  a minor bump (see CONTRIBUTING).
+  log and chat lines. `TextSanitizer` is public, so putting it in the
+  folder that matches it is a surface move that needs a minor bump (see
+  CONTRIBUTING); `UnicodeEscapes` is internal and free to move.
 - `GameBridge` is net48 because it references game assemblies, so the net8
   test project cannot reference it. A bridge class that carries no game
   reference but needs suite coverage is source-linked into the test
@@ -155,8 +164,9 @@ game main loop.
   the export signatures before instantiation. Any failure throws
   `WasmModLoadException` with a specific reason and leaves the host intact.
 - `DispatchTick` walks loaded modules in load order; each call gets a fresh
-  fuel budget and returns a `ModRunResult` (Ok, Trap, FuelExhausted, Error).
-  A bad module never stops the loop.
+  fuel budget, and the walk returns one `ModRunResult` per module as an
+  `IReadOnlyList<ModRunResult>`, each with status Ok, Trap, FuelExhausted
+  or Error. A bad module never stops the loop.
 - `WasmMod` wraps one instance and its exports and keeps per-module counters
   (total calls, traps, fuel exhausted, total fuel consumed).
 - `Dispose` runs every loaded guest's shutdown export and keeps the ones that
@@ -205,7 +215,9 @@ in CI, not only on a host that already has a toolchain config.
   bridge reports three ways: a heartbeat every 1200 ticks (60 s at 20 TPS),
   a warning for a dispatch over `SlowDispatchMs` (half a frame) capped at
   one per second, and a per-mod failure line capped like guest log output.
-  `wasm status` and the shutdown summary print the same totals.
+  `wasm status` prints the same totals, and so does the shutdown summary,
+  which runs only when an embedder calls `BridgeHost.Shutdown()` (nothing in
+  the mod does, so a live server never prints it).
 - `GameHostApi` implements the ABI over live game services: log via the game
   logger (rate capped per module), world time via `GameManager.Instance.World.GetWorldTime()`,
   chat via `ChatMessageServer(..., EChatType.Global, ..., EMessageSender.Server,

@@ -18,6 +18,11 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 - imports the host API functions under module name `hordeforge`
 - exports `on_enable`, `on_tick`, and optionally `on_shutdown`,
   `on_player_join`, and `on_admin_command`
+- exports its linear memory under the name `memory`. The host resolves guest
+  memory by that exact export name on every import that takes a pointer, and
+  nothing checks the name at load, so a guest that renames its memory export
+  loads and then traps on the first `log`, `send_chat`, `get_setting`, or
+  `get_join_player_name` call
 - declares an explicit memory maximum. A module without one is treated as
   declaring the wasm32 ceiling (4 GiB) and loads only when the operator
   raised the effective cap accordingly (see "Modules without a declared
@@ -28,11 +33,11 @@ A guest is a `wasm32-wasip1` module (cdylib) that:
 
 | Import | Signature | Meaning |
 |---|---|---|
-| `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Write a log line. Level: 0 debug, 1 info, 2 warn, 3 error |
-| `tick` | `() -> i64` | Current game tick. The bridge maintains a monotonic counter incremented once per game tick (20 TPS on the dedicated server); `GameTimer.ticks` reads 0 on the dedicated server, so it is not used. Same name as zdtd's `tick()` |
+| `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Write a log line. Level: 0 debug, 1 info, 2 warn, 3 error. Rate capped per module at 10 lines/second (ADR 0006); excess lines are dropped, counted, and reported in `wasm status` |
+| `tick` | `() -> i64` | Current game tick. The bridge maintains a monotonic counter incremented once per game tick (20 TPS on the dedicated server); `GameTimer.Instance.ticks` reads 0 on the dedicated server, so it is not used. Same name as zdtd's `tick()` |
 | `get_world_time` | `() -> i64` | World time in game minutes, 0 when no world is loaded |
 | `get_setting` | `(key_ptr: i32, key_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Read a setting (per-mod settings win over shared; see docs/CONFIG.md). Returns written byte count, -1 not found, -2 buffer too small |
-| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 Unicode code points are rejected (an emoji counts as one) |
+| `send_chat` | `(ptr: i32, len: i32) -> i32` | Send a global chat message. 0 accepted, -1 rejected. Messages over 256 Unicode code points are rejected (an emoji counts as one), and so is any message sent while the shared 10/second global chat cap is exhausted; the guest sees the same -1 for both |
 | `get_join_player_name` | `(out_ptr: i32, out_cap: i32) -> i32` | During an `on_player_join` call: the joining player's name written into the guest buffer. Returns byte count, -1 no event, -2 buffer too small |
 
 The join name is the only personal data a guest can read: it is the in-game
@@ -72,9 +77,12 @@ An optional export that is present must have exactly this signature
 plugins); any other shape is rejected at load time rather than silently
 dropping the handler.
 
-Export status codes: 0 ok, 1 not implemented, 2 internal error. When
-verdict-style hooks are added (deny/adjust events), they will follow the
-zdtd convention: <0 deny, 0 keep, >0 percent-adjust.
+Export status codes: 0 ok, 1 not implemented, 2 internal error. The host
+treats every nonzero code the same way: it counts the call in `errors`,
+returns `ModRunStatus.Error`, and the bridge logs a warning for it. A hook
+with nothing to do this tick returns 0. When verdict-style hooks are added
+(deny/adjust events), they will follow the zdtd convention: <0 deny, 0 keep,
+>0 percent-adjust.
 
 Hook names are exactly zdtd's plugin hooks (`on_enable`, `on_tick`,
 `on_player_join`, `on_shutdown`), so a guest author familiar with one host
@@ -98,8 +106,8 @@ surface so those plugins run unmodified:
 |---|---|---|
 | `log` | `(level: i32, ptr: i32, len: i32) -> ()` | Same as the hordeforge log |
 | `tick` | `() -> i64` | Same as the hordeforge tick |
-| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (zdtd ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected |
-| `sense` | `(ptr: i32, len: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS4', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data |
+| `queue` | `(ptr: i32, len: i32) -> i32` | Queue a text SimCommand: `bot <verb> ...` for the bot servant, `glide <net_id> <0\|1>` for the parachute mod (zdtd ADR 0037), and any other text is broadcast as a chat announce (the parachute deploy message). 0 accepted, -1 rejected. A non-servant announce the game refuses, including one the shared chat cap drops, is still reported as 0; -1 means a bot or glide verb was recognised and failed |
+| `sense` | `(out_ptr: i32, out_cap: i32, token: i32) -> i32` | Fill the binary world snapshot ('ZBS4', format in SenseSnapshotWriter) into the guest buffer. Returns bytes written, 0 when no world data or when the snapshot does not fit `out_cap` (a too-small buffer gets 0, not a truncated snapshot). `token` is accepted and ignored: every successful call writes a full snapshot, so any value gives the same bytes. The argument exists to keep the zdtd signature |
 | `query` | `(req_ptr: i32, req_len: i32, out_ptr: i32, out_cap: i32) -> i32` | Text request/response (`cover bx bz tx tz`, `path bx bz tx tz`). Returns response bytes, -1 no answer, -2 buffer too small |
 | `config` | `(out_ptr: i32, out_cap: i32) -> i32` | Copy the calling mod's config.toml verbatim as UTF-8, at most min(out_cap, len) bytes and never splitting a multi-byte character; 0 = no config (module has none, or the buffer is too small). The host never parses it; each guest owns its format (zdtd contract, so the parachute mod's on_enable reads it unchanged) |
 
@@ -116,11 +124,14 @@ to the client, plus a server-side clamp of the descent to the sink rate),
 and `sense` reports players, zombies, and our bots in the ZBS4 layout (v4:
 40-byte records with server-derived `vy` from the per-tick position history
 and the `wearing_glider` bit, zdtd ADR 0037). Records are ordered by
-ascending net id, and when more alive entities exist than one snapshot can
-carry, the lowest net ids are the ones reported, so the same entity set
+ascending net id, and a snapshot carries at most 41 records, the number a
+2048-byte guest sense buffer holds; when more alive entities exist than that,
+the lowest net ids are the ones reported, so the same entity set
 always produces the same snapshot bytes. Only a net id that names a live
-player in the world can be armed, so a guest cannot steer an entity it does
-not own. The descent clamp is anchored to the last observed position and
+player in the world can be armed. That gate is not ownership: any module may
+arm or clear the flag on any live player (SECURITY.md, "What is NOT
+sandboxed"). Bot verbs, in contrast, act only on the calling module's bots.
+The descent clamp is anchored to the last observed position and
 applies only when that observation is the previous tick, so a gap in sense
 polling never snaps a player upward. `query` (cover/path) and
 `on_admin_command` console wiring are stage 3.
@@ -143,6 +154,8 @@ budget does not cover game-side work):
   the calling module's bots. Another module's bots are still reported as
   bots, so a guest is not handed bodies it may not drive. Unloading or
   reloading a module despawns its bots and drops its `bot count` floor.
+
+### Modules without a declared memory maximum
 
 Modules without a declared memory maximum are treated as declaring the
 wasm32 ceiling (4 GiB) and load only when the effective cap allows it; an
@@ -204,8 +217,10 @@ boss_name = "maci"
 - `settings` values are served to the guest through the `get_setting`
   import, per mod (the mod's own settings win over shared `wasm.toml`
   settings).
-- Any other keys are ignored; malformed values reject the module with a
-  specific reason and the bridge skips it with a warning. Only
+- Any other top-level key is tolerated and named in the load log; inside
+  `[limits]` any other key rejects the module, because an unlisted limit would
+  leave the host cap in force instead. Malformed values reject the module
+  with a specific reason and the bridge skips it with a warning. Only
   `wasm-mod.toml` is read; the deprecated JSON form (`wasm-mod.json`) is no
   longer accepted, and quoted manifest keys are taken as literal key names
   instead of being unwrapped.

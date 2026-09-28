@@ -280,7 +280,7 @@ namespace HordeForge.GameBridge.Bridge
                         // The mod id and the tick number are what turn a line
                         // into a pivot point: without them "fuel exhausted
                         // during on_tick" is unattributable in a log that
-                        // carries one such line per guest per second, and the
+                        // carries ten such lines per guest per second, and the
                         // tick number is the only handle that lines this up
                         // with the heartbeat and the per-mod counters in
                         // "wasm status".
@@ -400,6 +400,11 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// The full host report: configured limits, one line per loaded
+        /// module, the dropped totals of every limiter, the armed glide ids,
+        /// and the tick telemetry line. Used by "wasm status".
+        /// </summary>
         public static List<string> StatusLines()
         {
             lock (Gate)
@@ -540,11 +545,14 @@ namespace HordeForge.GameBridge.Bridge
 
         /// <summary>
         /// Drops every piece of per-module bridge state for an id that is no
-        /// longer loaded: its settings, its cached raw config, its rate cap
-        /// windows, and the bots it owned. Reload and unload both go through
-        /// here, so a module can never be left with settings but without
-        /// config, can never resume a previous generation's throttle, and
-        /// cannot keep a share of the bot budget it no longer owns.
+        /// longer loaded: its settings, its cached raw config, its host-side
+        /// rate cap windows, and the bots it owned. Reload and unload both go
+        /// through here, so a module can never be left with settings but
+        /// without config, can never resume a previous generation's throttle,
+        /// and cannot keep a share of the bot budget it no longer owns. The
+        /// servant's own log windows ("glide/&lt;net id&gt;", "bot/&lt;verb&gt;",
+        /// "sense/worn") are not module-keyed and are left to the limiter's
+        /// idle sweep.
         /// </summary>
         private static void ReleaseModuleState(string id)
         {
@@ -779,6 +787,13 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// Unloads and reloads one module from disk, dropping its per-module
+        /// state and running the new instance's on_enable. Returns false
+        /// when the host is not started, the id is invalid, or the load from
+        /// disk failed; a failing shutdown of the outgoing instance is
+        /// logged but does not fail the reload.
+        /// </summary>
         public static bool Reload(string id)
         {
             lock (Gate)
@@ -810,6 +825,15 @@ namespace HordeForge.GameBridge.Bridge
             }
         }
 
+        /// <summary>
+        /// Unloads one module, running its shutdown export and dropping its
+        /// per-module state. Returns false only when the host is not started
+        /// or the id is not loaded. A trapped or failing shutdown still
+        /// reports success, because the module is gone either way; the
+        /// failure is logged instead. That is the opposite convention from
+        /// <see cref="Reload"/>, where a false return means the load did not
+        /// happen.
+        /// </summary>
         public static bool Unload(string id)
         {
             lock (Gate)

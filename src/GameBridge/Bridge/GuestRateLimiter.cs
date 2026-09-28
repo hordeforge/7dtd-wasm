@@ -5,9 +5,14 @@ namespace HordeForge.GameBridge.Bridge
 {
     /// <summary>
     /// Caps guest output per source key so a talkative mod cannot flood the
-    /// server log or the global chat. A source is a mod id (per-module caps
-    /// for log lines and SimCommands) or a shared tag such as "chat" (the
-    /// global chat cap). Each source may emit at most the cap the limiter
+    /// server log or the global chat. A source is whatever stable string
+    /// the caller keys on: a bare mod id for the SimCommand, sense, and
+    /// chat-rejection caps, the host's composed log source tag
+    /// (<c>&lt;prefix&gt;/&lt;mod id&gt;</c>) for guest log lines,
+    /// <c>config/&lt;mod id&gt;</c> for config read failures,
+    /// <c>glide/&lt;net id&gt;</c> and <c>bot/&lt;verb&gt;</c> for the
+    /// servant, and shared tags such as "chat" and "world_time".
+    /// Each source may emit at most the cap the limiter
     /// was constructed with per second, measured with the monotonic process
     /// clock so an operator clock step
     /// or NTP correction can neither freeze output nor open a burst; excess

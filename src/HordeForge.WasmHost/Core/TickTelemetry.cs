@@ -15,7 +15,7 @@ namespace HordeForge.WasmHost.Core
     ///
     /// Thread safety: one instance is safe to share. Every counter is a
     /// plain field, and the roll in <see cref="Record"/> reads and rewrites
-    /// four of them at once, so an unsynchronized second writer tears the
+    /// three of them at once, so an unsynchronized second writer tears the
     /// window and loses a sample's cost. The properties each read under the
     /// same lock, so a "wasm status" line never mixes counters from two
     /// different samples.

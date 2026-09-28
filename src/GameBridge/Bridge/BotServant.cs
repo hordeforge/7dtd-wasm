@@ -19,8 +19,11 @@ namespace HordeForge.GameBridge.Bridge
     /// implemented; cover/path queries still return no answer and
     /// on_admin_command is not yet wired to the console.
     ///
-    /// Thread safety: both public entry points take the servant gate, so
-    /// one servant is safe to share. The state below is ordinary
+    /// Thread safety: the guest entry points (TryQueue, WriteSense) take
+    /// the servant gate, and ReleaseModule is run by the bridge's reload
+    /// and unload paths under BridgeHost.Gate, which is what serializes it
+    /// against a concurrent sense call; it takes no servant lock itself.
+    /// The state below is ordinary
     /// collections and pooled scratch buffers reused across calls (the
     /// comment on the sense buffers), and every entry point is reachable
     /// from a guest import, so two threads serving two guests would refill
@@ -77,20 +80,23 @@ namespace HordeForge.GameBridge.Bridge
         // safe landing on the stock server.
         private const string GlideBuffName = "buffParachuteGlide";
 
-        // Entity records per sense snapshot. With the v4 40-byte records a
-        // 2048-byte guest sense cap holds 41 records after reserving the
-        // 384-byte event trailer (24 + 41 * 40 + 24 * 16 = 2048), the same
-        // sizing zdtd uses for that cap.
+        // Entity records per sense snapshot. 41 is what a 2048-byte guest
+        // buffer holds after the 24-byte header and a full 384-byte event
+        // trailer (24 + 41 * 40 + 24 * 16 = 2048). The cap itself is
+        // whatever length the guest passes to the sense import, not a
+        // constant here: a smaller buffer makes SenseSnapshotWriter.Write
+        // report 0 bytes for the whole snapshot.
         private const int MaxSenseRecords = 41;
 
         private readonly Func<long> _tickProvider;
 
         // Serializes every field below: the bot, yaw, glide and position
         // tables, the count floor, the top-up clock, and the pooled scratch
-        // buffers. Taken by the two public entry points (TryQueue,
+        // buffers. Taken by the two guest entry points (TryQueue,
         // WriteSense) and by the Glide copy, never by a leaf helper, so the
         // scope is one guest command or one snapshot and reentry through
-        // Monitor keeps the internal chains working.
+        // Monitor keeps the internal chains working. ReleaseModule is the
+        // exception: it runs under BridgeHost.Gate, not under this lock.
         private readonly object _gate = new object();
 
         // Millisecond clock for the log cap and the spawn top-up throttle,
@@ -187,10 +193,11 @@ namespace HordeForge.GameBridge.Bridge
         /// Handles one queued SimCommand from <paramref name="modId"/>. The
         /// module id is the caller's identity: every bot verb is scoped to
         /// the bots that module owns. Returns true when the command was
-        /// accepted. <paramref name="handled"/> reports whether the command
-        /// belonged to the servant surface (bot or glide verbs) at all, so
-        /// the caller can tell a rejected servant command from text that was
-        /// never ours (chat announce).
+        /// accepted. <paramref name="handled"/> is false only for a null
+        /// module id or command; every other string is routed to the bot
+        /// dispatcher, so queue text that is neither a bot nor a glide verb
+        /// is accepted and logged as an unknown verb rather than handed
+        /// back to the caller for another purpose.
         /// </summary>
         public bool TryQueue(string modId, string command, out bool handled)
         {
@@ -779,6 +786,9 @@ namespace HordeForge.GameBridge.Bridge
             {
                 return SenseSnapshotWriter.KindPlayer;
             }
+            // Fallthrough: the scan reports every alive entity, so animals,
+            // drones, and whatever else the game adds are classified here,
+            // as kind bot with is_self false (they belong to no module).
             return SenseSnapshotWriter.KindBot;
         }
 

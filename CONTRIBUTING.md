@@ -36,8 +36,9 @@ make samples-check # guest lint gate: rustc + clippy warnings are build errors
 make fixtures      # if you touched samples/ or guests; also needs zig and ZDTD_SERVER
 make bridge        # net48 bridge against GAME_DIR
 make bridge-check  # game targets must pass after any game update
-make check         # docs gate + sbom tests + tools lint + guest lint + build + test + bridge + bridge-check
-make check-ci      # the same gate minus bridge and bridge-check (no game install needed)
+make check         # everything check-ci runs, plus bridge and bridge-check
+make check-ci      # docs, version, pack and API gates + sbom tests + tools lint
+                   # + guest lint + build + test + pack (no game install needed)
 
 # Dependency changes: bump the PackageReference, then regenerate every
 # committed packages.lock.json; "make check" restores locked and fails when a

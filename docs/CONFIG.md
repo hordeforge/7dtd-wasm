@@ -9,13 +9,19 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
 - A key that is not in the file keeps its **code default**; moving a value
   onto the config surface is never a retune (same rule as zdtd's
   `RULES_CONFIG.md`).
-- **Load order** (mirroring zdtd ADR 0010): host code defaults -> shared
-  `Mods/Wasm/wasm.toml` -> per-mod `Mods/Wasm/<id>/wasm-mod.toml`. Shared
-  `[limits]` replace the code defaults at host start, so an operator may
-  raise them; a manifest's `fuel_per_call` overrides the effective default
-  within the host ceiling, and its `max_memory_bytes` can only tighten it.
+- **Load order** (mirroring zdtd ADR 0010): host code defaults -> the shared
+  `wasm.toml` (`Mods/Wasm/wasm.toml`, or the first staged modlet tree that
+  carries one when the top-level file is absent) -> per-mod
+  `Mods/Wasm/<id>/wasm-mod.toml`. Shared `[limits]` replace the code
+  defaults at host start, so an operator may raise them; a manifest's
+  `fuel_per_call` overrides the effective default (bounded by the
+  50,000,000 instruction parser ceiling, not by the shared value, so a mod
+  can raise it), and its `max_memory_bytes` can only tighten it.
   A mod that asks for more fuel than the shared value gets is named in the
-  log at load, so the override is visible rather than inferred.
+  log at load, so the override is visible rather than inferred. A
+  `max_memory_bytes` above the effective ceiling is ignored without a word
+  in the log: the shared cap stays in force, so keep the per-mod value at
+  or below it.
 - **Unknown keys** are tolerated outside `[limits]` (a manifest written for a
   newer host still loads) and rejected inside it, where a typo such as
   `fuel_percall` would otherwise leave the operator believing a cap is in
@@ -45,7 +51,7 @@ as the sibling `zdtd-server` project (its `zdtd.toml` / mode packs, bound by
 
 | File | Owns | Re-read at runtime |
 |---|---|---|
-| `Mods/Wasm/wasm.toml` | Shared `[limits]` (host defaults) and `[settings]` (cross-mod) | settings yes, limits at host start |
+| `Mods/Wasm/wasm.toml` (or the first `<modlet>/Wasm/wasm.toml`) | Shared `[limits]` (host defaults) and `[settings]` (cross-mod) | settings yes, limits at host start |
 | `Mods/Wasm/<id>/wasm-mod.toml` | That mod's `[limits]` and `[settings]` | on `wasm reload <id>` |
 | `Mods/Wasm/<id>/config.toml` | That mod's own config, served to the guest verbatim through the `zdtd.config` import | on `wasm reload <id>` |
 
@@ -85,7 +91,7 @@ version = "0.1.0"
 # on a case-insensitive filesystem.
 
 # Host-enforced caps. fuel_per_call overrides the effective default
-# (rejected above the 50,000,000 ceiling); max_memory_bytes can only
+# (must be at least 1 and at most 50,000,000); max_memory_bytes can only
 # tighten the effective cap and must sit between one wasm page (65536)
 # and the wasm32 address space (4294967296).
 # These two keys are the whole [limits] schema: any other key here (a
@@ -105,8 +111,8 @@ boss_name = "maci"
 
 ```toml
 # Host defaults: the engine is created with these. Per-mod [limits]
-# override fuel_per_call within the host ceiling and tighten
-# max_memory_bytes; see the load-order rule above.
+# override fuel_per_call (any value from 1 up to the 50,000,000 parser
+# ceiling) and tighten max_memory_bytes; see the load-order rule above.
 [limits]
 fuel_per_call = 1000000
 max_memory_bytes = 33554432
@@ -131,14 +137,23 @@ dotted keys are not supported. The parser is dependency-free (`MiniToml`,
 ADR 0007) and rejects anything outside this subset with a specific error;
 the bridge skips the module and logs the reason.
 
+A `[settings]` value must be a scalar (string, integer, float, or boolean);
+an array or a nested table there fails the load with
+`settings.<key> must be a scalar`. A `[limits]` value must be an integer.
+
+`wasm.toml` and `wasm-mod.toml` are read as strict UTF-8 with a leading BOM
+stripped, and each is capped at 1 MiB. A file in another encoding, or over
+the cap, is not read: the per-mod module is skipped, and a shared file that
+cannot be read aborts the bridge start as described above.
+
 Strings must be well-formed Unicode: a lone surrogate, raw or written as a
 `\uXXXX` escape, is rejected, because it has no UTF-8 form and could not
 round-trip the guest string ABI.
 
 ## Settings resolution
 
-`get_setting(key, out, cap)` (host import, docs/ABI.md) resolves in this
-order, per calling mod:
+`get_setting(key_ptr, key_len, out_ptr, out_cap)` (host import, docs/ABI.md)
+resolves in this order, per calling mod:
 
 1. the mod's own `[settings]` from its `wasm-mod.toml`
 2. shared `[settings]` from `wasm.toml` (re-read when the file changes)
@@ -150,7 +165,11 @@ file's last write time *and* its length, so a rewrite that carries the
 old timestamp (a restore, a copy that preserves times) still reaches
 guests. A `wasm.toml` that does not parse is reported once and the
 previous shared settings keep serving; it is not re-read and re-parsed
-on every probe, and a later fixed save is picked up.
+on every probe, and a later fixed save is picked up. Deleting
+`wasm.toml` while the server runs is not an error path: the shared
+settings are dropped and the probe identity reset, so guests fall back
+to their own code defaults with nothing in the log. A re-created file is
+picked up by a later probe.
 
 The host tracks the calling mod per call, so two mods can use the same
 setting key with different values.

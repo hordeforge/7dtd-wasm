@@ -8,7 +8,10 @@ implementation is `samples/guest-hello`; the shared helpers live in
 
 ```bash
 make toolchain  # once per clone: fills .cargo/ and .rustup/ with the pinned rust
-make samples    # builds every guest with the in-project rustup toolchain
+make samples    # builds the Rust guests (the cargo workspace under samples/)
+                # with the in-project rustup toolchain; the C and Zig guests
+                # are `make boss` and `make boss-zig`, and `make fixtures`
+                # builds all three
 ```
 
 `make toolchain` needs rustup on your PATH and installs the toolchain itself
@@ -31,6 +34,12 @@ crate-type = ["cdylib"]
 [dependencies]
 guest-common = { path = "../guest-common" }
 ```
+
+A crate under `samples/` must also be listed in `members` in
+`samples/Cargo.toml`, or cargo ignores it and `make samples` does not build
+it. That listing is also what gives it the workspace `[lints]` (every rustc
+warning and the clippy default set are denied) and `panic = "abort"` in
+release.
 
 The tracked `samples/.cargo/config.toml` already pins
 `--max-memory=33554432` and a 1 MiB stack, so the module fits the host caps
@@ -76,17 +85,22 @@ pub extern "C" fn on_shutdown() -> i32 {
 - Do not allocate unbounded memory; the declared maximum (32 MiB) is a hard
   ceiling and growth past it traps.
 - Keep tick work small. The per-call fuel budget (default 1,000,000
-  instructions) is the only protection against a runaway module, and the
-  server tick is 50 ms.
-- Panicking is allowed (it traps and is reported), but prefer returning a
-  status code: a guest that traps every tick spams the log.
+  instructions, raisable per module to at most 50,000,000 through
+  `wasm-mod.toml [limits] fuel_per_call`) is the only bound on how long one
+  guest call can run, and the server tick is 50 ms. Host-side work the guest
+  triggers is capped separately, see [ABI.md](ABI.md).
+- Panicking is allowed (the profile aborts, so it surfaces as a trap and is
+  reported as a failed call), but prefer returning a status code. Failure
+  lines are capped at 10 per second per module, so a module that traps every
+  tick reports a handful of lines a second and the rest shows only as a
+  running total in `wasm status`.
 
 ## Host API quick reference
 
 | Helper | What it does |
 |---|---|
-| `abi::log_debug(s)`, `abi::log_info(s)`, `abi::log_warn(s)`, `abi::log_error(s)` | Log through the game logger |
-| `abi::current_tick()` | Current game tick |
+| `abi::log_debug(s)`, `abi::log_info(s)`, `abi::log_warn(s)`, `abi::log_error(s)` | Log through the game logger. Capped at 10 lines per second per module; excess lines are dropped and counted for `wasm status` |
+| `abi::current_tick()` | The tick number the bridge dispatches with: its own monotonic counter starting at 1 (the game's own tick reads 0 on the dedicated server, see [GAME_HOOKS.md](GAME_HOOKS.md)) |
 | `abi::world_time()` | World time in game minutes, 0 when no world is loaded |
 | `abi::get_setting_str(key, &mut out)` | Read a setting, `Option<String>` |
 | `abi::send_chat_str(s)` | Send a global chat message, returns status |
@@ -94,7 +108,7 @@ pub extern "C" fn on_shutdown() -> i32 {
 | `abi::queue_command(s)` | Queue a zdtd text SimCommand ("bot move ...", "glide ..."); true when accepted |
 | `abi::sense_snapshot(&mut out)` | Fill the binary 'ZBS4' world snapshot, returns bytes written (0 when no world data) |
 | `abi::query_text(req, &mut out)` | Ask a text query ("cover ...", "path ..."), `Option<String>` |
-| `abi::config_text(&mut out)` | Own `config.toml` verbatim, returns bytes read (0 when the mod ships none) |
+| `abi::config_text(&mut out)` | Own `config.toml` (the file next to `module.wasm` in the mod folder) verbatim, returns bytes read (0 when the mod ships none or the buffer is too small) |
 
 The raw imports (`abi::tick`, `abi::get_world_time`, ...) stay available for
 guests that want them; the wrappers above are the safe path.
@@ -103,14 +117,16 @@ The last four helpers drive the `zdtd` import module, the compatibility
 surface the host defines so sibling zdtd-server plugins run unmodified (see
 [ABI.md](ABI.md)). The export name constants (`abi::EXPORT_INIT`,
 `abi::EXPORT_TICK`, `abi::EXPORT_SHUTDOWN`, `abi::EXPORT_PLAYER_JOIN`,
-`abi::EXPORT_ADMIN_COMMAND`) are exported for guests that build their
-`#[export_name]` attributes from the SDK rather than spelling the strings.
+`abi::EXPORT_ADMIN_COMMAND`) name the same strings the host resolves, for
+comparison or for building strings at runtime. `#[export_name]` takes a
+literal, so a guest still writes the string in the attribute.
 
 ## Player join events
 
 A Rust mod reacts to a player spawn by exporting `on_player_join` and
 reading the name through `join_player_name` (valid only during the
-callback):
+callback). The handler also fires on respawns, not only on the first join,
+so a mod that counts joins must track state across calls:
 
 ```rust
 #[export_name = "on_player_join"]
@@ -132,10 +148,10 @@ into `log_*` either. Match on it inside the callback, as
 something. A guest that has no use for names should not export the handler
 at all.
 
-`on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap)` is the fifth optional
-export. The host resolves and signature-checks it, but no console command
-dispatches to it yet, so a guest that exports it is never called; wait for
-the stage 3 wiring (docs/ABI.md) before relying on it.
+`on_admin_command(cmd_ptr, cmd_len, out_ptr, out_cap)` is the fifth export
+and the third optional one. The host resolves and signature-checks it, but
+no console command dispatches to it yet, so a guest that exports it is never
+called; wait for the stage 3 wiring (docs/ABI.md) before relying on it.
 
 ## Writing a guest in C (with zig)
 
@@ -196,13 +212,20 @@ Config-driven behavior works like the other languages: the guest reads
 ## Deployment
 
 Copy the built `.wasm` into `<install>/Mods/Wasm/<id>/module.wasm` (the id
-is the folder name) and run `wasm load` or `wasm reload <id>` on the server,
-or restart the server. The id must be a plain folder name: no path
+is the folder name), or into `Wasm/<id>/module.wasm` inside another staged
+modlet. `Mods/Wasm` is scanned first and wins per id. Then run `wasm load` or
+`wasm reload <id>` on the server, or restart the server. The id must be a
+plain folder name: no path
 separators, no colons, no dot-only segments (`.` or `..`), no control
-characters.
+characters. A name ending in a space or a period, a Windows device name
+(`CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`, before the first
+period), a Unicode format character, a variation selector, U+2028/U+2029, or
+U+FFFD is rejected as well, so the name on disk and the id must be identical.
 Folders with invalid names are skipped with a warning, and `wasm reload`
-refuses them. An optional `wasm-mod.toml` manifest next to the
-module tunes its limits and settings; see [docs/CONFIG.md](CONFIG.md). A
+refuses them. The id is matched with the exact on-disk spelling on every
+platform, so a wrong-case id is a "not found" rather than a second registry
+entry reading the same module. An optional `wasm-mod.toml` manifest next to
+the module tunes its limits and settings; see [docs/CONFIG.md](CONFIG.md). A
 malformed manifest rejects the module with a warning in the server log.
 
 ## Settings

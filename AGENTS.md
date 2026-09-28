@@ -59,8 +59,10 @@ make bridge         # net48 mod against GAME_DIR (defaults to this machine's ins
 make bridge-check   # validate game API targets against GAME_DIR
 make dist           # assemble dist/Mods/1_HordeForge_WasmHost + sample guests
 make pack           # pack the host library as a NuGet package under artifacts/
-make check          # doccheck + build + test + bridge + bridge-check (CI entry)
-make check-ci       # the same gate minus bridge and bridge-check; what CI runs
+make check          # everything check-ci runs, plus bridge and bridge-check
+make check-ci       # doccheck, versioncheck, packcheck, apicheck, the tools
+                    # unit tests, ruff lint, samples-check, build, test, pack
+                    # (what CI runs)
 ```
 
 Known gaps (stated honestly): the bridge has run inside a live dedicated

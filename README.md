@@ -96,8 +96,8 @@ The ABI surface (details in [docs/ABI.md](docs/ABI.md)):
 ```mermaid
 flowchart TB
     subgraph G["Guest module"]
-        E["exports the host calls<br/>on_enable / on_tick / on_shutdown<br/>on_player_join / on_admin_command"]
-        I["imports the guest calls<br/>log / tick / get_world_time / get_setting / send_chat<br/>get_join_player_name / queue / sense / query"]
+        E["exports the host calls<br/>on_enable / on_tick / on_shutdown<br/>on_player_join (on_admin_command is<br/>signature-checked at load, not dispatched)"]
+        I["imports the guest calls<br/>log / tick / get_world_time / get_setting / send_chat<br/>get_join_player_name / queue / sense / query / config"]
     end
     subgraph H["Host"]
         HE["hooks dispatched per game event"]
@@ -109,9 +109,11 @@ flowchart TB
 
 Config load order (docs/CONFIG.md). Shared `wasm.toml` [limits] replace the
 code defaults at host start, so an operator may raise them; a per-mod
-`wasm-mod.toml` overrides `fuel_per_call` within the host ceiling and can
-only tighten `max_memory_bytes`. The module size cap is not configurable
-from either file; it lives on `WasmHostConfig`.
+`wasm-mod.toml` overrides `fuel_per_call` (bounded by the 50,000,000
+instruction parser ceiling, not by the shared value, so a mod can raise it
+and the bridge logs that it did) and can only tighten `max_memory_bytes`.
+The module size cap is not configurable from either file; it lives on
+`WasmHostConfig`.
 
 ```mermaid
 flowchart LR
@@ -138,18 +140,20 @@ make dist           # stage the modlet under dist/ (plus a CycloneDX SBOM)
 make pack           # pack the host library as a NuGet package under artifacts/
 ```
 
-`make build` and `make test` are all a new contributor needs: they want a .NET
-8 SDK (pinned by `global.json`) and Python 3, and the sandbox suite runs
-against the guest fixtures already committed under `tests/fixtures`. The
-remaining targets need more of a machine, and `make help` names what each one
-is missing before it fails:
+`make build` and `make test` are all a new contributor needs: they need only
+the .NET 8 SDK (pinned by `global.json`), and the sandbox suite runs against
+the guest fixtures already committed under `tests/fixtures`. The targets
+that read versions out of Python (`make dist`, `make pack`, `make locks`)
+are the ones that need Python 3. The remaining targets need more of a
+machine, and `make help` names what each one is missing before it fails:
 
 | Target | Needs |
 |---|---|
 | `make fixtures` | `make toolchain` (the in-project rustup), zig, and the `zdtd-server` checkout as a sibling |
 | `make samples` / `make samples-check` | `make toolchain` |
 | `make boss` / `make boss-zig` | zig |
-| `make dist` | everything `make fixtures` needs, plus a .NET 8 SDK and Python 3 |
+| `make dist` | everything `make fixtures` needs, plus a .NET 8 SDK, Python 3, and a 7 Days to Die Dedicated Server install at `GAME_DIR` |
+| `make bridge` / `make bridge-check` | a .NET 8 SDK and a dedicated server install at `GAME_DIR` |
 | `make pack` | a .NET 8 SDK and Python 3 |
 
 `make toolchain` populates `.cargo/` and `.rustup/` inside the checkout using
@@ -186,8 +190,8 @@ The Makefile drives a POSIX shell (GNU make plus `sh`): the in-project
 `samples/rust-toolchain.toml`) for the Rust guests, `zig 0.16.0` for the C
 and Zig guests (a different release is rejected by name before the compile),
 and Python 3 for the tools gate, resolved as `python3` or as
-`python` where that is the interpreter name. `GAME_DIR` defaults to the
-Steam library root of the platform
+`python` where that is the interpreter name. `GAME_DIR` defaults to `7 Days to Die
+Dedicated Server` under the Steam library root of the platform
 (`C:\Program Files (x86)\Steam\steamapps\common` on Windows,
 `$HOME/.local/share/Steam/steamapps/common` elsewhere); pass
 `GAME_DIR=/path/to/install` when Steam lives elsewhere. `make dist` reads the
@@ -234,7 +238,9 @@ ModRunResult? shutdown = host.Unload("hello");
 
 A guest fault never throws: every call outcome is a `ModRunResult`
 (`Ok`, `Trap`, `FuelExhausted`, `Error`). Only load rejection throws,
-as `WasmModLoadException` with the offending mod id. Each `Dispatch*` call
+as `WasmModLoadException` with the offending mod id (a null module or an
+invalid id throws `ArgumentNullException` / `ArgumentException`, and a call
+after `Dispose` throws `ObjectDisposedException`). Each `Dispatch*` call
 builds its own result list and hands it back read-only, so a later dispatch
 (including one on another thread) never rewrites a list you are still
 reading. Limits live on `WasmHostConfig` (fuel per call, memory ceiling,
@@ -251,7 +257,7 @@ using HordeForge.WasmHost.Registry;         // ModManifest
 try
 {
     ModManifest manifest = ModManifest.ParseToml(File.ReadAllText(manifestToml), id);
-    using WasmMod mod = host.LoadModule(id, File.ReadAllBytes(moduleWasm), manifest);
+    host.LoadModule(id, File.ReadAllBytes(moduleWasm), manifest);   // the host owns it; Unload releases it
 }
 catch (WasmManifestException ex)            // broken wasm-mod.toml; ModId is the mod
 {

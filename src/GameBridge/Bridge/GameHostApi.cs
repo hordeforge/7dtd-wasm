@@ -33,9 +33,10 @@ namespace HordeForge.GameBridge.Bridge
         // must not stat the disk at call rate.
         private readonly Dictionary<string, string> _rawConfigs = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        // Guards the config cache only. The servant and the limiters guard
-        // their own state, so this lock is never held while calling them and
-        // the order BridgeHost.Gate -> this -> servant is one way.
+        // Guards the config cache. It is held across the config file read
+        // and the config-failure report, so the order is
+        // BridgeHost.Gate -> this -> limiter. The servant is never called
+        // under it, and it calls nothing that takes this lock again.
         private readonly object _gate = new object();
 
         /// <summary>
@@ -333,11 +334,13 @@ namespace HordeForge.GameBridge.Bridge
             }
             command = TextSanitizer.Clean(command);
             // The bot servant dispatches the brain's SimCommands and the
-            // parachute mod's glide verb; non-servant queue text is a chat
-            // announce (the parachute deploy message reaches the stock chat
-            // broadcast this way, matching the mod's config: "announce via
-            // the stock chat broadcast"). A rejected chat falls back to a
-            // log line and still counts as accepted (the bytes were read).
+            // parachute mod's glide verb. It also absorbs every other string:
+            // non-servant queue text is not recognized as such and lands on
+            // the unknown-verb log, so the chat announce below is reachable
+            // only when the servant declines the command outright
+            // (handled false, that is a null id or command). A rejected
+            // chat falls back to a log line and still counts as accepted
+            // (the bytes were read).
             if (_servant.TryQueue(modId, command, out bool handled))
             {
                 return true;

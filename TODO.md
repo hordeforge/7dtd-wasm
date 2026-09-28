@@ -1,6 +1,7 @@
 # TODO
 
-Checklist format only (enforced by tools/doccheck.py). Items are ordered by
+Checklist format only (the part tools/doccheck.py enforces is that a
+`- TODO` item uses the `- [ ]` checkbox form). Items are ordered by
 dependency, not priority.
 
 ## In-game acceptance (done)

@@ -7,7 +7,7 @@ namespace HordeForge.WasmHost.Registry
     /// <summary>
     /// Reads operator-authored manifest files (wasm-mod.toml, wasm.toml)
     /// behind a hard size bound. These are tiny config files by nature;
-    /// anything at or beyond the bound is rejected instead of being slurped
+    /// anything larger than the bound is rejected instead of being slurped
     /// into memory wholesale.
     ///
     /// Decoding is explicitly UTF-8 with an invalid-byte fallback that

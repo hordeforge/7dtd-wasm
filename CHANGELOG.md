@@ -231,7 +231,8 @@ operator, embedder, and guest author.
   only thing a CI run saw. `EnforceCodeStyleInBuild` is on, and
   `.editorconfig` names the rules it promotes (braces on a multi-line
   `if`/`else`, unused private members and parameters, unread private
-  members, a simplifiable conditional, a disposable kept past its scope).
+  members, a simplifiable conditional, a using declaration in place of a
+  using block).
   The tree passes all of them, so a new one fails the build.
 - Two `targetcheck` helpers (`TypeKind`, `DecodeSignature`) took a
   `MetadataReader` they never read, a leftover from a shared signature
@@ -262,10 +263,6 @@ operator, embedder, and guest author.
 - A module whose directory resolved to nothing would have had its manifest
   read from the server process's working directory (`Path.Combine("", name)`
   is a relative path). `TryReadManifest` refuses instead.
-- `make dist` staged the native engine out of a hardcoded
-  `$(HOME)/.nuget/packages`, which is not where NuGet restores to when
-  `NUGET_PACKAGES` points somewhere else (CI caches, a shared package
-  folder). The variable is read now, with the same path as its default.
 - A mod id naming a Windows device (`con`, `nul`, `com1`, ..., also with a
   suffix like `aux.wasm`) or ending in a space or a period was accepted and
   then never loaded, because Windows has no directory by that name and stores
@@ -294,7 +291,7 @@ operator, embedder, and guest author.
   stream was unattributable in a log carrying one such line per guest per
   second, and a failed `on_player_join` was logged the same way. Both are
   warnings that name the tick, the mod, and the fuel the call consumed, which
-  is what CHANGELOG 0.4.0's telemetry entry already claimed they were.
+  is what the unreleased section's telemetry entry already claimed they were.
 - `make dist` staged the modlet with the third-party notices but not the
   project's own MIT LICENSE, so the shipped tree linked to a file that was
   not in it. Both travel in `dist/Mods/1_HordeForge_WasmHost/` now.

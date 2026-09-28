@@ -23,6 +23,7 @@ namespace HordeForge.WasmHost.Registry
     /// to the code defaults):
     ///   name = "boss"                  (optional, informational)
     ///   description = "..."            (optional, informational)
+    ///   version = "0.1.0"              (optional, informational)
     ///
     ///   [limits]                       (host-enforced caps)
     ///   fuel_per_call = 1000000        (optional, must be >= 1)

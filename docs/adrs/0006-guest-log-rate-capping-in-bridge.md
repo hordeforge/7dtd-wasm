@@ -19,9 +19,9 @@ concern: unbounded log growth over a long-lived server. Where to cap:
 
 The cap itself: per module id, at most 10 lines per second, measured on a
 monotonic clock so clock steps cannot freeze output or open bursts;
-excess lines are dropped and counted; every 100th dropped line is logged so
-throttling is visible without flooding the log, and the totals appear in
-`wasm status`.
+excess lines are dropped and counted; the first dropped line and then every
+100th after it is logged (`dropped % 100 == 1`) so throttling is visible
+without flooding the log, and the totals appear in `wasm status`.
 
 ## Decision
 

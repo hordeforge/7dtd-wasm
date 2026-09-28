@@ -16,8 +16,9 @@ namespace HordeForge.WasmHost.Core
     /// API plus WASI preview1; each loaded module gets its own store. Modules
     /// are loaded per id, validated against the configured limits, and driven
     /// through the documented export surface (on_enable, on_tick,
-    /// on_player_join, on_shutdown, on_admin_command). Every entry point
-    /// serializes on one
+    /// on_player_join, on_shutdown). on_admin_command is resolved and
+    /// signature-checked at load but never dispatched (docs/ABI.md). Every
+    /// entry point serializes on one
     /// internal gate, so an embedder that drives the host from more than one
     /// thread (a game main loop plus a console thread, say) gets the same
     /// state the single-caller case sees.
@@ -698,8 +699,8 @@ namespace HordeForge.WasmHost.Core
         /// unmodified fps_bot and its kin) load as-is. The functions map onto
         /// the game host API: log and tick behave like the hordeforge ones,
         /// queue forwards SimCommands to the bot servant, sense fills the
-        /// binary world snapshot, and query answers text requests. See
-        /// docs/ABI.md.
+        /// binary world snapshot, and query forwards a text request to the
+        /// host API, which answers none today (stage 3, docs/ABI.md).
         /// </summary>
         private void DefineZdtdCompatibilityApi()
         {

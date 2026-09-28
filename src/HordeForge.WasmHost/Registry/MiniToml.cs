@@ -8,7 +8,8 @@ namespace HordeForge.WasmHost.Registry
     /// <summary>
     /// Minimal, dependency-free TOML parser used for wasm-mod.toml and
     /// wasm.toml, keeping the sandbox trust boundary free of a TOML library
-    /// dll (ADR 0005).
+    /// dll (ADR 0007; ADR 0005 recorded the same decision for the retired
+    /// JSON manifest).
     ///
     /// Supported subset (documented in docs/CONFIG.md):
     ///   comments (#), top-level key = value, [table] and [table.sub]

@@ -35,8 +35,10 @@ layout our v3 writer could not feed.
    server writes an i32 there today, which its own guests cannot parse, so
    the f32 bits are the value that works.
 2. **`zdtd.config(out_ptr, out_cap) -> i32`**: serves the calling mod's
-   `config.toml` verbatim (min(out_cap, len) bytes, 0 = none), the zdtd
-   contract. The host never parses it; each guest owns its format. The
+   `config.toml` verbatim, copying min(out_cap, len) bytes cut at a UTF-8
+   character boundary; 0 means no bytes were served, which covers a mod
+   with no config, an empty `out_cap`, and a buffer too small to hold the
+   first character. The host never parses it; each guest owns its format. The
    bridge reads `Mods/Wasm/<id>/config.toml` at module load and caches it
    (invalidated on reload), so a guest looping on the import does not stat
    the disk at call rate.
@@ -46,9 +48,12 @@ layout our v3 writer could not feed.
    the parachute deploy message reaches players ("announce via the stock
    chat broadcast"). The real game has no C2S movement envelope to exempt,
    so the glide flag is tracked authority state, not a physics clamp.
-4. **`Entity.motion` and the equipment/item-tag surface are pinned in
-   targetcheck** so a real `make bridge-check` validates the new game API
-   the sense v4 fields read.
+4. **The equipment/item-tag surface the `wearing_glider` bit reads is
+   pinned in targetcheck** (`Equipment.GetItems`, `ItemValue.ItemClass`,
+   `ItemClass.HasAnyTags`) so a real `make bridge-check` validates that
+   game API. `Entity.motion` is deliberately not pinned: the stock server
+   does not populate it for remote players, so `vy` is derived from the
+   per-tick position history.
 
 ## Consequences
 
@@ -61,4 +66,5 @@ layout our v3 writer could not feed.
   against v3; the only in-repo consumer is the fps_bot fixture, updated
   together (the discipline docs/ABI.md requires).
 - A config.toml is optional: a mod without one keeps its built-in defaults
-  (the `config` import returns 0).
+  (the `config` import returns 0, as it also does for an empty `out_cap` or
+  a buffer too small for the first character).

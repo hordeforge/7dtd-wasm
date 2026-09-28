@@ -4,10 +4,12 @@
  * When a player named "maci" spawns into the world, this module prints
  * "THE BOSS IS HERE" to the server console via the host log import.
  *
- * Built with the zig compiler (see "make boss" in the Makefile):
+ * Built with the zig compiler ("make boss" in the Makefile runs exactly
+ * these flags, from the repository root, and emits into samples/target/ so
+ * no build artifact lands in a guest source directory):
  *   zig cc -target wasm32-wasi -O2 -nostdlib -Wl,--no-entry \
  *          -Wl,--max-memory=33554432 -Wl,-z,stack-size=1048576 \
- *          -o guest-boss.wasm guest-boss.c
+ *          -o samples/target/guest-boss.wasm samples/guest-boss/guest-boss.c
  *
  * ABI (see docs/ABI.md):
  *   imports  hordeforge.log(level, ptr, len)

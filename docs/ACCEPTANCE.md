@@ -31,7 +31,7 @@ The bot servant (stage 2) now runs on a live dedicated server in the
 acceptance container: 4 bot entities spawned from the unmodified zdtd
 fps_bot brain's sense/queue loop, and the brain drove them into combat
 against each other with the servant applying the ordered damage (including
-headshots). 1555 shots over the run; evidence:
+headshots). 1892 shots over the run, 279 of them headshots; evidence:
 `evidence/acceptance-1/servant-join.log`. Live-run fixes: spawn retries
 until the world is ready, and bot classification checks the roster before
 entity type (the bots are zombie-bodied).
@@ -64,13 +64,14 @@ install in the container. The native install should be repaired via Steam
 (`steamcmd +app_update 294420 validate`) before trusting it for further
 runs.
 
-## Parachute playtest (2026-08-30)
+## Parachute playtest (2026-09-04)
 
 The unmodified zdtd parachute module ran end to end on a live dedicated
 server (docker, fresh steamcmd V3.2.0 b9) driven by a real stock client
-through the `7dtd-playtest` orchestrator: the client wore the glider item,
-fell, and the mod armed the glide exemption and announced through the stock
-chat broadcast, which the client asserted (pass=2, exit=0). Server log
+through the `7dtd-playtest` orchestrator: the client equipped the glider
+item, fell, the mod armed the glide exemption and announced through the
+stock chat broadcast, and the client landed safe (alive, no broken leg),
+`SUMMARY pass=3 fail=0` with the orchestrator at `exit=0`. Server log
 showed `parachute: config deploy_vy=-6 delay_ticks=10` (the `zdtd.config`
 import serving the mod's config.toml), `glide <id> armed`, the announce,
 and `glide <id> cleared` on landing. Evidence and reproduction:
