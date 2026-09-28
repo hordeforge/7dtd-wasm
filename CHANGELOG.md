@@ -163,6 +163,10 @@ a third set of breaking changes in a patch slot, after 0.1.3 and 0.3.1.
 - Two `targetcheck` helpers (`TypeKind`, `DecodeSignature`) took a
   `MetadataReader` they never read, a leftover from a shared signature
   shape. Removed, with the call sites.
+- `BotServant` kept a `_botOwnersWithFloor` set that nothing read: the
+  per-module bot count floor is a dictionary lookup in `EnsureSpawned`, so
+  the set was written on every `bot count` and cleared on every release
+  without ever answering a question. Removed, with the two writes.
 - The Python gate had no exception-hygiene rules at all. `TRY` (with
   TRY003, a style preference about message length, off) and `RSE` are
   enabled; both pass the tree today, so control flow inside a `try` and a

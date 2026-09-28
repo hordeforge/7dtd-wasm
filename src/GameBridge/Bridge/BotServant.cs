@@ -115,11 +115,9 @@ namespace HordeForge.GameBridge.Bridge
         // never raises or lowers another's, and the live ceiling stays
         // global (MaxBotCount) because the entity cost is shared.
         private readonly Dictionary<string, int> _countFloors = new Dictionary<string, int>(StringComparer.Ordinal);
-        private readonly HashSet<string> _botOwnersWithFloor = new HashSet<string>(StringComparer.Ordinal);
-        // Sense runs once per
-        // tick per calling brain; the snapshot and its entity records are
-        // pooled and refilled per call instead of being reallocated every
-        // time (single main-loop thread by contract).
+        // Sense runs once per tick per calling brain; the snapshot and its
+        // entity records are pooled and refilled per call instead of being
+        // reallocated every time (single main-loop thread by contract).
         private readonly SenseSnapshotWriter.Snapshot _sense = new SenseSnapshotWriter.Snapshot();
         private readonly SenseSnapshotWriter.EntityRecord[] _senseRecords =
             new SenseSnapshotWriter.EntityRecord[MaxSenseRecords];
@@ -352,7 +350,6 @@ namespace HordeForge.GameBridge.Bridge
                         if (parts.Length > 2 && TryParseId(parts[2], out int n) && n >= 0 && n <= MaxBotCount)
                         {
                             _countFloors[modId] = n;
-                            _botOwnersWithFloor.Add(modId);
                             EnsureSpawned(modId);
                         }
                         return true;
@@ -915,7 +912,6 @@ namespace HordeForge.GameBridge.Bridge
         {
             IReadOnlyList<int> released = _botOwners.Release(modId);
             _countFloors.Remove(modId);
-            _botOwnersWithFloor.Remove(modId);
             if (released.Count == 0)
             {
                 return;

@@ -72,14 +72,8 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public static MonotonicTimer Timer
         {
-            get
-            {
-                return _timer;
-            }
-            set
-            {
-                _timer = value ?? throw new ArgumentNullException(nameof(value));
-            }
+            get { return _timer; }
+            set { _timer = value ?? throw new ArgumentNullException(nameof(value)); }
         }
 
         /// <summary>
@@ -89,14 +83,8 @@ namespace HordeForge.GameBridge.Bridge
         /// </summary>
         public static Func<int> ClockMs
         {
-            get
-            {
-                return _clockMs;
-            }
-            set
-            {
-                _clockMs = value ?? throw new ArgumentNullException(nameof(value));
-            }
+            get { return _clockMs; }
+            set { _clockMs = value ?? throw new ArgumentNullException(nameof(value)); }
         }
 
         /// <summary>Folder that holds guest modules: Mods/Wasm under the install.</summary>

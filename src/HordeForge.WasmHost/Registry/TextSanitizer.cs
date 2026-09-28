@@ -26,7 +26,7 @@ namespace HordeForge.WasmHost.Registry
         {
             if (string.IsNullOrEmpty(text))
             {
-                return text ?? string.Empty;
+                return string.Empty;
             }
             int firstControl = FirstControlIndex(text);
             if (firstControl < 0)
