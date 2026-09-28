@@ -228,6 +228,19 @@ operator, embedder, and guest author.
   permissions, which the game honors in preference to the default.
   `tools/targetcheck` gates on the member so a game update that drops it
   fails the check rather than reopening the command.
+- A guest string import (log, send_chat, queue, get_setting, query) read
+  exactly the length the guest named, so a guest could have the host read,
+  decode, and allocate its whole linear memory (32 MiB under the default
+  cap, 4 GiB when the operator raised it) and repeat the call inside one
+  fuel budget. The read is now capped at 64 KiB
+  (`HordeForge.WasmHost.Abi.GuestStringLength`); a longer length is cut
+  there, so the text is still a prefix of what the guest wrote. The chat
+  and log caps only ever refused the result, after the bytes were read.
+- `HordeForge.WasmHost.Core.MonotonicTimer.ElapsedMs(double)` reported NaN
+  as a call cost, because NaN fails the `elapsed < 0.0` test. One NaN
+  sample from the clock then poisoned every average and sum it reached,
+  including the per-guest cost in the slow-dispatch warning. The bridge's
+  copy already reported zero for it; the host copy now does too.
 - A per-mod `max_memory_bytes` above the effective cap is ignored by design
   (a manifest can only tighten), and nothing said so: a module the operator
   believed was capped tighter than the host cap ran under the host cap
