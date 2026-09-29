@@ -1,6 +1,10 @@
-# 🧫 Quarantine (7DTD WasmHost)
+# 🧫 Quarantine (WasmHost)
 
 > **Part of [HordeForge](https://github.com/hordeforge)**: High-Performance Systems Engineering for 7 Days to Die.
+
+![CI](https://github.com/hordeforge/7dtd-wasm/actions/workflows/ci.yml/badge.svg)
+![license](https://img.shields.io/github/license/hordeforge/7dtd-wasm)
+![release](https://img.shields.io/github/v/release/hordeforge/7dtd-wasm)
 
 > **EXPERIMENT.** This project is an experiment: the ABI and host API are
 > expected to change, the in-game bridge has run live only inside a
