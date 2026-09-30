@@ -396,7 +396,7 @@ api-baseline:
 	$(PYTHON) tools/apicheck.py --update
 
 # The pinned ruff version on stdout, for whoever has to install it. The CI
-# step pipes this into its pip install, so the pin in pyproject.toml is the
+# step pipes this into its uv tool install, so the pin in pyproject.toml is the
 # only place the version is written and a bump cannot miss an installer.
 .PHONY: ruff-version
 ruff-version:

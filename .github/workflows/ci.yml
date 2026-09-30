@@ -95,15 +95,11 @@ jobs:
       # "ruff check tools" so local and CI never disagree on rule sets. The
       # version comes from pyproject.toml through the Makefile, the one
       # place it is declared, so a bump there cannot leave this step
-      # installing a ruff the gate then rejects. --no-deps keeps the runner
-      # from resolving anything beside the one wheel (ruff ships no runtime
-      # dependencies), and --only-binary refuses a source distribution,
-      # which would build the linter from a fetched sdist here.
+      # installing a ruff the gate then rejects. --no-build refuses a source
+      # distribution, which would build the linter from a fetched sdist here.
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install ruff (pinned)
-        # Quoted because the bare form carries a ": " free but colon-dense
-        # argument (--only-binary=:all:), which stricter YAML readers reject
-        # as a mapping inside a plain scalar.
-        run: 'python3 -m pip install --quiet --no-deps --only-binary=:all: "ruff==$(make ruff-version)"'
+        run: uv tool install --no-build "ruff==$(make ruff-version)"
       - name: Make sure shellcheck is on PATH
         # check-ci lints the bash under evidence/ with shellcheck, and the
         # ubuntu runner image ships it. This step only matters if a future
