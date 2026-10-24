@@ -15,6 +15,28 @@ Codename: Quarantine (7dtd-wasm).
   where the rate limiter takes the millisecond value. `make bridge-check`
   stayed green through both because it matches metadata by name and never
   compiles the bridge. Both now build.
+- Module loads failed on Windows with `all fuel consumed by WebAssembly`.
+  Wasmtime 48 runs module initialization as metered wasm (the synthesized
+  startup function), and the host instantiated each store with no fuel armed,
+  so any initialization it could not constant-fold trapped the instantiation
+  before the first guest call. The load now arms a fixed 10,000,000
+  instruction budget before instantiating; a startup that exhausts it fails
+  the load and the host stays healthy. A regression test loads a module with
+  a passive element segment and one with a looping `(start ...)`.
+- `make toolchain` left no `cargo` in `.cargo/bin` on a fresh clone or on a
+  CI runner. rustup writes its proxies only into the CARGO_HOME of the
+  rustup installation it is itself installed in, so installing the toolchain
+  into the in-project `RUSTUP_HOME` was enough for `rustup` but not for
+  `make samples`/`make samples-check`, which run `$(CURDIR)/.cargo/bin/cargo`.
+  The target now links the rustup proxies it needs into the in-project
+  CARGO_HOME, disables rustup's self-update in the in-project RUSTUP_HOME so
+  a pinned toolchain does not also pull a new rustup, and honours
+  `RUSTUP=/path/to/rustup` in its guard.
+- `WasmSettingsProviderTests.FixedFileIsPickedUpAfterAFailure` relied on two
+  same-length writes getting different filesystem timestamps, which is not
+  guaranteed, and failed on the Windows runner. Both revisions now carry
+  pinned mtimes so the test measures the retry-after-failure path instead of
+  the filesystem clock.
 
 ### Changed
 

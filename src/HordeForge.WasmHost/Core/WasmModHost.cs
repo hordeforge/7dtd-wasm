@@ -51,6 +51,24 @@ namespace HordeForge.WasmHost.Core
         /// </summary>
         private const int EngineMaxStackBytes = 2 * 1024 * 1024;
 
+        /// <summary>
+        /// Fuel armed on a mod's store before its module is instantiated.
+        /// Wasmtime compiles the segment, table, and global initialization a
+        /// module needs into a synthesized startup function and meters it
+        /// with fuel like any other wasm, so a store that has never been
+        /// given fuel traps there with OutOfFuel before the first guest
+        /// call, and a module with such initialization could never load
+        /// (measured: one unit for a module with a passive element segment,
+        /// none for a module whose initialization is constant-folded away).
+        /// The budget is separate from <see cref="WasmHostConfig.FuelPerCall"/>
+        /// because it bounds one load, not a call: it does not shrink with a
+        /// manifest's smaller per-call budget, and it is far above what the
+        /// segment data of a module under the default 1 MiB size cap needs to
+        /// initialize. A module whose initialization exhausts it fails to
+        /// load, and the host stays healthy.
+        /// </summary>
+        private const ulong InstantiationFuel = 10_000_000UL;
+
         private readonly WasmHostConfig _config;
         private readonly IGameHostApi _api;
         private readonly MonotonicTimer _timer;
@@ -411,6 +429,11 @@ namespace HordeForge.WasmHost.Core
                         .WithInheritedStandardOutput()
                         .WithInheritedStandardError());
                 }
+                // Armed before instantiation: the module's startup function is
+                // metered wasm, and a store with no fuel traps there instead
+                // of loading (see InstantiationFuel). Calls arm their own
+                // budget in WasmMod.Run, so this one covers only the load.
+                store.Fuel = InstantiationFuel;
                 Instance instance;
                 try
                 {

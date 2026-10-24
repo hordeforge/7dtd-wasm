@@ -45,6 +45,63 @@ namespace HordeForge.WasmHost.Tests
             }
         }
 
+        /// <summary>
+        /// A module whose initialization Wasmtime cannot constant-fold: the
+        /// passive element segment forces the synthesized startup function
+        /// that runs module initialization as metered wasm.
+        /// </summary>
+        private static byte[] StartupModule()
+        {
+            return Wasmtime.Module.ConvertText(
+                "(module (memory (export \"memory\") 1 1)" +
+                " (func $f (result i32) i32.const 42)" +
+                " (table 1 funcref) (elem $passive func $f)" +
+                " (func (export \"on_enable\") (result i32) i32.const 0)" +
+                " (func (export \"on_tick\") (result i32) i32.const 0))");
+        }
+
+        [Fact]
+        public void ModuleInitializationRunsUnderItsOwnFuelBudget()
+        {
+            // Wasmtime runs module initialization as metered wasm, so a store
+            // armed with no fuel traps at instantiation before the first guest
+            // call. A module with a passive element segment could then never
+            // load at all, and the Windows CI job hit that on its
+            // module-loading tests.
+            var (host, _) = NewHost();
+            using (host)
+            {
+                host.LoadModule("startup", StartupModule());
+                ModRunResult tick = host.DispatchTick(1).Single();
+                Assert.True(tick.Ok, tick.Message + " " + tick.Details);
+            }
+        }
+
+        [Fact]
+        public void InitializationThatExhaustsItsFuelBudgetFailsTheLoad()
+        {
+            // The startup function can be guest wasm too (a (start ...)
+            // export), so the load budget bounds it: a looping startup is
+            // rejected with the fuel trap named, the registry keeps nothing,
+            // and the host stays usable for the next load.
+            byte[] wasm = Wasmtime.Module.ConvertText(
+                "(module (memory (export \"memory\") 1 1)" +
+                " (func $spin (loop $l br $l)) (start $spin)" +
+                " (func (export \"on_enable\") (result i32) i32.const 0)" +
+                " (func (export \"on_tick\") (result i32) i32.const 0))");
+            var (host, _) = NewHost();
+            using (host)
+            {
+                WasmModLoadException ex = Assert.Throws<WasmModLoadException>(
+                    () => host.LoadModule("spinner", wasm));
+                Assert.Contains("instantiation failed", ex.Message);
+                Assert.Contains("fuel", ex.Message);
+                Assert.Empty(host.ModIds);
+                host.LoadModule("startup", StartupModule());
+                Assert.Single(host.ModIds);
+            }
+        }
+
         [Fact]
         public void GuestCallCostComesFromTheInjectedTimer()
         {

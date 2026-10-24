@@ -222,11 +222,16 @@ namespace HordeForge.WasmHost.Tests
         [Fact]
         public void FixedFileIsPickedUpAfterAFailure()
         {
-            WriteShared("[settings\nkey = \"broken\"\n");
+            // Both revisions are the same length, so only the mtime can tell
+            // the fixed save from the broken one. Pin both: whether two
+            // writes this close together carry distinct timestamps depends on
+            // the filesystem clock, and the retry-after-failure path is what
+            // this test is about.
+            WriteSharedAt("[settings\nkey = \"broken\"\n", SharedEpoch);
             var provider = NewProvider();
             Assert.False(provider.TryGetSetting("mod", "key", out _));
 
-            WriteShared("[settings]\nkey = \"fixed\"\n");
+            WriteSharedAt("[settings]\nkey = \"fixed\"\n", SharedEpoch.AddSeconds(1));
             AdvancePastProbeThrottle();
             Assert.True(provider.TryGetSetting("mod", "key", out string fixedValue));
             Assert.Equal("fixed", fixedValue);

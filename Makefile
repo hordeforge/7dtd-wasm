@@ -44,11 +44,11 @@ unexport CARGO_ENCODED_RUSTFLAGS
 CIBUILD ?= -p:ContinuousIntegrationBuild=true
 
 # The in-project toolchain is gitignored, so a fresh clone has no cargo at
-# $(CARGO) and every guest target would fail with a bare "No such file or
-# directory" from sh. These two guards turn that into a named instruction.
-# The host suite runs on the committed fixtures without either tool, so the
-# error says so rather than sending a new contributor looking for a tool
-# they do not need yet.
+# $(CARGO) until "make toolchain" has run, and every guest target would fail
+# with a bare "No such file or directory" from sh. These two guards turn that
+# into a named instruction. The host suite runs on the committed fixtures
+# without either tool, so the error says so rather than sending a new
+# contributor looking for a tool they do not need yet.
 define require_dotnet
 	@command -v "$(DOTNET)" >/dev/null 2>&1 || test -x "$(DOTNET)" 2>/dev/null || { \
 	  echo "make: no .NET SDK found ($(DOTNET) is not executable)."; \
@@ -371,14 +371,37 @@ shell-check:
 # RUST_TOOLCHAIN, read from samples/rust-toolchain.toml, which is the same file
 # rustup resolves when cargo runs inside samples/: installing a different
 # release than the one cargo would pick is not possible.
+#
+# "rustup toolchain install" puts the toolchain under RUSTUP_HOME but writes
+# no cargo there: rustup only creates its proxies (rustup, cargo,
+# cargo-clippy, rustc, ...) in the CARGO_HOME of the rustup installation
+# itself, so a fresh clone and a CI runner end up with the toolchain
+# installed and nothing at $(CARGO). Link the proxies the guest gate runs,
+# rustup first because "rustup default" refuses a CARGO_HOME with no rustup
+# in it; each proxy is the rustup binary under its own name and resolves the
+# channel from the exported RUSTUP_HOME, so the same binary CI uses off PATH
+# now runs off the checkout and the pin holds. The links are rewritten every
+# run, so a cache restored from a runner image whose rustup moved is repaired
+# instead of left dangling.
 toolchain:
-	@command -v rustup >/dev/null 2>&1 || { \
-	  echo "make: rustup not found on PATH."; \
+	@command -v "$(RUSTUP)" >/dev/null 2>&1 || { \
+	  echo "make: rustup not found on PATH ($(RUSTUP))."; \
 	  echo "  Install it from https://rustup.rs (the toolchain itself lands in ./.rustup),"; \
 	  echo "  then run 'make toolchain' again. Point at an existing one with RUSTUP=/path/to/rustup."; \
 	  exit 1; }
+	@# The setting lives in the in-project RUSTUP_HOME, so it moves nothing
+	@# outside the checkout; it keeps a pinned toolchain from also pulling
+	@# whatever rustup release the runner happens to offer on every run.
+	@$(RUSTUP) set auto-self-update disable
+	@mkdir -p "$(CARGO_HOME)/bin"
+	@for tool in rustup cargo cargo-clippy clippy-driver rustc; do \
+	  ln -sf "$$(command -v "$(RUSTUP)")" "$(CARGO_HOME)/bin/$$tool"; \
+	done
 	$(RUSTUP) toolchain install $(RUST_TOOLCHAIN) --profile minimal --target wasm32-wasip1 --component clippy
 	$(RUSTUP) default $(RUST_TOOLCHAIN)
+	@test -x "$(CARGO)" || { \
+	  echo "make: the cargo proxy was not created at $(CARGO)."; \
+	  exit 1; }
 	@echo "Guest toolchain ready in $(CARGO_HOME) (nothing installed system-wide)."
 
 # The two tools/ commands a contributor has to run by hand: the SBOM preview

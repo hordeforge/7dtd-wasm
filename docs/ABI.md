@@ -189,6 +189,13 @@ amendment; see SECURITY.md for the weaker bound).
   `limits.fuel_per_call` is held to, and a host configured above it is
   rejected at construction: one guest call is the only thing standing between
   a runaway module and the tick budget of the loop it runs on.
+- Module initialization runs under its own fixed fuel budget (10,000,000
+  instructions) before the first call. The engine compiles the segment,
+  table, and global initialization into a startup function and meters it
+  like any other wasm, and a `(start ...)` export runs there too; a load
+  whose initialization exhausts the budget is rejected with
+  `WasmModLoadException` and the host stays healthy. The budget does not
+  shrink with a module's `limits.fuel_per_call`, which bounds calls.
 - Traps return a structured `ModRunResult`; the game loop and other modules
   are unaffected.
 - WASI preview 1 is linked with stdout and stderr discarded by default (the

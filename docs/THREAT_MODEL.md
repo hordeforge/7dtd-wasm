@@ -81,8 +81,11 @@ carries no data today.
 Every row of the "What the sandbox guarantees" table resolves:
 
 - Fuel per call: engine built with fuel consumption on, budget re-armed
-  before every call (`src/HordeForge.WasmHost/Core/WasmModHost.cs:124`,
-  `src/HordeForge.WasmHost/Core/WasmMod.cs:285`).
+  before every call (`src/HordeForge.WasmHost/Core/WasmModHost.cs:152`,
+  `src/HordeForge.WasmHost/Core/WasmMod.cs:301`), and a separate load-time
+  budget armed before instantiation so metered module initialization cannot
+  trap the load or run unbounded
+  (`src/HordeForge.WasmHost/Core/WasmModHost.cs:70`, `:436`).
 - Memory maximum: engine static memory maximum, checked against the module's
   declared maximum at load, a module with no declared maximum treated as the
   wasm32 ceiling (`src/HordeForge.WasmHost/Core/WasmModHost.cs:120`,

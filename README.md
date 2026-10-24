@@ -23,7 +23,9 @@ process.
 
 - **Fuel**: every guest call (on_enable, on_tick, on_player_join,
   on_shutdown) gets a fixed instruction budget; a burning loop stops at the
-  budget and reports `FuelExhausted`.
+  budget and reports `FuelExhausted`. Module initialization at load runs
+  under its own fixed budget, so a startup that never returns fails the load
+  instead of holding the server.
 - **Memory**: a guest's declared memory maximum is checked at load time
   against the host cap; oversized modules are rejected.
 - **Module size**: a .wasm file larger than the cap is refused.
