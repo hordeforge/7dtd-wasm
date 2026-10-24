@@ -4,7 +4,27 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
-## Unreleased
+## [0.5.0] - 2026-10-25
+
+This release retargets the net48 bridge and the sample guests to V3.3.0 b18
+and gives host-side module initialization its own fuel budget. Both change
+behaviour, not only compatibility.
+
+V3.3.0 b18 removed `Equipment.GetItems()`. `BotServant.WearsGlider` now walks
+`Equipment.GetSlotCount()` and `Equipment.GetSlotItem(i)`, and
+`tools/targetcheck` pins those two members. `CmdWasm` had to override
+`ConsoleCmdAbstract.DefaultPermissionLevel` as a property rather than an
+accessor method, and `GameTickHook` had to pass the clock value instead of
+the clock accessor, so the bridge compiles again and the tick hook runs. The
+bridge targets V3.3.0 b18, so a dedicated server on an older build is not a
+supported target for this release.
+
+Wasmtime runs module initialization as metered wasm. The host now arms
+`InstantiationFuel` (10,000,000 instructions) before instantiating, separate
+from `FuelPerCall`, which stays per call and is not shrunk by a module's
+`limits.fuel_per_call`. A module whose initialization is not constant-folded
+now loads on every platform, and a startup that exhausts the load budget
+fails the load while the host stays healthy.
 
 ### Fixed
 
