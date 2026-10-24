@@ -6,6 +6,26 @@ Codename: Quarantine (7dtd-wasm).
 
 ## Unreleased
 
+### Fixed
+
+- The net48 bridge did not compile against a game install. `CmdWasm`
+  overrode `ConsoleCmdAbstract.get_DefaultPermissionLevel` as a method, but
+  the assembly exposes `DefaultPermissionLevel` as a property, so C# refused
+  the override, and `GameTickHook` passed `BridgeHost.ClockMs` (a `Func<int>`)
+  where the rate limiter takes the millisecond value. `make bridge-check`
+  stayed green through both because it matches metadata by name and never
+  compiles the bridge. Both now build.
+
+### Changed
+
+- Retargeted the game pin to V3.3.0 b18. `Equipment.GetItems` was removed
+  from the assembly, so `BotServant.WearsGlider` walks
+  `Equipment.GetSlotCount()` and `Equipment.GetSlotItem(i)`, and
+  `tools/targetcheck` pins those two members plus the
+  `ConsoleCmdAbstract.DefaultPermissionLevel` property. The live acceptance
+  evidence stays as dated history: it was recorded on V 3.1.0 b14 and
+  V3.2.0 b9, and no live run has happened on b18.
+
 ## [0.4.0] - 2026-09-28
 
 This cycle carries breaking changes, so it ships as 0.4.0: in this project's

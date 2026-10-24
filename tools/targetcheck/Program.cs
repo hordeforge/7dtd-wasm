@@ -176,10 +176,12 @@ namespace TargetCheck
 
             // Parachute glide sense (BotServant.WearsGlider): a worn item
             // whose ItemClass carries the glider tag sets the sense v4
-            // wearing_glider bit.
+            // wearing_glider bit. V3.3.0 removed GetItems(); the servant
+            // walks the grid through GetSlotCount/GetSlotItem instead.
             CheckType(md, "Equipment", t =>
             {
-                CheckMethod(md, t, "GetItems", "ItemValue[]()", isStatic: false);
+                CheckMethod(md, t, "GetSlotCount", "int()", isStatic: false);
+                CheckMethod(md, t, "GetSlotItem", "ItemValue(int)", isStatic: false);
             });
 
             CheckType(md, "ItemValue", t =>
@@ -212,10 +214,13 @@ namespace TargetCheck
                 CheckMethod(md, t, "getDescription", "string()", isStatic: false);
                 CheckMethod(md, t, "getHelp", "string()", isStatic: false);
                 // The permission level the game reads to decide which players
-                // may run CmdWasm at all. The base returns 0, so dropping the
-                // override would silently reopen load/reload/unload to every
-                // connected player rather than fail the build.
-                CheckMethod(md, t, "get_DefaultPermissionLevel", "int()", isStatic: false);
+                // may run CmdWasm at all. It is a property, so CmdWasm
+                // overrides it as one; the metadata accessor exists either
+                // way, which is why the check names the property. The base
+                // returns 0, so dropping the override would silently reopen
+                // load/reload/unload to every connected player rather than
+                // fail the build.
+                CheckProperty(md, t, "DefaultPermissionLevel", isStatic: false);
                 CheckMethod(md, t, "Execute", "void(List`1<string>, CommandSenderInfo)", isStatic: false);
             });
 

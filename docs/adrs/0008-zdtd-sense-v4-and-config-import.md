@@ -52,9 +52,11 @@ layout our v3 writer could not feed.
    set itself: it applies the glide buff and clamps the descent (amendment
    below).
 4. **The equipment/item-tag surface the `wearing_glider` bit reads is
-   pinned in targetcheck** (`Equipment.GetItems`, `ItemValue.ItemClass`,
-   `ItemClass.HasAnyTags`) so a real `make bridge-check` validates that
-   game API. `Entity.motion` is deliberately not pinned: the stock server
+   pinned in targetcheck** (`Equipment.GetSlotCount`,
+   `Equipment.GetSlotItem`, `ItemValue.ItemClass`, `ItemClass.HasAnyTags`)
+   so a real `make bridge-check` validates that game API. The pin used
+   `Equipment.GetItems` before V3.3.0 b18 removed it. `Entity.motion` is
+   deliberately not pinned: the stock server
    does not populate it for remote players, so `vy` is derived from the
    per-tick position history.
 

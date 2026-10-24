@@ -82,11 +82,14 @@ namespace HordeForge.GameBridge.Commands
 
         /// <summary>
         /// Admin level the game requires before a player may run this
-        /// command; see <see cref="AdminPermissionLevel"/>.
+        /// command; see <see cref="AdminPermissionLevel"/>. The game exposes
+        /// it as the <c>DefaultPermissionLevel</c> property, so it overrides
+        /// as a property, not as the <c>get_</c> accessor method the other
+        /// three members use.
         /// </summary>
-        public override int get_DefaultPermissionLevel()
+        public override int DefaultPermissionLevel
         {
-            return AdminPermissionLevel;
+            get { return AdminPermissionLevel; }
         }
 
         /// <summary>The per-subcommand help block, shared by both help paths.</summary>

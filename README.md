@@ -335,8 +335,8 @@ per release.
 
 - [x] Host library: load, dispatch, fuel, memory cap, traps (tested)
 - [x] Rust guest SDK (`guest-common`) plus C and Zig sample guests
-- [x] net48 bridge compiles against V3.1.0 and all targets are verified
-- [x] In-game acceptance on a live dedicated server (docker container, fresh steamcmd install, V 3.1.0 b14)
+- [x] net48 bridge compiles against V3.3.0 b18 and all targets are verified
+- [x] In-game acceptance on a live dedicated server (docker container, fresh steamcmd install); the run was on V 3.1.0 b14 and no live run has happened on b18 yet
 - [x] Unmodified zdtd fps_bot runs: sense, queue, and the bot servant drive live bots in combat
 - [ ] ABI stability review before anything is called stable
 

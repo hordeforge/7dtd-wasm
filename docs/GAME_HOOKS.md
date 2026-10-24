@@ -74,7 +74,14 @@ running host and logged at start. Guests that spam are rate capped; the
 running drop totals surface in `wasm status` and every 100th dropped line is
 logged.
 
-## Verified game API surface (via tools/targetcheck; V3.1.0 b14 acceptance and V3.2.0 b9 playtest)
+## Verified game API surface (via tools/targetcheck; V3.3.0 b18)
+
+Every row below was checked against the V3.3.0 b18 dedicated
+`Assembly-CSharp.dll` (sha256 `e16ff9d5...`, 11697152 bytes) with
+`make bridge-check`, and the net48 bridge compiles against the same install.
+The live runs behind the acceptance evidence predate that build: the first
+was V 3.1.0 b14 and the parachute playtest was V3.2.0 b9 (see
+[ACCEPTANCE.md](ACCEPTANCE.md)).
 
 | Member | Verified signature |
 |---|---|
@@ -86,6 +93,7 @@ logged.
 | `GameManager.RequestToSpawnPlayer` | `void(ClientInfo, int, PlayerProfile, int)` |
 | `ClientInfo.playerName`, `ClientInfo.entityId` | instance fields |
 | `ConsoleCmdAbstract.getCommands/getDescription/getHelp/Execute` | `string[]()`, `string()`, `string()`, `void(List<string>, CommandSenderInfo)` |
+| `ConsoleCmdAbstract.DefaultPermissionLevel` | `int` instance property (overridden as a property, not as the `get_` accessor method) |
 | `SdtdConsole.Output` | `void(string)` instance |
 | `SingletonMonoBehaviour<T>.Instance` | static field |
 | `World.Entities` | instance field |
@@ -103,7 +111,8 @@ logged.
 | `EntityBuffs.AddBuff` | `BuffStatus(string, int, bool, bool, float)` |
 | `EntityBuffs.RemoveBuff` | `void(string, int, bool)` |
 | `EntityBuffs.HasBuff` | `bool(string)` |
-| `Equipment.GetItems` | `ItemValue[]()` |
+| `Equipment.GetSlotCount` | `int()` instance (the grid length, 13) |
+| `Equipment.GetSlotItem` | `ItemValue(int)` instance |
 | `ItemValue.IsEmpty` | `bool()` |
 | `ItemValue.ItemClass` | instance property |
 | `ItemClass.HasAnyTags` | ``bool(FastTags`1<Global>)`` |
@@ -190,11 +199,13 @@ served to guests, so do not put secrets in them.
 
 ## Known gaps
 
-- Live acceptance succeeded in a docker container (fresh steamcmd install,
-  V 3.1.0 b14); the native install on this machine crashes at boot and was
-  not used. See `evidence/acceptance-1/` and `docs/ACCEPTANCE.md`. The
-  parachute module was later driven end to end on a V3.2.0 b9 live server
-  (`evidence/playtest-1/`).
+- The target list and the net48 build are re-verified on V3.3.0 b18, but no
+  live run has happened on that build. Everything proven in game rests on
+  older evidence: live acceptance succeeded in a docker container (fresh
+  steamcmd install, V 3.1.0 b14), and the parachute module was driven end to
+  end on a V3.2.0 b9 live server. The native install on this machine crashes
+  at boot and was not used. See `evidence/acceptance-1/`,
+  `evidence/playtest-1/`, and `docs/ACCEPTANCE.md`.
 - Guest log and chat rate capping are bridge code; the log cap was
   exercised in the acceptance run (drop counter in `wasm status`), not by
   host unit tests.

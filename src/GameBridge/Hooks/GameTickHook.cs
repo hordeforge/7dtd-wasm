@@ -23,7 +23,7 @@ namespace HordeForge.GameBridge.Hooks
         // the dropped total is reported so the cap never hides how long the
         // fault has been running.
         private static readonly GuestRateLimiter FailureLimiter =
-            new GuestRateLimiter(FailureLogsPerSecond, () => BridgeHost.ClockMs);
+            new GuestRateLimiter(FailureLogsPerSecond, () => BridgeHost.ClockMs());
 
         /// <summary>
         /// The patched method body. One call per game tick into the host

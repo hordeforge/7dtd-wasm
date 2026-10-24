@@ -784,13 +784,13 @@ namespace HordeForge.GameBridge.Bridge
                 {
                     return 0;
                 }
-                ItemValue[] items = player.equipment.GetItems();
-                if (items == null)
+                // V3.3.0 removed Equipment.GetItems(); the slots are read one
+                // at a time over the grid length, which is 13 and includes
+                // the backpack slot.
+                int slotCount = player.equipment.GetSlotCount();
+                for (int slot = 0; slot < slotCount; slot++)
                 {
-                    return 0;
-                }
-                foreach (ItemValue item in items)
-                {
+                    ItemValue item = player.equipment.GetSlotItem(slot);
                     if (item == null || item.IsEmpty())
                     {
                         continue;

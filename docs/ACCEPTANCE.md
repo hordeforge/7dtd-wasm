@@ -1,5 +1,27 @@
 # Acceptance status
 
+## Build re-verification (2026-10-24): V3.3.0 b18
+
+No live run has happened on V3.3.0 b18. The offline gates were re-run against
+that dedicated install (`/home/maci/.cache/zdtd-scratch/sdtd_v3.3.0`,
+`Assembly-CSharp.dll` sha256
+`e16ff9d539b8fbf64904c0bc090d502286a62464742a9396f0455936ad0beb87`,
+11697152 bytes):
+
+- `make bridge-check`: every required target present.
+- `make bridge`: the net48 bridge compiles against the b18 install.
+- `make check`: passes (host library, tests, tools, docs gates).
+
+The b18 inventory rework removed `Equipment.GetItems`, so the bridge walks
+`Equipment.GetSlotCount()` and `Equipment.GetSlotItem(i)` instead. `CmdWasm`
+declares its admin level through the `ConsoleCmdAbstract.DefaultPermissionLevel`
+property, which is what the b18 assembly exposes; overriding the accessor
+method by name does not compile. `tools/targetcheck` checks both.
+
+What still rests on older logs: everything below, including the bot servant,
+the join hook, and the parachute playtest. Those runs were V 3.1.0 b14 and
+V3.2.0 b9. Repeating them on a b18 server is the remaining proof.
+
 ## Attempt 1 (2026-08-24): SUCCESS in a docker container
 
 The modlet ran inside a live dedicated server (fresh steamcmd install in a
