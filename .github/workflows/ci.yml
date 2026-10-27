@@ -97,7 +97,7 @@ jobs:
       # place it is declared, so a bump there cannot leave this step
       # installing a ruff the gate then rejects. --no-build refuses a source
       # distribution, which would build the linter from a fetched sdist here.
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       - name: Install ruff (pinned)
         run: uv tool install --no-build "ruff==$(make ruff-version)"
       - name: Make sure shellcheck is on PATH
