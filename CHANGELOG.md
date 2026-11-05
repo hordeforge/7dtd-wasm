@@ -4,20 +4,47 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
-## Unreleased
+## [0.6.0] - 2026-11-05
+
+This release retargets the net48 bridge and the sample guests to V3.4.0 b10
+and fixes a shutdown fault the new build exposes. The game moved from 3.3 to
+3.4: it adds two wire packages, flattens carry capacity to 96 and adds a
+trader drone-recovery path, but every member the bridge binds to is still
+present with the same signature. What did change is the exit path: a server
+with the zdtd `fps_bot` guest loaded faulted after `OnApplicationQuit`.
 
 ### Fixed
 
+- A V3.4.0 b10 dedicated server with `fps_bot` running died with SIGSEGV on
+  shutdown, after the world had saved and cleaned up (`Caught fatal signal -
+  signo:11` after `OnApplicationQuit`, Wasmtime's trap handler in frame 0).
+  Isolation runs narrowed it to the bot path: stock V3.4.0 exits clean, the
+  four guests without `fps_bot` exit clean, `hello` alone exits clean, and
+  `fps_bot` alone faults. The bridge now registers
+  `ModEvents.WorldShuttingDown` and `ModEvents.GameShutdown` and calls
+  `BridgeHost.Shutdown()`: each guest's shutdown export runs, the bots the
+  servant created are despawned while the world is still intact, and the
+  engine is disposed. The repaired five-guest run exits with no fatal signal
+  and logs `released 4 bot(s)` plus the run summary. `tools/targetcheck` pins
+  both ModEvents fields, so a game update that moves them fails the gate.
 - `BotServant`'s pooled sense record array was never constructed. It was
   `new EntityRecord[MaxSenseRecords]`, all null, and the sense scan assigned
   into those slots, so the first alive entity threw
   `NullReferenceException` in `WriteSenseLocked` and every unmodified zdtd
   brain got zero snapshots. The pooling commit postdates the b14 bot
   evidence, so the V3.3.0 b18 live run was the first to exercise it. The
-  constructor now constructs the slots once. That run is also the first live
-  b18 acceptance: five guests loaded and ticked, hello read world time and
-  chatted, and the zdtd brains spawned bodies and fired. Evidence and
-  residuals: `docs/ACCEPTANCE.md`.
+  constructor now constructs the slots once. Evidence and residuals:
+  `docs/ACCEPTANCE.md`.
+
+### Changed
+
+- Retargeted the game pin to V3.4.0 b10. `make bridge-check` passes against
+  the new dedicated install with all 49 checks present, the net48 bridge
+  compiles against it, and the five-guest live run recorded in
+  `docs/ACCEPTANCE.md` exercises the tick and join patches, world time,
+  settings, chat, the sense path and the bot servant. The guest set ran with
+  zero sense failures, zero traps and zero fuel exhaustion; the b18 live
+  acceptance stays in that document as dated history.
 
 ## [0.5.0] - 2026-10-25
 

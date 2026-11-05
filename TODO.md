@@ -12,8 +12,9 @@ dependency, not priority.
       machine crashes at boot, unrelated to the modlet).
 - [x] Re-run `make bridge-check` against the container's game build:
       all targets present (V 3.1.0 b14).
-- [x] Re-run `make bridge-check` and `make bridge` against V3.3.0 b18:
-      all targets present and the bridge compiles. No live run on b18 yet.
+- [x] Re-run `make bridge-check` and `make bridge` against V3.4.0 b10:
+      all targets present, the bridge compiles, and a five-guest live run
+      passes (sense path included) with a clean shutdown.
 - [ ] Repeat acceptance on the workspace's container LAN host when
       convenient, to cover the non-docker deployment path.
 

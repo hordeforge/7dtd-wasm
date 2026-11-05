@@ -74,16 +74,16 @@ running host and logged at start. Guests that spam are rate capped; the
 running drop totals surface in `wasm status` and every 100th dropped line is
 logged.
 
-## Verified game API surface (via tools/targetcheck; V3.3.0 b18)
+## Verified game API surface (via tools/targetcheck; V3.4.0 b10)
 
-Every row below was checked against the V3.3.0 b18 dedicated
-`Assembly-CSharp.dll` (sha256 `e16ff9d5...`, 11697152 bytes) with
+Every row below was checked against the V3.4.0 b10 dedicated
+`Assembly-CSharp.dll` (sha256 `00a962dbb...`, 11752960 bytes) with
 `make bridge-check`, and the net48 bridge compiles against the same install.
-The live b18 acceptance run exercised the tick hook, the join hook patch,
-world time, settings, chat, and the sense and sim-command surface with the
-unmodified zdtd brains. The join dispatch and the parachute glide were not
-driven on b18: no player was in the world. Those remain b14/b9 evidence,
-see [ACCEPTANCE.md](ACCEPTANCE.md).
+The live V3.4.0 acceptance run exercised the tick hook, the join hook patch,
+world time, settings, chat, the sense and sim-command surface with the
+unmodified zdtd brains, and the shutdown hooks. The join dispatch and the
+parachute glide were not driven on V3.4.0: no player was in the world.
+Those remain b14/b9 evidence, see [ACCEPTANCE.md](ACCEPTANCE.md).
 
 | Member | Verified signature |
 |---|---|
@@ -121,6 +121,7 @@ see [ACCEPTANCE.md](ACCEPTANCE.md).
 | `EntityFactory.CreateEntity` | static `Entity(int, Vector3, Vector3)` |
 | `EntityClass.FromString` | static `int(string)` |
 | `Log` (LogLibrary) | static `Out`, `Warning`, `Error` |
+| `ModEvents.WorldShuttingDown`, `ModEvents.GameShutdown` | static fields (event handlers registered by `ModApi`) |
 | `EChatType.Global`, `EMessageSender.Server`, `GeneratedTextManager.BbCodeSupportMode.NotSupported` | enum members |
 
 The `World`, `Entity`, `EntityAlive`, `EntityFactory`, `EntityClass`,
@@ -187,6 +188,17 @@ the server-side entry point the game itself logs on every join. Note that
 the hook also fires on respawns, not only on first join; guests that care
 should track state across calls.
 
+## Shutdown
+
+`ModApi` registers handlers on `ModEvents.WorldShuttingDown` and
+`ModEvents.GameShutdown` and calls `BridgeHost.Shutdown()` from either. The
+bridge runs every guest's shutdown export, despawns the bots the servant
+created while the world is still intact, logs the run summary, and disposes
+the Wasmtime engine. `Shutdown` is idempotent, so the second event is a
+no-op. Both events fire in the acceptance run: without them a V3.4.0
+dedicated server with `fps-bot` loaded faulted with SIGSEGV after
+`OnApplicationQuit`; see [ACCEPTANCE.md](ACCEPTANCE.md).
+
 ## Settings
 
 Guest settings are TOML: shared `<install>/Mods/Wasm/wasm.toml` (or, when
@@ -201,13 +213,14 @@ served to guests, so do not put secrets in them.
 
 ## Known gaps
 
-- The bridge and its guests now have live evidence on the stock V3.3.0 b18
+- The bridge and its guests have live evidence on the stock V3.4.0 b10
   dedicated server: five guests loaded, ticked, read world time and settings,
   chatted, and the unmodified zdtd brains spawned bodies and fired through
-  sense and sim commands. Player join dispatch and the parachute glide were
-  not driven on b18 because no player was in the world; those still rest on
-  V 3.1.0 b14 and V3.2.0 b9 evidence. See `evidence/acceptance-1/`,
-  `evidence/playtest-1/`, and `docs/ACCEPTANCE.md`.
+  sense and sim commands. Shutdown now disposes the host and exits clean.
+  Player join dispatch and the parachute glide were not driven on V3.4.0
+  because no player was in the world; those still rest on V 3.1.0 b14 and
+  V3.2.0 b9 evidence. The b18 run is dated history in the same document. See
+  `evidence/acceptance-1/`, `evidence/playtest-1/`, and `docs/ACCEPTANCE.md`.
 - The b18 sense scan exposed a live bug the unit suite cannot reach: the
   pooled `EntityRecord` array was never constructed, so the first alive
   entity threw NRE in `BotServant.WriteSenseLocked`. Fixed in the constructor

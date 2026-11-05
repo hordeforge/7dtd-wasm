@@ -25,6 +25,13 @@ namespace HordeForge.GameBridge
 
         private static readonly object PatchLock = new object();
 
+        // The game raises WorldShuttingDown before it tears the world down and
+        // GameShutdown later; both are registered because either can be the
+        // last one a server reaches, and BridgeHost.Shutdown is idempotent.
+        // A registered handler must not stack on a second InitMod.
+        private static bool _shutdownRegistered;
+        private static readonly object ShutdownLock = new object();
+
         /// <summary>
         /// Entry point the game calls once at load. Records the modlet path,
         /// stages the native engine, applies the Harmony patches, and scans
@@ -45,10 +52,67 @@ namespace HordeForge.GameBridge
 
                 BridgeHost.Start();
                 ApplyHarmonyPatches();
+                RegisterShutdownHooks();
             }
             catch (Exception ex)
             {
                 Log.Error("[WasmHost] init failed: " + TextSanitizer.Describe(ex));
+            }
+        }
+
+        /// <summary>
+        /// Stops the host when the game tears down the world or the process.
+        /// Without this the Wasmtime engine and the bots it spawned are still
+        /// alive after the game has cleaned up, and the V3.4.0 dedicated
+        /// server then faults on exit (SIGSEGV after OnApplicationQuit). The
+        /// game no longer needs either after these events, and BridgeHost
+        /// shutdown despawns the bots while the world is still intact.
+        /// </summary>
+        private static void RegisterShutdownHooks()
+        {
+            lock (ShutdownLock)
+            {
+                if (_shutdownRegistered)
+                {
+                    return;
+                }
+                _shutdownRegistered = true;
+            }
+            try
+            {
+                ModEvents.WorldShuttingDown.RegisterHandler(OnWorldShuttingDown);
+                ModEvents.GameShutdown.RegisterHandler(OnGameShutdown);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[WasmHost] could not register shutdown hooks: " + TextSanitizer.Describe(ex));
+            }
+        }
+
+        private static void OnWorldShuttingDown(ref ModEvents.SWorldShuttingDownData _data)
+        {
+            ShutdownHost();
+        }
+
+        private static void OnGameShutdown(ref ModEvents.SGameShutdownData _data)
+        {
+            ShutdownHost();
+        }
+
+        /// <summary>
+        /// BridgeHost.Shutdown is idempotent; a guest that traps on its
+        /// shutdown export must not let one event escape the other, so both
+        /// handlers go through here.
+        /// </summary>
+        private static void ShutdownHost()
+        {
+            try
+            {
+                BridgeHost.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[WasmHost] shutdown failed: " + TextSanitizer.Describe(ex));
             }
         }
 

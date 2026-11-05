@@ -68,12 +68,13 @@ make check-ci       # doccheck, versioncheck, packcheck, apicheck, the tools
                     # test, pack (what CI runs)
 ```
 
-Known gaps (stated honestly): the bridge now runs live in the stock V3.3.0
-b18 dedicated server on this machine (`.scratch` reflink copy, separate
-config and userdata): five guests loaded and ticked, and the unmodified
-zdtd brains spawned bodies and fired on b18 after a sense-pooling fix.
-Player join dispatch and the parachute glide need a real player and were
-not driven on b18; they remain b14/b9 evidence. Evidence:
+Known gaps (stated honestly): the bridge runs live in the stock V3.4.0 b10
+dedicated server on this machine (`.scratch` reflink copy, separate config
+and userdata): five guests loaded and ticked, the unmodified zdtd brains
+spawned bodies and fired, and shutdown disposes the host and its bots
+instead of faulting. Player join dispatch and the parachute glide need a
+real player and were not driven on V3.4.0; they remain b14/b9 evidence. The
+b18 live run is dated history in the same document. Evidence:
 `evidence/acceptance-1/`, `evidence/playtest-1/`, and
 `docs/ACCEPTANCE.md`. The host library and all sandbox guarantees are
 covered by the test suite.

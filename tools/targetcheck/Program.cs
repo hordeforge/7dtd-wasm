@@ -249,6 +249,16 @@ namespace TargetCheck
                 Console.WriteLine("  IModApi found at " + FullName(md, t) + " (" + TypeKind(t) + ")");
             });
 
+            // Shutdown hooks (ModApi.RegisterShutdownHooks): the bridge
+            // stops the host and despawns its bots before the game tears the
+            // world down, which is what keeps a V3.4.0 exit from faulting
+            // after OnApplicationQuit. Both events are fields on ModEvents.
+            CheckType(md, "ModEvents", t =>
+            {
+                CheckFieldOrProperty(md, t, "WorldShuttingDown", isStatic: true);
+                CheckFieldOrProperty(md, t, "GameShutdown", isStatic: true);
+            });
+
             CheckEnumMember(md, "EChatType", "Global");
             CheckEnumMember(md, "EMessageSender", "Server");
             CheckEnumMember(md, "BbCodeSupportMode", "NotSupported");
