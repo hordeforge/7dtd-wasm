@@ -4,6 +4,21 @@ All notable changes to this project are recorded here. The format follows
 the sibling projects: versioned sections with dated entries, newest first.
 Codename: Quarantine (7dtd-wasm).
 
+## Unreleased
+
+### Fixed
+
+- `BotServant`'s pooled sense record array was never constructed. It was
+  `new EntityRecord[MaxSenseRecords]`, all null, and the sense scan assigned
+  into those slots, so the first alive entity threw
+  `NullReferenceException` in `WriteSenseLocked` and every unmodified zdtd
+  brain got zero snapshots. The pooling commit postdates the b14 bot
+  evidence, so the V3.3.0 b18 live run was the first to exercise it. The
+  constructor now constructs the slots once. That run is also the first live
+  b18 acceptance: five guests loaded and ticked, hello read world time and
+  chatted, and the zdtd brains spawned bodies and fired. Evidence and
+  residuals: `docs/ACCEPTANCE.md`.
+
 ## [0.5.0] - 2026-10-25
 
 This release retargets the net48 bridge and the sample guests to V3.3.0 b18

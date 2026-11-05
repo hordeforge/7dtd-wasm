@@ -171,6 +171,15 @@ namespace HordeForge.GameBridge.Bridge
             _tickProvider = tickProvider ?? throw new ArgumentNullException(nameof(tickProvider));
             _clockMs = clockMs ?? (() => Environment.TickCount);
             _commandLogLimiter = new GuestRateLimiter(GuestRateLimiter.MaxLinesPerSecond, _clockMs);
+            // The pooled record array is allocated once here; a bare
+            // `new EntityRecord[n]` holds nulls, and the sense scan assigns
+            // into records[Snapshot.Records.Count] without constructing them,
+            // so the first alive entity threw NRE at assignment. Constructing
+            // the slots once keeps sense allocation-free per call.
+            for (int i = 0; i < _senseRecords.Length; i++)
+            {
+                _senseRecords[i] = new SenseSnapshotWriter.EntityRecord();
+            }
         }
 
         /// <summary>Per-source cap on this servant's log lines; exposed for "wasm status".</summary>

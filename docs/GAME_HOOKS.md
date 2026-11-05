@@ -79,9 +79,11 @@ logged.
 Every row below was checked against the V3.3.0 b18 dedicated
 `Assembly-CSharp.dll` (sha256 `e16ff9d5...`, 11697152 bytes) with
 `make bridge-check`, and the net48 bridge compiles against the same install.
-The live runs behind the acceptance evidence predate that build: the first
-was V 3.1.0 b14 and the parachute playtest was V3.2.0 b9 (see
-[ACCEPTANCE.md](ACCEPTANCE.md)).
+The live b18 acceptance run exercised the tick hook, the join hook patch,
+world time, settings, chat, and the sense and sim-command surface with the
+unmodified zdtd brains. The join dispatch and the parachute glide were not
+driven on b18: no player was in the world. Those remain b14/b9 evidence,
+see [ACCEPTANCE.md](ACCEPTANCE.md).
 
 | Member | Verified signature |
 |---|---|
@@ -199,13 +201,17 @@ served to guests, so do not put secrets in them.
 
 ## Known gaps
 
-- The target list and the net48 build are re-verified on V3.3.0 b18, but no
-  live run has happened on that build. Everything proven in game rests on
-  older evidence: live acceptance succeeded in a docker container (fresh
-  steamcmd install, V 3.1.0 b14), and the parachute module was driven end to
-  end on a V3.2.0 b9 live server. The native install on this machine crashes
-  at boot and was not used. See `evidence/acceptance-1/`,
+- The bridge and its guests now have live evidence on the stock V3.3.0 b18
+  dedicated server: five guests loaded, ticked, read world time and settings,
+  chatted, and the unmodified zdtd brains spawned bodies and fired through
+  sense and sim commands. Player join dispatch and the parachute glide were
+  not driven on b18 because no player was in the world; those still rest on
+  V 3.1.0 b14 and V3.2.0 b9 evidence. See `evidence/acceptance-1/`,
   `evidence/playtest-1/`, and `docs/ACCEPTANCE.md`.
+- The b18 sense scan exposed a live bug the unit suite cannot reach: the
+  pooled `EntityRecord` array was never constructed, so the first alive
+  entity threw NRE in `BotServant.WriteSenseLocked`. Fixed in the constructor
+  and re-proven live; see `docs/ACCEPTANCE.md`.
 - Guest log and chat rate capping are bridge code; the log cap was
   exercised in the acceptance run (drop counter in `wasm status`), not by
   host unit tests.

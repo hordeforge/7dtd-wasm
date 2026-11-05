@@ -68,10 +68,12 @@ make check-ci       # doccheck, versioncheck, packcheck, apicheck, the tools
                     # test, pack (what CI runs)
 ```
 
-Known gaps (stated honestly): the target list and the net48 build are
-re-verified against V3.3.0 b18, but the bridge has run inside a live
-dedicated server only in a docker container (acceptance succeeded; fresh
-steamcmd install, V 3.1.0 b14); the native install on this machine crashes
-at boot, so it was not used. Evidence: `evidence/acceptance-1/` and
+Known gaps (stated honestly): the bridge now runs live in the stock V3.3.0
+b18 dedicated server on this machine (`.scratch` reflink copy, separate
+config and userdata): five guests loaded and ticked, and the unmodified
+zdtd brains spawned bodies and fired on b18 after a sense-pooling fix.
+Player join dispatch and the parachute glide need a real player and were
+not driven on b18; they remain b14/b9 evidence. Evidence:
+`evidence/acceptance-1/`, `evidence/playtest-1/`, and
 `docs/ACCEPTANCE.md`. The host library and all sandbox guarantees are
 covered by the test suite.
