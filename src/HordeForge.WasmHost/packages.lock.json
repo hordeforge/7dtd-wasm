@@ -13,9 +13,9 @@
       },
       "Wasmtime": {
         "type": "Direct",
-        "requested": "[48.0.2, )",
-        "resolved": "48.0.2",
-        "contentHash": "BBqIEIPSTQ5cCVfxk6kH4lYSwNiMQ8Bf2F8Sy1I8N0JkvrWYoqhG3ro41R3JhNStIs0tVbqajBXXKnahyxHn0g==",
+        "requested": "[50.0.1, )",
+        "resolved": "50.0.1",
+        "contentHash": "YLMAwzmjCkpsA2dPzO91tcG12PTO2tt6eQw1pcMwMTujHpcn2RlPmvF8id++5V+3gI/qTkI/aWPnrwaeaXCyhA==",
         "dependencies": {
           "IndexRange": "1.0.2",
           "System.Memory": "4.5.5"
@@ -60,9 +60,9 @@
     "net8.0": {
       "Wasmtime": {
         "type": "Direct",
-        "requested": "[48.0.2, )",
-        "resolved": "48.0.2",
-        "contentHash": "BBqIEIPSTQ5cCVfxk6kH4lYSwNiMQ8Bf2F8Sy1I8N0JkvrWYoqhG3ro41R3JhNStIs0tVbqajBXXKnahyxHn0g=="
+        "requested": "[50.0.1, )",
+        "resolved": "50.0.1",
+        "contentHash": "YLMAwzmjCkpsA2dPzO91tcG12PTO2tt6eQw1pcMwMTujHpcn2RlPmvF8id++5V+3gI/qTkI/aWPnrwaeaXCyhA=="
       }
     }
   }
